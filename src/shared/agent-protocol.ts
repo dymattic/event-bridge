@@ -85,6 +85,12 @@ export interface BlobDropOp {
   op: 'blobDrop';
   blobId: string;
 }
+// rave.page desktop-grant handshake (P3). Runs only on the rave.page dev origin;
+// waits for the /desktop/bridge page to post a grant code. See ravepage-grant.dom.ts.
+export interface GrantAwaitOp {
+  op: 'grantAwait';
+  timeoutMs: number;
+}
 
 export type AgentOp =
   | PingOp
@@ -93,7 +99,8 @@ export type AgentOp =
   | BlobBeginOp
   | BlobChunkOp
   | BlobEndOp
-  | BlobDropOp;
+  | BlobDropOp
+  | GrantAwaitOp;
 
 export type AgentOpName = AgentOp['op'];
 export type AgentOpFor<K extends AgentOpName> = Extract<AgentOp, { op: K }>;
@@ -108,6 +115,11 @@ export interface BlobAck {
   blobId: string;
   sha256?: string; // present on blobEnd (agent-computed SHA-256 hex)
 }
+// Result of grantAwait: the one-time code + the API base the SPA minted it for.
+export interface GrantResult {
+  code: string;
+  api: string;
+}
 
 export interface AgentResultMap {
   ping: PingResult;
@@ -117,6 +129,7 @@ export interface AgentResultMap {
   blobChunk: BlobAck;
   blobEnd: BlobAck;
   blobDrop: BlobAck;
+  grantAwait: GrantResult;
 }
 
 // ---- Port envelope (request + response correlated by id) ----

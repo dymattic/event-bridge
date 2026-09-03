@@ -12,6 +12,7 @@
   "scripts": {
     "build": "node tools/build.mjs && node tools/assemble.mjs",
     "dev": "node tools/build.mjs --watch",
+    "dev:browser": "node tools/dev-browser.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.background.json --noEmit",
     "test": "vitest run",
     "e2e": "playwright test -c e2e/playwright.config.ts",

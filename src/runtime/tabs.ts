@@ -86,13 +86,26 @@ export interface EnsureResult {
   opened: boolean;
 }
 
-export async function ensureAgent(platform: Platform, opts: { allowOpen: boolean }): Promise<EnsureResult> {
+// opts.url/active (P3): a caller may target a specific page on the platform
+// (e.g. rave.page's /desktop/bridge) and open it ACTIVE. When url is set an
+// existing tab is reused only if its URL is on that path; otherwise the tab is
+// opened at url. Callers passing only {allowOpen} keep the P2 behaviour.
+export async function ensureAgent(
+  platform: Platform,
+  opts: { allowOpen: boolean; url?: string; active?: boolean },
+): Promise<EnsureResult> {
   const meta = PLATFORM_ORIGINS[platform];
   if (!(await hasPermission(meta.origin))) {
     throw new BridgeError('PERMISSION_MISSING', `host permission missing for ${meta.name}`);
   }
 
-  const existing = pickTab(await ext.tabs.query({ url: `${meta.origin}/*` }));
+  let matches = await ext.tabs.query({ url: `${meta.origin}/*` });
+  if (opts.url) {
+    const target = new URL(opts.url);
+    const pathPrefix = `${target.origin}${target.pathname}`;
+    matches = matches.filter((t) => (t.url ?? '').startsWith(pathPrefix));
+  }
+  const existing = pickTab(matches);
   let tabId: number;
   let opened_ = false;
   if (existing?.id != null) {
@@ -100,7 +113,7 @@ export async function ensureAgent(platform: Platform, opts: { allowOpen: boolean
     await waitForComplete(tabId);
   } else {
     if (!opts.allowOpen) throw new BridgeError('AGENT_UNAVAILABLE', `no ${meta.name} tab open`);
-    const created = await ext.tabs.create({ url: meta.entry, active: false });
+    const created = await ext.tabs.create({ url: opts.url ?? meta.entry, active: opts.active ?? false });
     if (created.id == null) throw new BridgeError('AGENT_UNAVAILABLE', `failed to open ${meta.name} tab`);
     tabId = created.id;
     opened_ = true;

@@ -19,6 +19,7 @@ import {
   type HttpResult,
 } from '../shared/agent-protocol';
 import { detectSession } from './session.dom';
+import { awaitGrant } from './ravepage-grant.dom';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -193,6 +194,8 @@ async function dispatch(req: AgentRequest): Promise<AgentResponse> {
         return reply(req.id, 'blobEnd', await blobEnd(req));
       case 'blobDrop':
         return reply(req.id, 'blobDrop', blobDrop(req));
+      case 'grantAwait':
+        return reply(req.id, 'grantAwait', await awaitGrant(req.timeoutMs));
     }
   } catch (e) {
     return toErr(req.id, e);

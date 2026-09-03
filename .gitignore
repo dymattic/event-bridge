@@ -12,3 +12,4 @@ build/
 test-results/
 playwright-report/
 e2e/.tmp/
+.profile/

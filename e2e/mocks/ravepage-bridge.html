@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rave.page desktop bridge (mock)</title>
+</head>
+<body>
+<h1>rave.page desktop bridge</h1>
+<div id="app">Waiting for the extension…</div>
+<script>
+  // Mock of development.rave.page/desktop/bridge?target=extension. Implements the
+  // P3 handshake: post bridge-ready until the extension answers hello, then show a
+  // Connect button that posts a desktop-grant code.
+  (function () {
+    var API = 'https://development.api.rave.page';
+    var helloSeen = false;
+    function ready() {
+      if (!helloSeen) window.postMessage({ type: 'rave-page:bridge-ready', version: 1 }, location.origin);
+    }
+    var timer = setInterval(ready, 500);
+    ready();
+    window.addEventListener('message', function (e) {
+      if (e.source !== window || e.origin !== location.origin) return;
+      var d = e.data || {};
+      if (d.type === 'event-bridge:hello') {
+        helloSeen = true;
+        clearInterval(timer);
+        var app = document.getElementById('app');
+        app.textContent = '';
+        var btn = document.createElement('button');
+        btn.id = 'bridge-connect';
+        btn.setAttribute('data-testid', 'bridge-connect');
+        btn.textContent = 'Connect';
+        btn.addEventListener('click', function () {
+          window.postMessage({ type: 'rave-page:desktop-grant', version: 1, code: 'TESTCODE', api: API }, location.origin);
+        });
+        app.appendChild(btn);
+      }
+    });
+  })();
+</script>
+</body>
+</html>

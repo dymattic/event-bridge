@@ -1,24 +1,31 @@
 import { expect, mockPlatform, openPlatformTab, openPopup, test, type MockPlatform } from '../fixtures/extension';
 
+// P3 changed rave.page: its status derives from the extension token store (a
+// connect gesture), NOT from a page session — no tab is opened and the SPA's
+// localStorage login is ignored. With no stored token it is always "Logged out"
+// here. The tab-session platforms (vrcpop, vrc.tl) keep the P2 behaviour.
+const TAB_PLATFORMS: MockPlatform[] = ['vrcpop', 'vrctl'];
 const PLATFORMS: MockPlatform[] = ['vrcpop', 'vrctl', 'ravepage'];
 const EXPECT_TIMEOUT = 25_000;
 
-test('no platform tabs open -> popup shows "No tab open" for all three', async ({ context }) => {
+test('no platform tabs open -> "No tab open" for tab platforms, "Logged out" for rave.page', async ({ context }) => {
   const popup = await openPopup(context);
-  for (const p of PLATFORMS) {
+  for (const p of TAB_PLATFORMS) {
     await expect(popup.getByTestId(`status-${p}`)).toContainText('No tab open', { timeout: EXPECT_TIMEOUT });
   }
+  await expect(popup.getByTestId('status-ravepage')).toContainText('Logged out', { timeout: EXPECT_TIMEOUT });
 });
 
-test('logged-in mocked tabs -> popup shows Logged in for all three', async ({ context }) => {
+test('logged-in mocked tabs -> Logged in for tab platforms; rave.page stays Logged out (no stored token)', async ({ context }) => {
   for (const p of PLATFORMS) {
     await mockPlatform(context, p, 'logged-in');
     await openPlatformTab(context, p);
   }
   const popup = await openPopup(context);
-  for (const p of PLATFORMS) {
+  for (const p of TAB_PLATFORMS) {
     await expect(popup.getByTestId(`status-${p}`)).toContainText('Logged in', { timeout: EXPECT_TIMEOUT });
   }
+  await expect(popup.getByTestId('status-ravepage')).toContainText('Logged out', { timeout: EXPECT_TIMEOUT });
 });
 
 test('logged-out mocked tabs -> popup shows Logged out for all three', async ({ context }) => {

@@ -166,3 +166,40 @@ over a real port), plus the P0 `smoke.spec.ts`.
   just `host_permissions`. `manifest/base.json` keeps `permissions:
   ["storage","scripting"]` — no `tabs`.
 
+## rave.page adapter (P3, dev API only)
+
+API base = one constant `API_BASE = 'https://development.api.rave.page'`
+(`src/adapters/ravepage/client.ts`), which configures the generated `OpenAPI`
+(`BASE`, a Bearer `TOKEN` resolver reading the token store, `WITH_CREDENTIALS
+false`). Generated calls go only through the `ROUTES` allowlist
+(`ravepage/routes.ts`); a unit test greps the adapter for raw `fetch(` and
+allows exactly one — the chunk PUT — marked `raw-fetch-allowed:`.
+
+**Auth = the SPA's grant/exchange flow, never SPA tokens.** `connect()` opens
+`https://development.rave.page/desktop/bridge?target=extension` active, runs the
+agent `grantAwait` handshake (page `rave-page:bridge-ready` → agent
+`event-bridge:hello` → page `rave-page:desktop-grant {code, api}`), then
+`POST /auth/exchange {code}` → `{token, refresh}`. The `refresh` is **discarded**
+(`/auth/refresh` is 410 → renewal is a user re-connect). The 30-day JWT + identity
+(`GET /auth/me`) are stored in `storage.local` under `ravepage.auth`
+(`ravepage/token-store.ts`); `needsReconnect()` fires < 3 days before expiry, and
+any 401 clears the token so the UI offers Reconnect.
+
+The dashboard (`src/ui/dashboard/App.tsx`) is a minimal dev panel — Connect /
+Disconnect, status, Who am I, My groups, Create test draft (draft + unlisted +
+`is_public:false`, one slot, one performer), Delete it — used for manual checks
+once the bridge branch is deployed to development.rave.page. Writes use the pure
+`planCreate/Update/Delete/Poster` builders + a sequential `runPlan` that resolves
+`{$ref}` placeholders (new event/slot ids). Poster bytes upload imperatively
+(`setPoster`): chunked `media-upload` (resume from `uploaded_chunk_numbers`, poll
+`pipeline_status` to `ready`) then `PATCH /events/{id}/poster`.
+
+## Manual verification browser (`pnpm dev:browser`)
+
+Builds, then launches a **headed** Chromium with the unpacked extension loaded
+into a persistent, git-ignored `.profile/` and `--remote-debugging-port=9222`.
+It prints the extension id + dashboard URL and opens the dashboard, then stays
+alive until Ctrl+C. The user logs in on development.rave.page themselves in that
+window; the lead attaches tooling (Playwright/CDP) via
+`http://127.0.0.1:9222`. rave.page development is exercised with draft/unlisted
+events only, cleaned up afterwards (repo rule: no test events on vrc.tl/vrcpop).
