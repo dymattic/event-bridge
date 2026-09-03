@@ -76,6 +76,8 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   publish** (workspace rule: never publish beyond repository policy and
   explicit approval). Before first push: audit history for anything violating
   public-repo hygiene - history is forever on GitHub.
+- **GitHub namespace: `dymattic/event-bridge`** (user's personal account, NOT a
+  rave.page org) - user decision 2026-09-03.
 - Commit after each logical unit once gates pass; don't batch features.
 - Never force-push; never leave broken state committed.
 
