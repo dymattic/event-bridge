@@ -1,16 +1,20 @@
-// Adapter registry. rave.page is registered in P3; vrcpop/vrctl register in P4/P5.
+// Adapter registry. All three platform adapters register here. The vrcpop/vrctl
+// entries come from each platform's ./platform module (webext-bound), NOT the
+// pure ./adapter/index barrels — importing this module pulls in the runtime.
 import type { PlatformId } from '../core/schema';
 import { BridgeError } from '../core/errors';
 import type { PlatformAdapter } from './types';
 import { ravepageAdapter } from './ravepage/adapter';
+import { vrcpopAdapter } from './vrcpop/platform';
+import { vrctlAdapter } from './vrctl/platform';
 
-const ADAPTERS: Partial<Record<PlatformId, PlatformAdapter>> = {
+const ADAPTERS: Record<PlatformId, PlatformAdapter> = {
   ravepage: ravepageAdapter,
+  vrcpop: vrcpopAdapter,
+  vrctl: vrctlAdapter,
 };
 
-export function registerAdapter(adapter: PlatformAdapter): void {
-  ADAPTERS[adapter.id] = adapter;
-}
+export const ADAPTER_IDS: readonly PlatformId[] = ['ravepage', 'vrcpop', 'vrctl'];
 
 export function getAdapter(id: PlatformId): PlatformAdapter {
   const a = ADAPTERS[id];

@@ -1,7 +1,10 @@
-// TODO(P6): rebuild on @rave-page/ui. Minimal dev panel for manual rave.page
-// verification on development.rave.page (connect + who-am-i + groups + a draft
-// round-trip). Plain Tailwind token classes; self-contained; exposes nothing on
-// window beyond what P2 already does.
+// Dashboard shell: minimal hash router + dev nav. Routes:
+//   #/kit         -> @rave-page/ui showcase (KitShowcase)
+//   #/dev/vrcpop  -> vrcpop dev panel
+//   #/dev/vrctl   -> vrc.tl dev panel
+//   default (#/)  -> the rave.page dev panel (RavepageDevPanel, keeps rp-* testids)
+// Real routing lands with the P6+ UI; this is the smallest thing that wires the
+// existing panels + showcase into one built page for manual + e2e checks.
 import { useCallback, useEffect, useState } from 'react';
 import { BUILD_ID } from '../../shared/build-id';
 import { isBridgeError } from '../../core/errors';
@@ -11,6 +14,9 @@ import { getSettings } from '../../runtime/settings';
 import { ravepageAdapter, runPlan } from '../../adapters/ravepage/adapter';
 import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
+import KitShowcase from './views/KitShowcase';
+import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
+import { VrctlDevPanel } from './dev/VrctlDevPanel';
 
 function errMessage(e: unknown): string {
   if (isBridgeError(e)) return `${e.code}: ${e.message}`;
@@ -37,7 +43,7 @@ function testDraftCore(prefix: string, club: OwnClub): EventCore {
   };
 }
 
-export function App() {
+function RavepageDevPanel() {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,5 +178,62 @@ export function App() {
         </p>
       )}
     </main>
+  );
+}
+
+const NAV: { hash: string; label: string }[] = [
+  { hash: '#/', label: 'rave.page' },
+  { hash: '#/kit', label: 'Kit' },
+  { hash: '#/dev/vrcpop', label: 'vrcpop' },
+  { hash: '#/dev/vrctl', label: 'vrc.tl' },
+];
+
+function DevNav({ route }: { route: string }) {
+  return (
+    <nav data-testid="dev-nav" className="flex flex-wrap items-center gap-4 px-4 py-2 border-b border-border bg-card">
+      {NAV.map((n) => {
+        const active = `#${route}` === n.hash;
+        return (
+          <a
+            key={n.hash}
+            href={n.hash}
+            data-testid={`nav-${n.label}`}
+            className={`text-sm underline-offset-2 hover:underline ${active ? 'text-brand-base' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            {n.label}
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+function useHashRoute(): string {
+  const [hash, setHash] = useState<string>(() => (typeof window !== 'undefined' ? window.location.hash : ''));
+  useEffect(() => {
+    const on = (): void => setHash(window.location.hash);
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  return hash;
+}
+
+export function App() {
+  const route = useHashRoute().replace(/^#/, '') || '/';
+  const view =
+    route === '/kit' ? (
+      <KitShowcase />
+    ) : route === '/dev/vrcpop' ? (
+      <VrcpopDevPanel />
+    ) : route === '/dev/vrctl' ? (
+      <VrctlDevPanel />
+    ) : (
+      <RavepageDevPanel />
+    );
+  return (
+    <div className="min-h-screen bg-background">
+      <DevNav route={route} />
+      {view}
+    </div>
   );
 }

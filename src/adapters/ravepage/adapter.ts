@@ -28,7 +28,7 @@ import { caps } from './capabilities';
 import { status as authStatus } from './auth';
 import { removeEventPoster, setEventPoster } from './upload';
 import type { EventCreateIn } from './api-client/models/EventCreateIn';
-import type { EntityTagAssignIn } from './api-client/models/EntityTagAssignIn';
+import type { EntityGenreAssignmentIn } from './api-client/models/EntityGenreAssignmentIn';
 import type { EventPerformerCreateIn } from './api-client/models/EventPerformerCreateIn';
 import type { EventPosterAssignIn } from './api-client/models/EventPosterAssignIn';
 import type { EventSlotCreateIn } from './api-client/models/EventSlotCreateIn';
@@ -152,6 +152,7 @@ export function planCreate(core: EventCore, opts: CreateOpts): PlanResult {
     genreVocab: opts.genreVocab,
   });
   const report = computeLoss(core, caps);
+  report.dropped.push(...built.dropped); // vocab-level drops (platform tags, scene/energy)
   const steps: PlannedStep[] = [];
 
   steps.push({
@@ -186,13 +187,13 @@ export function planCreate(core: EventCore, opts: CreateOpts): PlanResult {
     });
   });
 
-  if (built.genreIds.length) {
+  if (built.genreSlugs.length) {
     steps.push({
       id: 'genres',
       platform: 'ravepage',
       kind: 'genres',
       routeId: 'genres.assign',
-      request: { eventId: ref(CREATE_STEP, 'id'), body: { ids: built.genreIds, source: 'manual', confidence: 1 } },
+      request: { eventId: ref(CREATE_STEP, 'id'), body: { genre_slugs: built.genreSlugs } },
       previewLabel: 'Assign genres',
     });
   }
@@ -225,6 +226,7 @@ export function slotUpdateShape(next: EventSlotCreateIn, cur: EventSlotOut): Eve
 export function planUpdate(core: EventCore, opts: UpdateOpts): PlanResult {
   const built = toRavepage(core, buildCtx(opts));
   const report = computeLoss(core, caps);
+  report.dropped.push(...built.dropped); // vocab-level drops (platform tags, scene/energy)
   const steps: PlannedStep[] = [];
   const id = opts.id;
   const raw = rawFrom(opts.current);
@@ -311,13 +313,13 @@ export function planUpdate(core: EventCore, opts: UpdateOpts): PlanResult {
     });
   });
 
-  if (built.genreIds.length) {
+  if (built.genreSlugs.length) {
     steps.push({
       id: 'genres',
       platform: 'ravepage',
       kind: 'genres',
       routeId: 'genres.assign',
-      request: { eventId: id, body: { ids: built.genreIds, source: 'manual', confidence: 1 } },
+      request: { eventId: id, body: { genre_slugs: built.genreSlugs } },
       previewLabel: 'Assign genres',
     });
   }
@@ -413,7 +415,9 @@ export async function executeStep(step: PlannedStep): Promise<JsonValue> {
       }
       case 'genres.assign': {
         const r = asObj(step.request);
-        return (await ROUTES.assignEventGenres({ entityType: 'event', entityId: r.eventId, requestBody: r.body as unknown as EntityTagAssignIn })) as unknown as JsonValue;
+        // Organizer-facing PUT (setEntityManualGenres); replaces this caller's
+        // manual genre tags. The admin-only POST needed admin rights.
+        return (await ROUTES.setEntityGenres({ entityType: 'event', entityId: r.eventId, requestBody: r.body as unknown as EntityGenreAssignmentIn })) as unknown as JsonValue;
       }
       case 'poster.assign': {
         const r = asObj(step.request);

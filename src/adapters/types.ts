@@ -1,6 +1,13 @@
 // Shared platform-adapter contract. rave.page implements it first (P3); the
 // vrcpop (P4) and vrc.tl (P5) adapters implement the same shape. Adapters own
 // their transport + platform quirks; core/UI talk only to this interface.
+//
+// Agent-bound adapters (vrcpop/vrc.tl) self-bind their page-tab transport via
+// `withAgent` inside each method, so the interface needs no transport/context
+// param — it stays identical to the token-store-backed rave.page adapter. The
+// only shared-type change P6 required is `PlatformCapabilities.draft` widening
+// to a tri-state (see DraftSupport) so vrcpop's unverifiable draft flag fits
+// `caps` without forcing a boolean; rave.page/vrc.tl keep passing `true`.
 import type { EventCore, PlatformId, PosterFile, PosterRef } from '../core/schema';
 import type { LossReport, PlatformCapabilities } from '../core/capabilities';
 import type { PlannedStep } from '../core/planner';
@@ -61,7 +68,7 @@ export interface PlanResult {
 export interface CreateOpts {
   organizer: OrganizerFilter;
   publish?: boolean; // default false -> draft/unlisted
-  genreVocab?: Record<string, string>; // lowercased genre name -> id
+  genreVocab?: Record<string, string>; // lowercased genre name -> slug (rave.page) / id
 }
 
 export interface UpdateOpts {

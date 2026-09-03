@@ -41,9 +41,10 @@ export const ROUTES = {
   deletePoster: EventsService.deleteEventPoster,
   // taxonomy
   listGenres: TaxonomyService.listGenres,
-  // NOTE: POST /taxonomy/entities/event/{id}/genres is admin-only per the live
-  // spec; a non-admin event owner may get 403. See adapter.ts + P3 report.
-  assignEventGenres: TaxonomyService.assignEntityGenres,
+  // Organizer-facing genre write: PUT /taxonomy/{entity_type}/{entity_id}/genres
+  // (setEntityManualGenres, body genre_slugs[]). The POST
+  // /taxonomy/entities/event/{id}/genres variant is admin-only (403 for owners).
+  setEntityGenres: TaxonomyService.setEntityManualGenres,
   // performer search
   searchPerformers: PerformersService.listPerformers,
   // media upload (chunk PUT is a raw fetch in upload.ts — see header note)

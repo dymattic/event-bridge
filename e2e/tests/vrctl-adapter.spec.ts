@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, openPlatformTab, openPopup, test } from '../fixtures/extension';
+import { expect, openDashboard, openPlatformTab, openPopup, test } from '../fixtures/extension';
 import { mockVrctlSite, type RecordedRequest } from '../mocks/vrctl-site';
 import type { HttpRequest, HttpResult } from '../../src/shared/agent-protocol';
 import type { VrctlDetailForm } from '../../src/core/mapping/vrctl-types';
@@ -117,11 +117,37 @@ test('logged out: an /admin GET follows to sign-in (NOT_LOGGED_IN signal)', asyn
   expect(isSignInRedirect(res)).toBe(true);
 });
 
-// The full dev-panel-driven flow (in-page parse of slots/flags, create preview
-// shown in the UI, VALIDATION surfaced before any request) needs the panel bundled
-// into a built page. App.tsx is owned by the lead; wire it in P6 with:
-//   import { VrctlDevPanel } from './dev/VrctlDevPanel';  // then render <VrctlDevPanel />
-// (or mount standalone via src/ui/dashboard/dev/vrctl-dev-entry.ts mountVrctlDevPanel).
-test.skip('dev-panel: organizers -> grid -> detail parse -> preview == body (needs App.tsx wiring)', () => {
-  // Covered at the unit level (test/adapters/vrctl/*). Unskip after P6 wiring.
+// Dev-panel-driven READ-ONLY flow via the #/dev/vrctl hash route (App.tsx router):
+// organizers -> grid -> read detail -> preview create. No vrc.tl event is created
+// or deleted (repo rule: NO test events on vrc.tl). The exhaustive parse/plan/
+// VALIDATION assertions live in the unit suite (test/adapters/vrctl/*).
+test('dev panel: organizers -> grid -> read detail -> preview create (read-only)', async ({ context }) => {
+  const rec: RecordedRequest[] = [];
+  await mockVrctlSite(context, rec);
+  await openPlatformTab(context, 'vrctl');
+  const page = await openDashboard(context);
+  await page.evaluate(() => {
+    location.hash = '#/dev/vrctl';
+  });
+  await page.reload();
+
+  await expect(page.getByTestId('vrctl-dev-panel')).toBeVisible();
+
+  await page.getByTestId('vt-organizers').click();
+  await expect(page.getByTestId('vt-club').first()).toContainText('Example Club');
+
+  await page.getByTestId('vt-grid').click();
+  await expect(page.getByTestId('vt-event').first()).toContainText("what's poppin");
+
+  await page.getByTestId('vt-eventid').fill('100002');
+  await page.getByTestId('vt-read').click();
+  await expect(page.getByTestId('vt-detail')).toBeVisible();
+
+  await page.getByTestId('vt-preview').click();
+  await expect(page.getByTestId('vt-preview-out')).toContainText('name=');
+
+  // Read-only: no create/detail POST and no grid delete action was issued.
+  expect(rec.some((r) => r.method === 'POST' && r.path.startsWith('/admin/event/create'))).toBe(false);
+  expect(rec.some((r) => r.method === 'POST' && r.path.startsWith('/admin/event/detail/'))).toBe(false);
+  expect(rec.some((r) => r.search.includes('grid-grid-__key=delete'))).toBe(false);
 });

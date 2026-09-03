@@ -23,7 +23,7 @@ SmartSelect, Date/DateTime pickers, DataTable, Toast, …) plus its `tokens.css`
 `font-orbitron`, z-ladder, `--breakpoint-xxl`). No hand-rolled widgets or
 ad-hoc colours where a kit component/token exists; missing primitives are added
 upstream in the kit, never forked here. Extension-specific views stay in
-`src/ui/`. `views/KitShowcase.tsx` renders every export (wire it at `#/kit`).
+`src/ui/`. `views/KitShowcase.tsx` renders every export (wired at `#/kit`).
 
 `src/ui/styles.css` is the Tailwind entry:
 
@@ -138,6 +138,22 @@ optionally opens one inactive (15 s ready timeout), injects, verifies the build
 Transport caches one port per tab and reconnects on disconnect (Firefox drops
 ports). Codes are `BridgeError`/`BridgeErrorCode` from `src/core/errors.ts`.
 
+## Dashboard routes
+
+`src/ui/dashboard/App.tsx` is a minimal hash router (no router dep) with a small
+dev nav:
+
+| Hash | View |
+|---|---|
+| `#/` (default) | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) |
+| `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
+| `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
+| `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
+
+The registry (`src/adapters/registry.ts`) exposes `getAdapter(id)` + `ADAPTER_IDS`
+for all three platforms; the two agent-bound adapters live in each platform's
+`platform.ts`. e2e drives every route (`kit`/`vrcpop`/`vrctl` panel specs).
+
 ## e2e mocks
 
 Tests never hit the real platforms. `e2e/fixtures/extension.ts` exposes
@@ -193,6 +209,20 @@ once the bridge branch is deployed to development.rave.page. Writes use the pure
 `{$ref}` placeholders (new event/slot ids). Poster bytes upload imperatively
 (`setPoster`): chunked `media-upload` (resume from `uploaded_chunk_numbers`, poll
 `pipeline_status` to `ready`) then `PATCH /events/{id}/poster`.
+
+**Genres** write organizer-side: `PUT /taxonomy/{entity_type}/{entity_id}/genres`
+(`setEntityManualGenres`, body `{genre_slugs}`) replaces this caller's manual
+genre assignments; slugs resolve from `GET /taxonomy/genres` (`loadVocab`). The
+admin-only POST `/taxonomy/entities/event/{id}/genres` is not used (403 for
+non-admin owners).
+
+**Vocab mapping to the live spec** (`toRavepage`/`fromRavepage`, with `// spec:`
+comments citing the `EventOut` schema fields): platform tags `windows→pc`,
+`android→quest` (ios has no rave.page tag → `LossReport.dropped`); `age_gate` ∈
+`all_ages | 18_plus | 21_plus` (core `ageGated` → `18_plus`); `scene_type` ∈
+`club | festival | rave | concert | showcase`; `energy_level` ∈
+`chill | medium | high | extreme`. Unmappable scene/energy values drop to the
+loss report instead of being sent verbatim.
 
 ## Manual verification browser (`pnpm dev:browser`)
 

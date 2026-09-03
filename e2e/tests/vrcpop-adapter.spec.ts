@@ -110,9 +110,8 @@ test('vrcpop transport: create draft, update w/ version, stale->500, flyer multi
   expect(recorder.deleteBodies[0]).toMatchObject({ event_id: 100001 });
 });
 
-// --- Panel-driven end-to-end. Requires the lead to wire VrcpopDevPanel into the
-// dashboard (App.tsx is off-limits to P4). Skips cleanly until then; the lead
-// un-skips after adding the #/dev/vrcpop route (see docs/platforms/vrcpop.md). ---
+// --- Panel-driven end-to-end. Drives VrcpopDevPanel via the #/dev/vrcpop hash
+// route (App.tsx router). ---
 test('vrcpop dev panel: clubs -> events(draft) -> read -> preview==recorded create (draft) -> flyer -> conflict -> delete', async ({ context }) => {
   const recorder: VrcpopRecorder = newRecorder();
   await mockVrcpopSite(context, recorder);
@@ -123,9 +122,7 @@ test('vrcpop dev panel: clubs -> events(draft) -> read -> preview==recorded crea
   });
   await page.reload();
 
-  const panel = page.getByTestId('vrcpop-dev-panel');
-  const wired = (await panel.count()) > 0;
-  test.skip(!wired, 'VrcpopDevPanel not wired into App.tsx yet (App.tsx is off-limits to P4). Lead adds: `if (location.hash === "#/dev/vrcpop") return <VrcpopDevPanel/>;`');
+  await expect(page.getByTestId('vrcpop-dev-panel')).toBeVisible();
 
   // clubs -> pick -> events (draft visible)
   await page.getByTestId('vp-clubs').click();

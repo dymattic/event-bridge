@@ -44,7 +44,7 @@ function b2bCore(): EventCore {
 
 describe('toRavepage', () => {
   it('draft/unlisted defaults; UTC ISO times; B2B = 2 performers on 1 slot', () => {
-    const build = toRavepage(b2bCore(), { organizerType: 'group', organizerId: 'grp_x', publish: false, genreVocab: { dnb: 'gen_1' } });
+    const build = toRavepage(b2bCore(), { organizerType: 'group', organizerId: 'grp_x', publish: false, genreVocab: { dnb: 'dnb' } });
     expect(build.event.status).toBe('draft');
     expect(build.event.visibility).toBe('unlisted');
     expect(build.event.is_public).toBe(false);
@@ -52,14 +52,15 @@ describe('toRavepage', () => {
     expect(build.event.ends_at).toBe('2026-09-03T21:00:00Z');
     expect(build.event.timezone).toBe('Europe/Berlin');
     expect(build.event.open_decks).toBe(true);
-    expect(build.event.platforms).toEqual(['windows']);
+    expect(build.event.platforms).toEqual(['pc']); // spec: windows -> pc
+    expect(build.event.energy_level).toBe('high'); // spec: EventOut.energy_level enum
     expect(build.slots).toHaveLength(1);
     expect(build.slots[0]?.slot_number).toBe(1);
     expect(build.slots[0]?.starts_at).toBe('2026-09-03T20:00:00Z');
     expect(build.performers).toHaveLength(2);
     expect(build.performers.every((p) => p.slotIndex === 0)).toBe(true);
     expect(build.performers.map((p) => p.performer.performer_name)).toEqual(['DJ A', 'DJ B']);
-    expect(build.genreIds).toEqual(['gen_1']);
+    expect(build.genreSlugs).toEqual(['dnb']); // name -> slug via vocab
   });
 
   it('publish -> scheduled/public/is_public', () => {
@@ -67,6 +68,21 @@ describe('toRavepage', () => {
     expect(build.event.status).toBe('scheduled');
     expect(build.event.visibility).toBe('public');
     expect(build.event.is_public).toBe(true);
+  });
+
+  it('platform tags: windows->pc, android->quest, ios dropped; age_gate 18_plus; scene_type mapped', () => {
+    const core: EventCore = {
+      ...b2bCore(),
+      flags: { ageGated: true, platforms: ['windows', 'android', 'ios'] },
+      music: { genres: [], sceneType: 'Rave', energy: 'peak time' },
+    };
+    const build = toRavepage(core, { organizerType: 'group', organizerId: 'grp_x', publish: false });
+    expect(build.event.platforms).toEqual(['pc', 'quest']); // spec: EventOut.platforms
+    expect(build.event.age_gate).toBe('18_plus'); // spec: EventOut.age_gate
+    expect(build.event.scene_type).toBe('rave'); // spec: EventOut.scene_type
+    expect(build.event.energy_level).toBeUndefined(); // "peak time" not in the enum
+    expect(build.dropped.some((d) => d.path === 'flags.platforms' && /ios/.test(d.reason))).toBe(true);
+    expect(build.dropped.some((d) => d.path === 'music.energy')).toBe(true);
   });
 });
 

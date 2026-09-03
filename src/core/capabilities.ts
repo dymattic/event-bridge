@@ -5,9 +5,13 @@ export type FlagKey = keyof Flags;
 
 export type FlagSupport = Partial<Record<FlagKey, boolean>>;
 
+// Draft support. Most platforms know for certain (boolean); vrcpop is tri-state
+// because the repo rule forbids probing it (no test events) — see vrcpop caps.
+export type DraftSupport = 'supported' | 'unsupported' | 'expected-unverified';
+
 export interface PlatformCapabilities {
   platform: PlatformId;
-  draft: boolean; // real draft state (not forced publish)
+  draft: boolean | DraftSupport; // real draft state (not forced publish)
   vj: boolean;
   dancers: boolean;
   hosts: boolean;

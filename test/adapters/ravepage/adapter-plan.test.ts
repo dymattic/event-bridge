@@ -25,7 +25,7 @@ vi.mock('../../../src/adapters/ravepage/routes', () => {
       deleteSlot: make('deleteSlot', undefined),
       addPerformer: make('addPerformer', { id: 'ep_new' }),
       deletePerformer: make('deletePerformer', undefined),
-      assignEventGenres: make('assignEventGenres', { ok: true }),
+      setEntityGenres: make('setEntityGenres', { ok: true }),
       assignPoster: make('assignPoster', {}),
       deletePoster: make('deletePoster', undefined),
     },
@@ -113,15 +113,15 @@ describe('planCreate', () => {
     expect(ev.is_public).toBe(true);
   });
 
-  it('resolves genre names to ids via the vocab', () => {
+  it('resolves genre names to slugs via the vocab', () => {
     const { steps } = planCreate(core({ music: { genres: ['Techno', 'Unknown'] } }), {
       organizer: ORG,
       publish: false,
-      genreVocab: { techno: 'gen_1' },
+      genreVocab: { techno: 'techno' },
     });
     const g = steps.find((s) => s.kind === 'genres');
     expect(g?.routeId).toBe('genres.assign');
-    expect((g?.request as { body: { ids: string[] } }).body.ids).toEqual(['gen_1']);
+    expect((g?.request as { body: { genre_slugs: string[] } }).body.genre_slugs).toEqual(['techno']);
   });
 });
 

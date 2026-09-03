@@ -82,36 +82,24 @@ the returned `flyer_url`. Remove = single `DELETE upload-flyer.php`. External
 
 ## Dev panel + wiring
 
-`src/ui/dashboard/dev/VrcpopDevPanel.tsx` (exported, **not** wired — App.tsx is
-owned by P3). Buttons: My clubs, Events, Read event, Preview create draft (shows
-the exact JSON), Run create draft, Set flyer (file picker), Delete. Drives the
-adapter via the P2 `withAgent` transport; used only against mocks in e2e and,
-later, read-only by the lead.
+`src/ui/dashboard/dev/VrcpopDevPanel.tsx`, wired into the dashboard hash router
+at `#/dev/vrcpop` (`App.tsx`). Buttons: My clubs, Events, Read event, Preview
+create draft (shows the exact JSON), Run create draft, Set flyer (file picker),
+Delete. Drives the native adapter via the `withAgent` transport; exercised
+against mocks in `e2e/tests/vrcpop-adapter.spec.ts` (panel flow) and, later,
+read-only by the lead.
 
-Wire it (lead) with one line — hash route in `App.tsx`:
+## PlatformAdapter binding
 
-```tsx
-import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
-// first line of App(): if (location.hash === '#/dev/vrcpop') return <VrcpopDevPanel />;
-```
-
-or, without touching App.tsx, in `main.tsx`:
-
-```tsx
-import { mountVrcpopDevPanel } from './dev/vrcpop-dev-entry';
-// if (location.hash === '#/dev/vrcpop') mountVrcpopDevPanel(el); else createRoot(el).render(<App/>);
-```
-
-Once wired, un-skip the panel test in `e2e/tests/vrcpop-adapter.spec.ts`
-(it skips itself until the panel renders).
-
-## PlatformAdapter (P3) reconciliation — open for the lead
-
-P3's `src/adapters/types.ts` `PlatformAdapter` is **agentless** (rave.page does
-CORS-exempt fetch from the dashboard itself). vrcpop needs the in-tab agent, so
-`vrcpopAdapter` threads a `VrcpopAgent` through every method (and stays
-unit-testable without the chrome-only webext shim). It matches the plan's
-adapter sketch, not P3's concrete interface. To register it, the lead should
-either add an agent-binding wrapper (`withAgent('vrcpop', …)` supplied by the
-dashboard) that maps vrcpop types → `ConnectionStatus`/`OwnClub`/`OwnEvent`/
-`PlanResult`, or evolve `PlatformAdapter` to pass a transport handle.
+The native `vrcpopAdapter` (`adapter.ts`) threads a `VrcpopAgent` through every
+method (unit-testable without the webext shim). `src/adapters/vrcpop/platform.ts`
+binds the agent via `withAgent` and exposes `vrcpopAdapter: PlatformAdapter`,
+mapping vrcpop types → shared `ConnectionStatus`/`OwnClub`/`OwnEvent`/`PlanResult`.
+The registry imports it from `./platform` (never `./index`, which stays pure so
+unit tests avoid the chrome shim). Impedance bridges: the sync `plan*` builders
+mint own-surface brands from the opts ids (`ownGroupRef`/`ownEventRef`);
+`readEvent`/`setPoster`/`removePoster` locate the owning club by scanning the
+user's own clubs/events; poster set/remove ride `setPoster`/`removePoster`
+(imperative), so `planPoster` reports loss only. The shared
+`PlatformCapabilities.draft` was widened to a tri-state (`DraftSupport`) so
+vrcpop's `expected-unverified` fits `caps` while rave.page/vrc.tl keep `true`.

@@ -2,8 +2,8 @@
 // read-only manual checks (own organizers, grid, detail parse, performer search,
 // create preview). WRITES (run create / delete) are preview-first + gated behind
 // an explicit "mock/dev only" confirm — the repo rule is NO test events on
-// vrc.tl. Plain Tailwind token classes; self-contained; exported, NOT wired into
-// App.tsx (the lead wires it — see vrctl-dev-entry.ts). Exposes nothing on window.
+// vrc.tl. Plain Tailwind token classes; self-contained. Wired into the dashboard
+// hash router at #/dev/vrctl (App.tsx). Exposes nothing on window.
 import { useCallback, useState } from 'react';
 import { isBridgeError } from '../../../core/errors';
 import { asIanaZone, asIsoUtc } from '../../../core/time';
@@ -93,54 +93,55 @@ export function VrctlDevPanel() {
   });
 
   return (
-    <section className="p-4 bg-background text-foreground">
+    <section data-testid="vrctl-dev-panel" className="p-4 bg-background min-h-screen text-foreground">
       <h2 className="font-orbitron text-xl">vrc.tl dev panel</h2>
       <p className="text-2xs text-muted-foreground mb-3">read-only by default · writes are preview-first + gated</p>
 
       <div className="flex flex-wrap gap-2 mb-3">
-        <button type="button" className={btn} disabled={busy} onClick={onOrganizers}>My organizers</button>
-        <button type="button" className={btn} disabled={busy} onClick={onGrid}>Grid</button>
-        <button type="button" className={btn} disabled={busy} onClick={onPreviewCreate}>Preview create</button>
+        <button type="button" data-testid="vt-organizers" className={btn} disabled={busy} onClick={onOrganizers}>My organizers</button>
+        <button type="button" data-testid="vt-grid" className={btn} disabled={busy} onClick={onGrid}>Grid</button>
+        <button type="button" data-testid="vt-preview" className={btn} disabled={busy} onClick={onPreviewCreate}>Preview create</button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <input
           value={eventId}
+          data-testid="vt-eventid"
           onChange={(e) => setEventId(e.target.value)}
           placeholder="event id"
           className="min-h-11 px-3 rounded-md border border-input bg-background text-foreground"
         />
-        <button type="button" className={btn} disabled={busy || !eventId} onClick={onReadDetail}>Read detail</button>
+        <button type="button" data-testid="vt-read" className={btn} disabled={busy || !eventId} onClick={onReadDetail}>Read detail</button>
       </div>
 
       <div className="mb-3 border border-brand-amber rounded-md p-2">
         <label className="flex items-center gap-2 text-2xs text-brand-amber">
-          <input type="checkbox" checked={confirmWrite} onChange={(e) => setConfirmWrite(e.target.checked)} />
+          <input type="checkbox" data-testid="vt-confirm" checked={confirmWrite} onChange={(e) => setConfirmWrite(e.target.checked)} />
           I confirm this targets a MOCK / dev instance (never a real vrc.tl event)
         </label>
         <div className="flex flex-wrap gap-2 mt-2">
-          <button type="button" className={btn} disabled={busy || !confirmWrite} onClick={onRunCreate}>Run create (mock only)</button>
-          <button type="button" className={btn} disabled={busy || !confirmWrite || !eventId} onClick={onDelete}>Delete (mock only)</button>
+          <button type="button" data-testid="vt-run-create" className={btn} disabled={busy || !confirmWrite} onClick={onRunCreate}>Run create (mock only)</button>
+          <button type="button" data-testid="vt-delete" className={btn} disabled={busy || !confirmWrite || !eventId} onClick={onDelete}>Delete (mock only)</button>
         </div>
       </div>
 
       {clubs && (
         <ul className="mb-3 list-disc pl-5">
           {clubs.map((c) => (
-            <li key={c.id} className="text-foreground">{c.name} · {c.id}{c.vrchatGroupId ? ` · ${c.vrchatGroupId}` : ''}</li>
+            <li key={c.id} data-testid="vt-club" className="text-foreground">{c.name} · {c.id}{c.vrchatGroupId ? ` · ${c.vrchatGroupId}` : ''}</li>
           ))}
         </ul>
       )}
       {events && (
         <ul className="mb-3 list-disc pl-5">
           {events.map((e) => (
-            <li key={e.id} className="text-foreground">{e.title} · {e.id} · {e.start ?? ''}{e.status ? ` · ${e.status}` : ''}</li>
+            <li key={e.id} data-testid="vt-event" className="text-foreground">{e.title} · {e.id} · {e.start ?? ''}{e.status ? ` · ${e.status}` : ''}</li>
           ))}
         </ul>
       )}
-      {detail && <pre className="mb-3 text-2xs text-brand-mint whitespace-pre-wrap">{detail}</pre>}
-      {preview && <pre className="mb-3 text-2xs text-foreground whitespace-pre-wrap">{preview.join('\n')}</pre>}
-      {error && <p className="text-2xs text-brand-base">{error}</p>}
+      {detail && <pre data-testid="vt-detail" className="mb-3 text-2xs text-brand-mint whitespace-pre-wrap">{detail}</pre>}
+      {preview && <pre data-testid="vt-preview-out" className="mb-3 text-2xs text-foreground whitespace-pre-wrap">{preview.join('\n')}</pre>}
+      {error && <p data-testid="vt-error" className="text-2xs text-brand-base">{error}</p>}
     </section>
   );
 }

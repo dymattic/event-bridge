@@ -5,9 +5,9 @@
 // Discord" flow POSTs status:"draft" to action=create. Still 'expected-unverified'
 // until the user's first real use confirms it. Publish stays an explicit toggle
 // with a red "PUBLIC immediately" confirm in the UI.
-import { VRCPOP_CAPS } from '../../core/capabilities';
+import { VRCPOP_CAPS, type DraftSupport } from '../../core/capabilities';
 
-export type DraftSupport = 'supported' | 'unsupported' | 'expected-unverified';
+export type { DraftSupport };
 
 export interface VrcpopCaps extends Omit<typeof VRCPOP_CAPS, 'draft'> {
   draft: DraftSupport;

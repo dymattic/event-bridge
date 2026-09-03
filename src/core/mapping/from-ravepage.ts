@@ -5,10 +5,11 @@ import type { EventPerformerOut } from '../../adapters/ravepage/api-client/model
 import type { Audience, EventCore, IanaZone, IsoUtc, Performer, Slot, VrPlatform } from '../schema';
 import { asIanaZone, asIsoUtc } from '../time';
 
+// spec: EventOut.platforms tags are `pc`/`quest` — mirror to-ravepage's mapping.
 function toVrPlatform(s: string): VrPlatform | undefined {
   const l = s.toLowerCase();
-  if (l.includes('win')) return 'windows';
-  if (l.includes('android') || l.includes('quest')) return 'android';
+  if (l === 'pc' || l.includes('win')) return 'windows';
+  if (l.includes('quest') || l.includes('android')) return 'android';
   if (l.includes('ios')) return 'ios';
   return undefined;
 }
@@ -86,7 +87,8 @@ export function fromRavepage(
     },
     flags: {
       openDecks: event.open_decks ?? false,
-      ageGated: !!event.age_gate,
+      // spec: EventOut.age_gate — all_ages (or empty) = not gated.
+      ageGated: !!event.age_gate && event.age_gate !== 'all_ages',
       platforms: platforms.length ? platforms : undefined,
     },
     music: {
