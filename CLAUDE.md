@@ -62,7 +62,8 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   user decision 2026-09-03), plus its `tokens.css`. No hand-rolled widgets or
   ad-hoc colours when a kit component/token exists; missing primitives are
   added upstream in the kit, never forked here. Until the kit is on npm the
-  dependency is a `link:` to a sibling rave.page checkout (see docs).
+  dependency is a vendored tarball under `vendor/` with `vendor/PROVENANCE.md`
+  (`pnpm vendor:ui`; see docs).
 - **Gates before any commit:**
   `pnpm check:pins && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`
   clean (keep this row current as tooling lands).

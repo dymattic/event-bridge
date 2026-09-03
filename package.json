@@ -4,7 +4,10 @@
   "type": "module",
   "version": "0.1.0",
   "license": "WTFPL",
-  "engines": { "node": ">=22", "pnpm": ">=10" },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "node tools/build.mjs && node tools/assemble.mjs",
@@ -15,9 +18,12 @@
     "check:pins": "node tools/check-pins.mjs",
     "generate-api": "node generate-api.mjs",
     "icons": "node tools/make-icons.mjs",
-    "lint:firefox": "pnpm dlx web-ext@10.6.0 lint --source-dir dist/firefox"
+    "lint:firefox": "pnpm dlx web-ext@10.6.0 lint --source-dir dist/firefox",
+    "vendor:ui": "node tools/vendor-ui.mjs"
   },
   "dependencies": {
+    "@rave-page/ui": "file:vendor/rave-page-ui-0.1.0.tgz",
+    "lucide-react": "1.34.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -36,6 +42,8 @@
     "vitest": "4.1.11"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

@@ -5,15 +5,27 @@ const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 const EXACT = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+// Local specs (vendored tarball / linked checkout) have no registry entry to
+// age-check. `@rave-page/ui` is a `file:` tarball whose provenance +
+// transitive exact pins live in vendor/PROVENANCE.md + SUPPLY_CHAIN.md; its
+// deps are still age-gated transitively by pnpm minimumReleaseAge at resolve.
+const LOCAL = /^(file:|link:)/;
 const encode = (n) => (n.startsWith('@') ? `@${encodeURIComponent(n.slice(1))}` : n);
 
 const rows = [];
+const skipped = [];
 let failed = false;
 
 for (const [name, version] of Object.entries(deps).sort((a, b) => a[0].localeCompare(b[0]))) {
   let status = 'OK';
   let published = '-';
   let ageDays = '-';
+  if (LOCAL.test(version)) {
+    status = 'SKIP:local';
+    skipped.push({name, version});
+    rows.push({name, version, published, ageDays, status});
+    continue;
+  }
   if (!EXACT.test(version)) {
     status = 'FAIL:range';
     failed = true;
@@ -52,5 +64,10 @@ for (const r of rows) {
 
 console.log('\nSUPPLY_CHAIN.md rows (paste-ready):');
 for (const r of rows) console.log(`| ${r.name} | ${r.version} | | released ${r.published} |`);
+
+if (skipped.length) {
+  console.log('\nSkipped (local specs, not registry-aged; provenance in vendor/PROVENANCE.md + SUPPLY_CHAIN.md):');
+  for (const s of skipped) console.log(`  - ${s.name} (${s.version})`);
+}
 
 process.exit(failed ? 1 : 0);

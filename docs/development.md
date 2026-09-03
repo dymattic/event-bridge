@@ -14,12 +14,60 @@ compiles `src/ui/styles.css` -> `build/styles.css`) then `tools/assemble.mjs`
 (merges manifests, copies bundles + built CSS + HTML + icons + `src/ui/fonts/*`
 into each `dist/` target). `dist/` and `build/` are git-ignored.
 
-**UI stack:** React 19 + Tailwind 4 on `@rave-page/ui`, the design-system kit
-owned by the rave.page repo (`packages/ui`). `src/ui/styles.css` is the Tailwind
-entry (`@import "tailwindcss"`); the rave.page design tokens (brand palette,
-semantic `--color-*`, `--control-h`, Orbitron font) currently sit in that file
-verbatim and move to `@import "@rave-page/ui/tokens.css"` once the kit package
-lands. The Orbitron font + its OFL license ship in `dist/*/fonts/`.
+## UI stack (@rave-page/ui)
+
+React 19 + Tailwind 4 on `@rave-page/ui` — the shared rave.page design-system
+kit (Button, Badge, Card/DashboardCard/StatCard, Dialog family, form controls,
+SmartSelect, Date/DateTime pickers, DataTable, Toast, …) plus its `tokens.css`
+(brand palette, semantic `--color-*`, `--control-h` density, Orbitron
+`font-orbitron`, z-ladder, `--breakpoint-xxl`). No hand-rolled widgets or
+ad-hoc colours where a kit component/token exists; missing primitives are added
+upstream in the kit, never forked here. Extension-specific views stay in
+`src/ui/`. `views/KitShowcase.tsx` renders every export (wire it at `#/kit`).
+
+`src/ui/styles.css` is the Tailwind entry:
+
+```css
+@import "tailwindcss";
+@import "@rave-page/ui/tokens.css";
+@source "../../node_modules/@rave-page/ui/src";   /* node_modules is auto-ignored; opt the kit back in */
+@source "./**/*.tsx";                             /* the extension's own components */
+```
+
+It adds only the extension's own Orbitron `@font-face` (dist-relative
+`fonts/…` url — we do NOT import the kit's `font.css`, whose url wouldn't
+resolve from `dist/`) and the `body` defaults. Orbitron + its OFL license ship
+in `dist/*/fonts/`.
+
+**Providers.** Mount once at each React root (`popup/main.tsx`,
+`dashboard/main.tsx`): `TooltipProvider` (backs any `Button`/`IconButtonWithTooltip`
+`tooltip`) wrapping `NotificationProvider` with `<Toast/>` inside (backs
+`useNotification()`).
+
+### Vendored kit (not `link:`)
+
+The kit isn't on npm yet, so it's consumed as a committed tarball under
+`vendor/` — a self-contained `pnpm install` for outside contributors (no
+sibling rave.page checkout needed). `package.json` carries
+`"@rave-page/ui": "file:vendor/rave-page-ui-<version>.tgz"`; peers are
+react/react-dom 19 + lucide-react 1.34 (the kit accepts lucide `>=0.560 <2`).
+Provenance (kit commit/branch, sha256, UTC date, refresh command) lives in
+`vendor/PROVENANCE.md`. Refresh:
+
+```sh
+pnpm vendor:ui                                     # default kit ../rave.page/packages/ui
+pnpm vendor:ui ../rave.page-wt-uikit/packages/ui   # today the kit is on a worktree
+pnpm install                                       # if the spec/tarball changed
+```
+
+`tools/vendor-ui.mjs` asserts the kit identity, runs `pnpm --dir <kit> build`
+then `pnpm --dir <kit> pack` into `vendor/`, drops stale tarballs, verifies the
+packed `.` export resolves to the compiled `dist/` (event-bridge consumes the
+`.js`/`.d.ts`, never the kit's looser TS sources — our tsconfig is stricter),
+rewrites `vendor/PROVENANCE.md`, and syncs the `package.json` spec.
+`check:pins` skips the `file:` spec with a printed note; the kit's transitive
+exact pins (Radix, cva, clsx, tailwind-merge, dayjs) are still age-gated by
+pnpm `minimumReleaseAge`. Switch to the npm version in P8.
 
 ## Two-manifest layout
 
@@ -117,3 +165,4 @@ over a real port), plus the P0 `smoke.spec.ts`.
   only): the e2e probe confirmed matching tabs AND their `url` come back with
   just `host_permissions`. `manifest/base.json` keeps `permissions:
   ["storage","scripting"]` — no `tabs`.
+

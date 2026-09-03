@@ -1,11 +1,10 @@
+import { Badge, Button, type BadgeProps } from '@rave-page/ui';
 import { ext } from '../../shared/webext';
 import { BUILD_ID } from '../../shared/build-id';
 import type { BackgroundRequest } from '../../shared/messages';
 import type { SessionState } from '../../runtime/sessions';
 import { usePlatformSessions, type PlatformRow } from './hooks/usePlatformSessions';
 import { usePermission } from './hooks/usePermission';
-
-// TODO(P0b): swap to @rave-page/ui Button/Badge once the shared kit is available.
 
 const STATE_TEXT: Record<SessionState, string> = {
   'logged-in': 'Logged in',
@@ -15,17 +14,20 @@ const STATE_TEXT: Record<SessionState, string> = {
   error: 'Error',
 };
 
-// Hue = intent: mint confirm, amber warn, muted absent, brand-base action/error.
-const STATE_CLASS: Record<SessionState, string> = {
-  'logged-in': 'text-brand-mint',
-  'logged-out': 'text-brand-amber',
-  'no-tab': 'text-muted-foreground',
-  'no-permission': 'text-brand-base',
-  error: 'text-brand-base',
+// Hue = intent (kit Badge variants): mint confirm, amber warn, neutral chrome
+// when absent, brand-base soft for the error/no-access states.
+const STATE_VARIANT: Record<SessionState, BadgeProps['variant']> = {
+  'logged-in': 'success',
+  'logged-out': 'warning',
+  'no-tab': 'secondary',
+  'no-permission': 'error',
+  error: 'error',
 };
 
 function Row({ row, onGranted }: { row: PlatformRow; onGranted: () => void }) {
   const { request } = usePermission(row.platform);
+  // request() calls ext.permissions.request synchronously (no await before it) —
+  // Firefox needs the user gesture live when it runs.
   const grant = (): void => {
     void request().then((ok) => {
       if (ok) onGranted();
@@ -35,21 +37,17 @@ function Row({ row, onGranted }: { row: PlatformRow; onGranted: () => void }) {
   return (
     <li className="flex items-center justify-between border-b border-border py-2">
       <span className="text-foreground">{row.name}</span>
-      <span className="flex items-center gap-2">
-        <span data-testid={`status-${row.platform}`} className={`text-2xs ${STATE_CLASS[row.status.state]}`}>
+      <div className="flex items-center gap-2">
+        <Badge data-testid={`status-${row.platform}`} variant={STATE_VARIANT[row.status.state]}>
           {STATE_TEXT[row.status.state]}
           {label}
-        </span>
+        </Badge>
         {row.status.state === 'no-permission' && (
-          <button
-            type="button"
-            onClick={grant}
-            className="text-2xs text-brand-base border border-border rounded px-2 h-[var(--control-h)]"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={grant}>
             Grant access
-          </button>
+          </Button>
         )}
-      </span>
+      </div>
     </li>
   );
 }
@@ -70,21 +68,12 @@ export function App() {
         ))}
       </ul>
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={openDashboard}
-          className="bg-brand-base text-white rounded-md h-[var(--control-h)] px-4"
-        >
+        <Button type="button" onClick={openDashboard}>
           Open dashboard
-        </button>
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={loading}
-          className="border border-border text-foreground rounded-md h-[var(--control-h)] px-4"
-        >
+        </Button>
+        <Button type="button" variant="outline" onClick={refresh} disabled={loading}>
           {loading ? 'Refreshing…' : 'Refresh'}
-        </button>
+        </Button>
       </div>
     </main>
   );

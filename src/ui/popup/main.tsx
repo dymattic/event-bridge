@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { NotificationProvider, Toast, TooltipProvider } from '@rave-page/ui';
 import { App } from './App';
 import { ensureAgent, queryPlatformTabs, PLATFORM_ORIGINS } from '../../runtime/tabs';
 import { callAgent, sendBlob } from '../../runtime/agent-transport';
@@ -21,4 +22,12 @@ declare global {
 window.__eventBridgeRuntime = { ensureAgent, queryPlatformTabs, callAgent, sendBlob, getSessionStatus, PLATFORM_ORIGINS };
 
 const el = document.getElementById('root');
-if (el) createRoot(el).render(<App />);
+if (el)
+  createRoot(el).render(
+    <TooltipProvider>
+      <NotificationProvider>
+        <App />
+        <Toast />
+      </NotificationProvider>
+    </TooltipProvider>,
+  );
