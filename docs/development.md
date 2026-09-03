@@ -62,3 +62,58 @@ Every direct dep is pinned exact and must be **>= 7 days old** at pin time
 (`SUPPLY_CHAIN.md` row each). `pnpm check:pins` verifies this against the npm
 registry; `pnpm-workspace.yaml` `minimumReleaseAge: 10080` also gates transitives
 at resolve time. Never `@latest`, never a range.
+
+## Runtime model (P2)
+
+Three cooperating contexts (both browsers):
+
+- **dashboard/popup** (extension pages, `dashboard.js` / `popup.js`) run
+  everything: `src/runtime/*` orchestrates agents, session status, settings.
+  They inject agents and drive them over ports. Popup shows per-platform session
+  status and (Firefox) requests host permissions in the click handler.
+- **agent** (`agent.js`, `src/agent/*`) is injected on demand per origin via
+  `scripting.executeScript`. Idempotent install guard
+  (`globalThis.__eventBridgeAgent = {buildId}`). Answers a one-shot `ping`
+  (`runtime.onMessage`, used right after injection to read the live build) and
+  request/response ops over a named `'agent'` port (`runtime.onConnect`):
+  `ping`, `session`, `http` (strictly same-origin, `credentials:'same-origin'`),
+  and blob transfer (`blobBegin/Chunk/End/Drop`, assembled in a 5-min-TTL Map).
+  Binary crosses the bus as base64 slices ≤1 MiB (`src/shared/base64.ts`);
+  Chrome JSON-serializes messages, so typed arrays don't survive.
+- **background** (`background.js`) only opens/focuses the dashboard (toolbar
+  click or an `open-dashboard` runtime message). No DOM, no network.
+
+`ensureAgent(platform, {allowOpen})` finds a platform tab (`tabs.query({url})`),
+optionally opens one inactive (15 s ready timeout), injects, verifies the build
+(stale → reload + re-inject once). `getSessionStatus` NEVER opens tabs
+(`allowOpen:false`); only a user-triggered action passes `allowOpen:true`.
+Transport caches one port per tab and reconnects on disconnect (Firefox drops
+ports). Codes are `BridgeError`/`BridgeErrorCode` from `src/core/errors.ts`.
+
+## e2e mocks
+
+Tests never hit the real platforms. `e2e/fixtures/extension.ts` exposes
+`mockPlatform(context, platform, 'logged-in'|'logged-out')` which `context.route`s
+`https://vrcpop.com/**`, `https://vrc.tl/**`, `https://development.rave.page/**`
+(+ `https://development.api.rave.page/**` → 404 JSON) to self-authored fixtures
+in `e2e/mocks/` (sanitized: placeholder group id, organizer 9001, CSRF
+`TEST_CSRF_TOKEN`). The vrcpop mock carries the inline `window.vrcpop.user`
+script; the vrc.tl logged-out mock 302-redirects `/admin/event` to `/sign/in`;
+the rave.page mock sets `localStorage.auth_token` to an unsigned test JWT with a
+future `exp`. Helpers: `openPopup`, `openDashboard`, `openPlatformTab`,
+`getExtensionId`. Specs: `session-status.spec.ts` (no-tab / logged-in /
+logged-out / `tabs.query` probe), `agent-blob.spec.ts` (3 MiB sha256 round-trip
+over a real port), plus the P0 `smoke.spec.ts`.
+
+## Verified platform facts
+
+- **vrc.tl (Nette) same-origin fetch passes the same-site guard.** In-tab agent
+  requests are viable; a nonexistent signal returns a plain 403 page (not the
+  CSRF redirect); `GET /admin/ajax/performer?term=…` returns 200 JSON.
+- **Chrome runtime messaging JSON-serializes payloads** — typed arrays /
+  ArrayBuffers do NOT survive. All binary crosses the bus as base64 slices
+  ≤1 MiB (`sliceBase64`).
+- **`tabs.query({url})` works WITHOUT the `tabs` permission** (host permission
+  only): the e2e probe confirmed matching tabs AND their `url` come back with
+  just `host_permissions`. `manifest/base.json` keeps `permissions:
+  ["storage","scripting"]` — no `tabs`.

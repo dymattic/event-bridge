@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rave.page mock</title>
+</head>
+<body>
+<h1>rave.page</h1>
+<script>
+  (function () {
+    if (__LOGGEDIN__) {
+      // Unsigned test JWT with a future exp. No real token, no signature.
+      var b64u = function (o) {
+        return btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      };
+      var exp = Math.floor(Date.now() / 1000) + 3600;
+      localStorage.setItem('auth_token', 'eyJhbGciOiJub25lIn0.' + b64u({ sub: 'test-user', exp: exp }) + '.sig');
+    } else {
+      localStorage.removeItem('auth_token');
+    }
+  })();
+</script>
+</body>
+</html>
