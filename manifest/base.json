@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "event-bridge",
+  "version": "0.1.0",
+  "description": "Create, manage and transfer VRChat scene events across vrc.tl, vrcpop.com and rave.page as the logged-in user.",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
+  },
+  "permissions": ["storage", "scripting"],
+  "host_permissions": [
+    "https://vrc.tl/*",
+    "https://vrcpop.com/*",
+    "https://development.rave.page/*",
+    "https://development.api.rave.page/*"
+  ]
+}

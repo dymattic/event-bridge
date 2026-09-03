@@ -57,8 +57,15 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   inside the adapter.
 - **Typed everything, zero unchecked `any`.** TS `strict`; casts only at real
   boundaries with a comment.
-- **Gates before any commit:** `pnpm typecheck && pnpm test && pnpm build`
-  clean (once scaffolded; keep this row current as tooling lands).
+- **UI reuse over reinvention.** Dashboard/popup are built on `@rave-page/ui`,
+  the shared design-system kit owned by the rave.page repo (`packages/ui`;
+  user decision 2026-09-03), plus its `tokens.css`. No hand-rolled widgets or
+  ad-hoc colours when a kit component/token exists; missing primitives are
+  added upstream in the kit, never forked here. Until the kit is on npm the
+  dependency is a `link:` to a sibling rave.page checkout (see docs).
+- **Gates before any commit:**
+  `pnpm check:pins && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`
+  clean (keep this row current as tooling lands).
 - **Secrets hygiene.** Test credentials in git-ignored `.env` /
   `CLAUDE.local.md` only.
 - **Never create public events on third-party platforms during testing**
@@ -93,7 +100,7 @@ src/
                via /admin/ajax/performer, slot ids read back after create,
                promoted/published split
     ravepage/  official rave.page API (development.rave.page during dev)
-  ui/          popup + options (framework-light)
+  ui/          React 19 + Tailwind 4 on @rave-page/ui (shared kit owned by rave.page) + its tokens.css; only extension-specific views/components live here
   background/  session detection, fetch orchestration
 e2e/           Playwright against the extension
 docs/          user-facing docs
@@ -111,3 +118,18 @@ capability-mapping precedent: not every platform federates every concept).
 - node ≥22 + pnpm ≥10 on PATH.
 - Manual verification via Playwright MCP with the user's logged-in sessions;
   the user logs in themselves - never ask for platform credentials.
+
+## Commands
+
+| Task | Command |
+|---|---|
+| Install | `pnpm install` |
+| Typecheck | `pnpm typecheck` (DOM project + `tsconfig.background.json` WebWorker) |
+| Test | `pnpm test` (vitest) |
+| Build | `pnpm build` (esbuild -> `build/`, assemble -> `dist/{chrome,firefox}`) |
+| Dev watch | `pnpm dev` (esbuild context.watch + `tailwindcss --watch` together) |
+| E2E | `pnpm e2e` (first: `pnpm exec playwright install chromium`) |
+| Check pins | `pnpm check:pins` (run on any `package.json` change) |
+| Generate API | `pnpm generate-api` (stub until P3) |
+| Regen icons | `pnpm icons` |
+| Firefox lint | `pnpm lint:firefox` (`web-ext@10.6.0` via `pnpm dlx`) |

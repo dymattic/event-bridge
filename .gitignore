@@ -8,3 +8,7 @@ CLAUDE.local.md
 .playwright-mcp/
 *.log
 *.har
+build/
+test-results/
+playwright-report/
+e2e/.tmp/

@@ -1,0 +1,41 @@
+{
+  "name": "event-bridge",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "license": "WTFPL",
+  "engines": { "node": ">=22", "pnpm": ">=10" },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "node tools/build.mjs && node tools/assemble.mjs",
+    "dev": "node tools/build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.background.json --noEmit",
+    "test": "vitest run",
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "check:pins": "node tools/check-pins.mjs",
+    "generate-api": "node generate-api.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "lint:firefox": "pnpm dlx web-ext@10.6.0 lint --source-dir dist/firefox"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@tailwindcss/cli": "4.3.3",
+    "@types/chrome": "0.2.7",
+    "@types/node": "22.20.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "esbuild": "0.28.2",
+    "happy-dom": "20.11.2",
+    "openapi-typescript-codegen": "0.30.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
