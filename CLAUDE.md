@@ -68,10 +68,14 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   clean (keep this row current as tooling lands).
 - **Secrets hygiene.** Test credentials in git-ignored `.env` /
   `CLAUDE.local.md` only.
-- **Never create public events on third-party platforms during testing**
-  without the user's explicit go-ahead. vrcpop has NO draft state (every save
-  publishes); vrc.tl has "Publish to Timeline" unchecked = draft. Prefer
-  drafts, prefer the user's own club, name test events clearly.
+- **No test events on vrc.tl / vrcpop.** Never create or delete events on the
+  third-party platforms during development or testing (user rule 2026-09-03:
+  recon captured everything needed). Automated tests run against mocks only.
+  Manual checks against real sessions are read-only by default; a write is
+  allowed only as a reversible edit of the user's designated existing test
+  events (ids in git-ignored `CLAUDE.local.md`), restored afterwards, with the
+  exact request previewed first. rave.page **development** may be exercised
+  freely with draft/unlisted events, cleaned up afterwards.
 - **Clean up scratch artefacts.** Repo root stays clean.
 - **Root `.md` hygiene.** Root keeps only `README.md`, `CLAUDE.md`,
   `SUPPLY_CHAIN.md`, `LICENSE` + README-linked refs. User docs → `docs/`.
@@ -130,6 +134,6 @@ capability-mapping precedent: not every platform federates every concept).
 | Dev watch | `pnpm dev` (esbuild context.watch + `tailwindcss --watch` together) |
 | E2E | `pnpm e2e` (first: `pnpm exec playwright install chromium`) |
 | Check pins | `pnpm check:pins` (run on any `package.json` change) |
-| Generate API | `pnpm generate-api` (stub until P3) |
+| Generate API | `pnpm generate-api` (live dev OpenAPI spec → `src/adapters/ravepage/{openapi.json,api-client/}`; idempotent; run before rave.page adapter work) |
 | Regen icons | `pnpm icons` |
 | Firefox lint | `pnpm lint:firefox` (`web-ext@10.6.0` via `pnpm dlx`) |
