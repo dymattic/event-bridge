@@ -1,0 +1,10 @@
+node_modules/
+dist/
+web-ext-artifacts/
+.env
+.env.*
+CLAUDE.local.md
+.devnotes/
+.playwright-mcp/
+*.log
+*.har
