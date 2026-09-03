@@ -1,0 +1,179 @@
+{
+  "genres": [
+    {
+      "id": 16,
+      "name": "Deep Dub",
+      "color": "#a35ff7",
+      "icon": "🤮",
+      "sort_order": 1
+    },
+    {
+      "id": 1,
+      "name": "EDM",
+      "color": "#8B5CF6",
+      "icon": "🎧",
+      "sort_order": 1
+    },
+    {
+      "id": 2,
+      "name": "House",
+      "color": "#EC4899",
+      "icon": "🏠",
+      "sort_order": 2
+    },
+    {
+      "id": 3,
+      "name": "Techno",
+      "color": "#3B82F6",
+      "icon": "🔊",
+      "sort_order": 3
+    },
+    {
+      "id": 4,
+      "name": "DnB",
+      "color": "#F97316",
+      "icon": "💿",
+      "sort_order": 4
+    },
+    {
+      "id": 5,
+      "name": "Dubstep",
+      "color": "#10B981",
+      "icon": "🎵",
+      "sort_order": 5
+    },
+    {
+      "id": 6,
+      "name": "Trance",
+      "color": "#06B6D4",
+      "icon": "🎹",
+      "sort_order": 6
+    },
+    {
+      "id": 7,
+      "name": "Hardcore",
+      "color": "#EF4444",
+      "icon": "🎵",
+      "sort_order": 7
+    },
+    {
+      "id": 8,
+      "name": "Hip-Hop",
+      "color": "#F59E0B",
+      "icon": "🎵",
+      "sort_order": 8
+    },
+    {
+      "id": 9,
+      "name": "Lo-Fi",
+      "color": "#A855F7",
+      "icon": "🎵",
+      "sort_order": 9
+    },
+    {
+      "id": 10,
+      "name": "Chill",
+      "color": "#6366F1",
+      "icon": "🎵",
+      "sort_order": 10
+    },
+    {
+      "id": 11,
+      "name": "Hardstyle",
+      "color": "#DC2626",
+      "icon": "🎵",
+      "sort_order": 11
+    },
+    {
+      "id": 12,
+      "name": "Psytrance",
+      "color": "#14B8A6",
+      "icon": "🎵",
+      "sort_order": 12
+    },
+    {
+      "id": 13,
+      "name": "Synthwave",
+      "color": "#F472B6",
+      "icon": "🎵",
+      "sort_order": 13
+    },
+    {
+      "id": 15,
+      "name": "Jersey Baile",
+      "color": "#D88C9A",
+      "icon": "💞",
+      "sort_order": 14
+    },
+    {
+      "id": 18,
+      "name": "Amapiano",
+      "color": "#b8a1ec",
+      "icon": "🎹",
+      "sort_order": 15
+    },
+    {
+      "id": 24,
+      "name": "Throwbacks",
+      "color": "#D946EF",
+      "icon": "🕰️",
+      "sort_order": 15
+    },
+    {
+      "id": 19,
+      "name": "Disco",
+      "color": "#5ff7f4",
+      "icon": "🕺",
+      "sort_order": 16
+    },
+    {
+      "id": 20,
+      "name": "Funk Disco",
+      "color": "#8b5cf6",
+      "icon": "💽",
+      "sort_order": 17
+    },
+    {
+      "id": 22,
+      "name": "Jungle",
+      "color": "#2f75e4",
+      "icon": "🪘",
+      "sort_order": 18
+    },
+    {
+      "id": 23,
+      "name": "Metal",
+      "color": "#ff0000",
+      "icon": "🤘",
+      "sort_order": 19
+    },
+    {
+      "id": 25,
+      "name": "K-Pop",
+      "color": "#5fc4f7",
+      "icon": "🐨",
+      "sort_order": 20
+    },
+    {
+      "id": 26,
+      "name": "Emo",
+      "color": "#ec1313",
+      "icon": "💔",
+      "sort_order": 21
+    },
+    {
+      "id": 28,
+      "name": "Bass EDM",
+      "color": "#7045d3",
+      "icon": "🪘",
+      "sort_order": 22
+    },
+    {
+      "id": 14,
+      "name": "Open Genre",
+      "color": "#FACC15",
+      "icon": "🎲",
+      "sort_order": 99
+    }
+  ]
+}

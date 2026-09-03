@@ -1,0 +1,42 @@
+{
+  "action": "create",
+  "group_id": "grp_00000000-0000-4000-8000-000000000001",
+  "event_name": "what's poppin",
+  "event_description": "",
+  "event_date": "2026-09-03",
+  "start_time": "22:00",
+  "doors_open": null,
+  "end_time": "23:00",
+  "owner_timezone": "Europe/Berlin",
+  "default_genre_id": null,
+  "custom_genre_name": null,
+  "custom_genre_color": null,
+  "scene_type": "rave",
+  "scene_type_secondary": null,
+  "default_energy_id": null,
+  "has_open_deck": false,
+  "is_quest_compatible": false,
+  "twitch_channel": null,
+  "flyer_url": "",
+  "status": "draft",
+  "hosts": [],
+  "event_dancers": [],
+  "sets": [
+    {
+      "set_order": 1,
+      "start_time": "22:00",
+      "end_time": "23:00",
+      "performers": [{ "name": "Example DJ", "profile_id": null }],
+      "vj_name": null,
+      "vj_profile_id": null,
+      "dancer_name": null,
+      "dancer_profile_id": null,
+      "dancers": [],
+      "genre_id": null,
+      "custom_genre_name": null,
+      "custom_genre_color": null,
+      "energy_id": null,
+      "notes": null
+    }
+  ]
+}

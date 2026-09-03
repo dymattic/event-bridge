@@ -1,0 +1,28 @@
+[
+  {
+    "id": "ep_00000000-0000-4000-8000-000000000001",
+    "event_id": "evt_00000000-0000-4000-8000-000000000001",
+    "slot_id": "slt_00000000-0000-4000-8000-000000000001",
+    "performer_id": "perf_00000000-0000-4000-8000-000000000001",
+    "stage_name": "Example DJ",
+    "billing_order": 0,
+    "is_headliner": false,
+    "genre_tags": [],
+    "starts_at": "2026-09-03T20:00:00Z",
+    "ends_at": "2026-09-03T21:00:00Z",
+    "slot_title": "Opening"
+  },
+  {
+    "id": "ep_00000000-0000-4000-8000-000000000002",
+    "event_id": "evt_00000000-0000-4000-8000-000000000001",
+    "slot_id": "slt_00000000-0000-4000-8000-000000000001",
+    "performer_id": "perf_00000000-0000-4000-8000-000000000002",
+    "stage_name": "Example DJ Two",
+    "billing_order": 1,
+    "is_headliner": false,
+    "genre_tags": [],
+    "starts_at": "2026-09-03T20:00:00Z",
+    "ends_at": "2026-09-03T21:00:00Z",
+    "slot_title": "Opening"
+  }
+]

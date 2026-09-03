@@ -1,0 +1,28 @@
+{
+  "energy_levels": [
+    {
+      "id": 1,
+      "name": "⚡ Chill",
+      "color": "#4ADE80",
+      "sort_order": 1
+    },
+    {
+      "id": 2,
+      "name": "⚡ Vibe",
+      "color": "#60A5FA",
+      "sort_order": 2
+    },
+    {
+      "id": 3,
+      "name": "⚡ High Energy",
+      "color": "#F97316",
+      "sort_order": 3
+    },
+    {
+      "id": 4,
+      "name": "⚡ Intense",
+      "color": "#EF4444",
+      "sort_order": 4
+    }
+  ]
+}

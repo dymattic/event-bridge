@@ -1,0 +1,567 @@
+<!doctype html><html><body>
+<form action="/admin/event/detail/100002" method="post" id="frm-form-form" enctype="multipart/form-data" class="" novalidate="">
+
+
+
+
+			<div class="container-fluid my-3" style="max-width: 2000px">
+				<div class="row">
+					<div class="col-12 col-md-6 col-xxl-8 col-xxxl-6">
+						<div class="row">
+							<div class="col-12 col-md-12 col-xxl-6">
+	<div style="border-width: 0 0 2px 2px; border-color: currentColor; border-style: solid; padding-left: 15px" class="mb-5">
+
+		<div class="my-3">
+			<div class="fw-bold">
+				Event is promoted:
+				<a href="#promotedInfo" class="link-warning" data-bs-toggle="collapse">
+					<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Click to open for more information">
+						<i class="bi bi-info-circle"></i>
+					</span>
+				</a>
+			</div>
+			<div>
+					<span class="text-success-emphasis">yes</span>
+			</div>
+			<div id="promotedInfo" class="collapse hide">
+				<div class="alert alert-warning mb-0 mt-3">
+					<ul class="m-0">
+						<li>
+							<strong>Promoted</strong> events are visible to all VRC.TL visitors.
+						</li>
+						<li>
+							<strong>Not promoted</strong> events are visible only to users who follow at least one of the clubs organizing the event.
+						</li>
+					</ul>
+					<div class="mt-3">
+						Promotion status was chosen during event creation and cannot be changed afterwards.
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div style="border-width: 0 0 2px 2px; border-color: currentColor; border-style: solid; padding-left: 15px" class="mb-5">
+	<div id="frm-form-form-organizers--pair" class="my-4 required">
+	<label for="frm-form-form-organizers" class="form-label">
+		Clubs
+	</label>
+
+			<select name="organizers[]" tabindex="-1" data-app-submit-on-change="refresh" id="frm-form-form-organizers" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;Please select at least one club.&quot;},{&quot;op&quot;:&quot;:blank&quot;,&quot;rules&quot;:[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;Please select at least one club.&quot;}],&quot;control&quot;:&quot;name&quot;}]" multiple="" data-ajax-url="https://vrc.tl/admin/ajax/organizer" class="select2 form-control select2-hidden-accessible" data-select2-id="select2-data-frm-form-form-organizers" ajax--url="https://vrc.tl/admin/ajax/organizer" aria-hidden="true"><option value="9001" selected="" data-select2-id="select2-data-2-npd9">Example Club</option></select><span class="select2 select2-container select2-container--default" dir="undefined" data-select2-id="select2-data-1-hxqc" style="width: 590.5px;"><span class="selection"><span class="select2-selection select2-selection--multiple" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="-1" aria-disabled="false"><ul class="select2-selection__rendered" id="select2-frm-form-form-organizers-container"><li class="select2-selection__choice" title="Example Club" data-select2-id="select2-data-3-yrwb"><button type="button" class="select2-selection__choice__remove" tabindex="-1" title="Remove item" aria-label="Remove item" aria-describedby="select2-frm-form-form-organizers-container-choice-nlvv-9001"><span aria-hidden="true">×</span></button><span class="select2-selection__choice__display" id="select2-frm-form-form-organizers-container-choice-nlvv-9001">Example Club</span></li></ul><span class="select2-search select2-search--inline"><textarea class="select2-search__field" type="search" tabindex="1" autocorrect="off" autocapitalize="none" spellcheck="false" role="searchbox" aria-autocomplete="list" autocomplete="off" aria-label="Search" aria-describedby="select2-frm-form-form-organizers-container" placeholder="" style="width: 0.75em;"></textarea></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+
+		<div>
+			<div class="mt-2"><div><a href="https://vrc.tl/admin/event/detail/100002?do=collaboration" class="ajax" data-naja-history="off">Invite other clubs to collaborate on this event.</a></div></div>
+		</div>
+
+	</div>
+
+	<div id="frm-form-form-name--pair" class="my-4">
+	<label for="frm-form-form-name" class="form-label">
+	Event name
+	</label>
+
+			<input type="text" name="name" maxlength="40" tabindex="3" id="frm-form-form-name" data-nette-rules="[{&quot;op&quot;:&quot;:maxLength&quot;,&quot;msg&quot;:&quot;Event name can't exceed 40 characters.&quot;,&quot;arg&quot;:40}]" value="what's poppin" class="form-control">
+
+
+	</div>
+
+	<div id="frm-form-form-description--pair" class="my-4">
+	<label for="frm-form-form-description" class="form-label">
+		Event description
+	</label>
+
+			<textarea name="description" rows="5" tabindex="4" class="app-expand-textarea-height-on-input form-control" maxlength="1000" id="frm-form-form-description" data-nette-rules="[{&quot;op&quot;:&quot;:maxLength&quot;,&quot;msg&quot;:&quot;Description can't exceed 1000 characters.&quot;,&quot;arg&quot;:1000}]" style="height: 142px;"></textarea>
+
+		<div>
+			<span class="form-text text-muted">Tell us more about your event</span>
+		</div>
+
+	</div>
+
+	<div id="frm-form-form-instanceOpenMinutesBeforeStart--pair" class="my-4 required">
+	<label for="frm-form-form-instanceOpenMinutesBeforeStart" class="form-label">
+		Instance open X minutes before start
+	</label>
+	<div class="input-group">
+		<input type="number" name="instanceOpenMinutesBeforeStart" tabindex="5" min="0" max="60" id="frm-form-form-instanceOpenMinutesBeforeStart" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;This field is required.&quot;},{&quot;op&quot;:&quot;:integer&quot;,&quot;msg&quot;:&quot;Please enter an integer.&quot;},{&quot;op&quot;:&quot;:range&quot;,&quot;msg&quot;:&quot;Instance open time must be 0 or between 15 and 60 minutes.&quot;,&quot;arg&quot;:[0,60]}]" value="0" class="form-control">
+		<button class="btn btn-outline-secondary" data-app-set-sibling-input-value="0">0</button>
+		<button class="btn btn-outline-secondary" data-app-set-sibling-input-value="15">15</button>
+		<button class="btn btn-outline-secondary" data-app-set-sibling-input-value="30">30</button>
+		<button class="btn btn-outline-secondary" data-app-set-sibling-input-value="60">60</button>
+	</div>
+
+
+	</div>
+
+	<div id="frm-form-form-start--pair" class="my-4 required">
+	<label for="frm-form-form-start" class="form-label">
+	Start
+	<a href="#startInstructions" class="link-warning" data-bs-toggle="collapse">
+		<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Click to open instructions">
+			<i class="bi bi-info-circle"></i>
+		</span>
+	</a>
+	</label>
+
+			<input type="datetime-local" name="start" tabindex="5" id="frm-form-form-start" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;This field is required.&quot;}]" value="2026-09-03T22:00" class="form-control">
+
+
+	</div>
+		<div id="startInstructions" class="collapse">
+			<div class="alert alert-warning mb-0">
+				This is time of first performer slot.
+			</div>
+		</div>
+
+
+	<div id="frm-form-form-timezone--pair" class="my-4 required">
+	<label for="frm-form-form-timezone" class="form-label">
+		Timezone
+	</label>
+
+			<select name="timezone" class="select2 form-control select2-hidden-accessible" tabindex="-1" id="frm-form-form-timezone" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;This field is required.&quot;}]" data-select2-id="select2-data-frm-form-form-timezone" aria-hidden="true"><option value="" disabled="" hidden="">Select timezone</option><option value="Africa/Abidjan">Africa/Abidjan</option><option value="Africa/Accra">Africa/Accra</option><option value="Africa/Addis_Ababa">Africa/Addis_Ababa</option><option value="Africa/Algiers">Africa/Algiers</option><option value="Africa/Asmara">Africa/Asmara</option><option value="Africa/Bamako">Africa/Bamako</option><option value="Africa/Bangui">Africa/Bangui</option><option value="Africa/Banjul">Africa/Banjul</option><option value="Africa/Bissau">Africa/Bissau</option><option value="Africa/Blantyre">Africa/Blantyre</option><option value="Africa/Brazzaville">Africa/Brazzaville</option><option value="Africa/Bujumbura">Africa/Bujumbura</option><option value="Africa/Cairo">Africa/Cairo</option><option value="Africa/Casablanca">Africa/Casablanca</option><option value="Africa/Ceuta">Africa/Ceuta</option><option value="Africa/Conakry">Africa/Conakry</option><option value="Africa/Dakar">Africa/Dakar</option><option value="Africa/Dar_es_Salaam">Africa/Dar_es_Salaam</option><option value="Africa/Djibouti">Africa/Djibouti</option><option value="Africa/Douala">Africa/Douala</option><option value="Africa/El_Aaiun">Africa/El_Aaiun</option><option value="Africa/Freetown">Africa/Freetown</option><option value="Africa/Gaborone">Africa/Gaborone</option><option value="Africa/Harare">Africa/Harare</option><option value="Africa/Johannesburg">Africa/Johannesburg</option><option value="Africa/Juba">Africa/Juba</option><option value="Africa/Kampala">Africa/Kampala</option><option value="Africa/Khartoum">Africa/Khartoum</option><option value="Africa/Kigali">Africa/Kigali</option><option value="Africa/Kinshasa">Africa/Kinshasa</option><option value="Africa/Lagos">Africa/Lagos</option><option value="Africa/Libreville">Africa/Libreville</option><option value="Africa/Lome">Africa/Lome</option><option value="Africa/Luanda">Africa/Luanda</option><option value="Africa/Lubumbashi">Africa/Lubumbashi</option><option value="Africa/Lusaka">Africa/Lusaka</option><option value="Africa/Malabo">Africa/Malabo</option><option value="Africa/Maputo">Africa/Maputo</option><option value="Africa/Maseru">Africa/Maseru</option><option value="Africa/Mbabane">Africa/Mbabane</option><option value="Africa/Mogadishu">Africa/Mogadishu</option><option value="Africa/Monrovia">Africa/Monrovia</option><option value="Africa/Nairobi">Africa/Nairobi</option><option value="Africa/Ndjamena">Africa/Ndjamena</option><option value="Africa/Niamey">Africa/Niamey</option><option value="Africa/Nouakchott">Africa/Nouakchott</option><option value="Africa/Ouagadougou">Africa/Ouagadougou</option><option value="Africa/Porto-Novo">Africa/Porto-Novo</option><option value="Africa/Sao_Tome">Africa/Sao_Tome</option><option value="Africa/Tripoli">Africa/Tripoli</option><option value="Africa/Tunis">Africa/Tunis</option><option value="Africa/Windhoek">Africa/Windhoek</option><option value="America/Adak">America/Adak</option><option value="America/Anchorage">America/Anchorage</option><option value="America/Anguilla">America/Anguilla</option><option value="America/Antigua">America/Antigua</option><option value="America/Araguaina">America/Araguaina</option><option value="America/Argentina/Buenos_Aires">America/Argentina/Buenos_Aires</option><option value="America/Argentina/Catamarca">America/Argentina/Catamarca</option><option value="America/Argentina/Cordoba">America/Argentina/Cordoba</option><option value="America/Argentina/Jujuy">America/Argentina/Jujuy</option><option value="America/Argentina/La_Rioja">America/Argentina/La_Rioja</option><option value="America/Argentina/Mendoza">America/Argentina/Mendoza</option><option value="America/Argentina/Rio_Gallegos">America/Argentina/Rio_Gallegos</option><option value="America/Argentina/Salta">America/Argentina/Salta</option><option value="America/Argentina/San_Juan">America/Argentina/San_Juan</option><option value="America/Argentina/San_Luis">America/Argentina/San_Luis</option><option value="America/Argentina/Tucuman">America/Argentina/Tucuman</option><option value="America/Argentina/Ushuaia">America/Argentina/Ushuaia</option><option value="America/Aruba">America/Aruba</option><option value="America/Asuncion">America/Asuncion</option><option value="America/Atikokan">America/Atikokan</option><option value="America/Bahia">America/Bahia</option><option value="America/Bahia_Banderas">America/Bahia_Banderas</option><option value="America/Barbados">America/Barbados</option><option value="America/Belem">America/Belem</option><option value="America/Belize">America/Belize</option><option value="America/Blanc-Sablon">America/Blanc-Sablon</option><option value="America/Boa_Vista">America/Boa_Vista</option><option value="America/Bogota">America/Bogota</option><option value="America/Boise">America/Boise</option><option value="America/Cambridge_Bay">America/Cambridge_Bay</option><option value="America/Campo_Grande">America/Campo_Grande</option><option value="America/Cancun">America/Cancun</option><option value="America/Caracas">America/Caracas</option><option value="America/Cayenne">America/Cayenne</option><option value="America/Cayman">America/Cayman</option><option value="America/Chicago">America/Chicago CT CST CDT central us</option><option value="America/Chihuahua">America/Chihuahua</option><option value="America/Ciudad_Juarez">America/Ciudad_Juarez</option><option value="America/Costa_Rica">America/Costa_Rica</option><option value="America/Creston">America/Creston</option><option value="America/Cuiaba">America/Cuiaba</option><option value="America/Curacao">America/Curacao</option><option value="America/Danmarkshavn">America/Danmarkshavn</option><option value="America/Dawson">America/Dawson</option><option value="America/Dawson_Creek">America/Dawson_Creek</option><option value="America/Denver">America/Denver MT MST MDT mountain us</option><option value="America/Detroit">America/Detroit</option><option value="America/Dominica">America/Dominica</option><option value="America/Edmonton">America/Edmonton</option><option value="America/Eirunepe">America/Eirunepe</option><option value="America/El_Salvador">America/El_Salvador</option><option value="America/Fort_Nelson">America/Fort_Nelson</option><option value="America/Fortaleza">America/Fortaleza</option><option value="America/Glace_Bay">America/Glace_Bay</option><option value="America/Goose_Bay">America/Goose_Bay</option><option value="America/Grand_Turk">America/Grand_Turk</option><option value="America/Grenada">America/Grenada</option><option value="America/Guadeloupe">America/Guadeloupe</option><option value="America/Guatemala">America/Guatemala</option><option value="America/Guayaquil">America/Guayaquil</option><option value="America/Guyana">America/Guyana</option><option value="America/Halifax">America/Halifax</option><option value="America/Havana">America/Havana</option><option value="America/Hermosillo">America/Hermosillo</option><option value="America/Indiana/Indianapolis">America/Indiana/Indianapolis</option><option value="America/Indiana/Knox">America/Indiana/Knox</option><option value="America/Indiana/Marengo">America/Indiana/Marengo</option><option value="America/Indiana/Petersburg">America/Indiana/Petersburg</option><option value="America/Indiana/Tell_City">America/Indiana/Tell_City</option><option value="America/Indiana/Vevay">America/Indiana/Vevay</option><option value="America/Indiana/Vincennes">America/Indiana/Vincennes</option><option value="America/Indiana/Winamac">America/Indiana/Winamac</option><option value="America/Inuvik">America/Inuvik</option><option value="America/Iqaluit">America/Iqaluit</option><option value="America/Jamaica">America/Jamaica</option><option value="America/Juneau">America/Juneau</option><option value="America/Kentucky/Louisville">America/Kentucky/Louisville</option><option value="America/Kentucky/Monticello">America/Kentucky/Monticello</option><option value="America/Kralendijk">America/Kralendijk</option><option value="America/La_Paz">America/La_Paz</option><option value="America/Lima">America/Lima</option><option value="America/Los_Angeles">America/Los_Angeles PT PST PDT pacific us</option><option value="America/Lower_Princes">America/Lower_Princes</option><option value="America/Maceio">America/Maceio</option><option value="America/Managua">America/Managua</option><option value="America/Manaus">America/Manaus</option><option value="America/Marigot">America/Marigot</option><option value="America/Martinique">America/Martinique</option><option value="America/Matamoros">America/Matamoros</option><option value="America/Mazatlan">America/Mazatlan</option><option value="America/Menominee">America/Menominee</option><option value="America/Merida">America/Merida</option><option value="America/Metlakatla">America/Metlakatla</option><option value="America/Mexico_City">America/Mexico_City</option><option value="America/Miquelon">America/Miquelon</option><option value="America/Moncton">America/Moncton</option><option value="America/Monterrey">America/Monterrey</option><option value="America/Montevideo">America/Montevideo</option><option value="America/Montserrat">America/Montserrat</option><option value="America/Nassau">America/Nassau</option><option value="America/New_York">America/New_York ET EST EDT eastern us</option><option value="America/Nome">America/Nome</option><option value="America/Noronha">America/Noronha</option><option value="America/North_Dakota/Beulah">America/North_Dakota/Beulah</option><option value="America/North_Dakota/Center">America/North_Dakota/Center</option><option value="America/North_Dakota/New_Salem">America/North_Dakota/New_Salem</option><option value="America/Nuuk">America/Nuuk</option><option value="America/Ojinaga">America/Ojinaga</option><option value="America/Panama">America/Panama</option><option value="America/Paramaribo">America/Paramaribo</option><option value="America/Phoenix">America/Phoenix</option><option value="America/Port-au-Prince">America/Port-au-Prince</option><option value="America/Port_of_Spain">America/Port_of_Spain</option><option value="America/Porto_Velho">America/Porto_Velho</option><option value="America/Puerto_Rico">America/Puerto_Rico</option><option value="America/Punta_Arenas">America/Punta_Arenas</option><option value="America/Rankin_Inlet">America/Rankin_Inlet</option><option value="America/Recife">America/Recife</option><option value="America/Regina">America/Regina</option><option value="America/Resolute">America/Resolute</option><option value="America/Rio_Branco">America/Rio_Branco</option><option value="America/Santarem">America/Santarem</option><option value="America/Santiago">America/Santiago</option><option value="America/Santo_Domingo">America/Santo_Domingo</option><option value="America/Sao_Paulo">America/Sao_Paulo</option><option value="America/Scoresbysund">America/Scoresbysund</option><option value="America/Sitka">America/Sitka</option><option value="America/St_Barthelemy">America/St_Barthelemy</option><option value="America/St_Johns">America/St_Johns</option><option value="America/St_Kitts">America/St_Kitts</option><option value="America/St_Lucia">America/St_Lucia</option><option value="America/St_Thomas">America/St_Thomas</option><option value="America/St_Vincent">America/St_Vincent</option><option value="America/Swift_Current">America/Swift_Current</option><option value="America/Tegucigalpa">America/Tegucigalpa</option><option value="America/Thule">America/Thule</option><option value="America/Tijuana">America/Tijuana</option><option value="America/Toronto">America/Toronto</option><option value="America/Tortola">America/Tortola</option><option value="America/Vancouver">America/Vancouver</option><option value="America/Whitehorse">America/Whitehorse</option><option value="America/Winnipeg">America/Winnipeg</option><option value="America/Yakutat">America/Yakutat</option><option value="Antarctica/Casey">Antarctica/Casey</option><option value="Antarctica/Davis">Antarctica/Davis</option><option value="Antarctica/DumontDUrville">Antarctica/DumontDUrville</option><option value="Antarctica/Macquarie">Antarctica/Macquarie</option><option value="Antarctica/Mawson">Antarctica/Mawson</option><option value="Antarctica/McMurdo">Antarctica/McMurdo</option><option value="Antarctica/Palmer">Antarctica/Palmer</option><option value="Antarctica/Rothera">Antarctica/Rothera</option><option value="Antarctica/Syowa">Antarctica/Syowa</option><option value="Antarctica/Troll">Antarctica/Troll</option><option value="Antarctica/Vostok">Antarctica/Vostok</option><option value="Arctic/Longyearbyen">Arctic/Longyearbyen</option><option value="Asia/Aden">Asia/Aden</option><option value="Asia/Almaty">Asia/Almaty</option><option value="Asia/Amman">Asia/Amman</option><option value="Asia/Anadyr">Asia/Anadyr</option><option value="Asia/Aqtau">Asia/Aqtau</option><option value="Asia/Aqtobe">Asia/Aqtobe</option><option value="Asia/Ashgabat">Asia/Ashgabat</option><option value="Asia/Atyrau">Asia/Atyrau</option><option value="Asia/Baghdad">Asia/Baghdad</option><option value="Asia/Bahrain">Asia/Bahrain</option><option value="Asia/Baku">Asia/Baku</option><option value="Asia/Bangkok">Asia/Bangkok</option><option value="Asia/Barnaul">Asia/Barnaul</option><option value="Asia/Beirut">Asia/Beirut</option><option value="Asia/Bishkek">Asia/Bishkek</option><option value="Asia/Brunei">Asia/Brunei</option><option value="Asia/Chita">Asia/Chita</option><option value="Asia/Colombo">Asia/Colombo</option><option value="Asia/Damascus">Asia/Damascus</option><option value="Asia/Dhaka">Asia/Dhaka</option><option value="Asia/Dili">Asia/Dili</option><option value="Asia/Dubai">Asia/Dubai</option><option value="Asia/Dushanbe">Asia/Dushanbe</option><option value="Asia/Famagusta">Asia/Famagusta</option><option value="Asia/Gaza">Asia/Gaza</option><option value="Asia/Hebron">Asia/Hebron</option><option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh</option><option value="Asia/Hong_Kong">Asia/Hong_Kong</option><option value="Asia/Hovd">Asia/Hovd</option><option value="Asia/Irkutsk">Asia/Irkutsk</option><option value="Asia/Jakarta">Asia/Jakarta</option><option value="Asia/Jayapura">Asia/Jayapura</option><option value="Asia/Jerusalem">Asia/Jerusalem</option><option value="Asia/Kabul">Asia/Kabul</option><option value="Asia/Kamchatka">Asia/Kamchatka</option><option value="Asia/Karachi">Asia/Karachi</option><option value="Asia/Kathmandu">Asia/Kathmandu</option><option value="Asia/Khandyga">Asia/Khandyga</option><option value="Asia/Kolkata">Asia/Kolkata</option><option value="Asia/Krasnoyarsk">Asia/Krasnoyarsk</option><option value="Asia/Kuala_Lumpur">Asia/Kuala_Lumpur</option><option value="Asia/Kuching">Asia/Kuching</option><option value="Asia/Kuwait">Asia/Kuwait</option><option value="Asia/Macau">Asia/Macau</option><option value="Asia/Magadan">Asia/Magadan</option><option value="Asia/Makassar">Asia/Makassar</option><option value="Asia/Manila">Asia/Manila</option><option value="Asia/Muscat">Asia/Muscat</option><option value="Asia/Nicosia">Asia/Nicosia</option><option value="Asia/Novokuznetsk">Asia/Novokuznetsk</option><option value="Asia/Novosibirsk">Asia/Novosibirsk</option><option value="Asia/Omsk">Asia/Omsk</option><option value="Asia/Oral">Asia/Oral</option><option value="Asia/Phnom_Penh">Asia/Phnom_Penh</option><option value="Asia/Pontianak">Asia/Pontianak</option><option value="Asia/Pyongyang">Asia/Pyongyang</option><option value="Asia/Qatar">Asia/Qatar</option><option value="Asia/Qostanay">Asia/Qostanay</option><option value="Asia/Qyzylorda">Asia/Qyzylorda</option><option value="Asia/Riyadh">Asia/Riyadh</option><option value="Asia/Sakhalin">Asia/Sakhalin</option><option value="Asia/Samarkand">Asia/Samarkand</option><option value="Asia/Seoul">Asia/Seoul</option><option value="Asia/Shanghai">Asia/Shanghai</option><option value="Asia/Singapore">Asia/Singapore</option><option value="Asia/Srednekolymsk">Asia/Srednekolymsk</option><option value="Asia/Taipei">Asia/Taipei</option><option value="Asia/Tashkent">Asia/Tashkent</option><option value="Asia/Tbilisi">Asia/Tbilisi</option><option value="Asia/Tehran">Asia/Tehran</option><option value="Asia/Thimphu">Asia/Thimphu</option><option value="Asia/Tokyo">Asia/Tokyo JT JST JDT japan</option><option value="Asia/Tomsk">Asia/Tomsk</option><option value="Asia/Ulaanbaatar">Asia/Ulaanbaatar</option><option value="Asia/Urumqi">Asia/Urumqi</option><option value="Asia/Ust-Nera">Asia/Ust-Nera</option><option value="Asia/Vientiane">Asia/Vientiane</option><option value="Asia/Vladivostok">Asia/Vladivostok</option><option value="Asia/Yakutsk">Asia/Yakutsk</option><option value="Asia/Yangon">Asia/Yangon</option><option value="Asia/Yekaterinburg">Asia/Yekaterinburg</option><option value="Asia/Yerevan">Asia/Yerevan</option><option value="Atlantic/Azores">Atlantic/Azores</option><option value="Atlantic/Bermuda">Atlantic/Bermuda</option><option value="Atlantic/Canary">Atlantic/Canary</option><option value="Atlantic/Cape_Verde">Atlantic/Cape_Verde</option><option value="Atlantic/Faroe">Atlantic/Faroe</option><option value="Atlantic/Madeira">Atlantic/Madeira</option><option value="Atlantic/Reykjavik">Atlantic/Reykjavik</option><option value="Atlantic/South_Georgia">Atlantic/South_Georgia</option><option value="Atlantic/St_Helena">Atlantic/St_Helena</option><option value="Atlantic/Stanley">Atlantic/Stanley</option><option value="Australia/Adelaide">Australia/Adelaide</option><option value="Australia/Brisbane">Australia/Brisbane</option><option value="Australia/Broken_Hill">Australia/Broken_Hill</option><option value="Australia/Darwin">Australia/Darwin</option><option value="Australia/Eucla">Australia/Eucla</option><option value="Australia/Hobart">Australia/Hobart</option><option value="Australia/Lindeman">Australia/Lindeman</option><option value="Australia/Lord_Howe">Australia/Lord_Howe</option><option value="Australia/Melbourne">Australia/Melbourne</option><option value="Australia/Perth">Australia/Perth</option><option value="Australia/Sydney">Australia/Sydney</option><option value="Europe/Amsterdam">Europe/Amsterdam</option><option value="Europe/Andorra">Europe/Andorra</option><option value="Europe/Astrakhan">Europe/Astrakhan</option><option value="Europe/Athens">Europe/Athens</option><option value="Europe/Belgrade">Europe/Belgrade</option><option value="Europe/Berlin" selected="" data-select2-id="select2-data-5-7qfv">Europe/Berlin</option><option value="Europe/Bratislava">Europe/Bratislava</option><option value="Europe/Brussels">Europe/Brussels</option><option value="Europe/Bucharest">Europe/Bucharest</option><option value="Europe/Budapest">Europe/Budapest</option><option value="Europe/Busingen">Europe/Busingen</option><option value="Europe/Chisinau">Europe/Chisinau</option><option value="Europe/Copenhagen">Europe/Copenhagen</option><option value="Europe/Dublin">Europe/Dublin</option><option value="Europe/Gibraltar">Europe/Gibraltar</option><option value="Europe/Guernsey">Europe/Guernsey</option><option value="Europe/Helsinki">Europe/Helsinki</option><option value="Europe/Isle_of_Man">Europe/Isle_of_Man</option><option value="Europe/Istanbul">Europe/Istanbul</option><option value="Europe/Jersey">Europe/Jersey</option><option value="Europe/Kaliningrad">Europe/Kaliningrad</option><option value="Europe/Kirov">Europe/Kirov</option><option value="Europe/Kyiv">Europe/Kyiv</option><option value="Europe/Lisbon">Europe/Lisbon</option><option value="Europe/Ljubljana">Europe/Ljubljana</option><option value="Europe/London">Europe/London BT BST BDST british uk</option><option value="Europe/Luxembourg">Europe/Luxembourg</option><option value="Europe/Madrid">Europe/Madrid</option><option value="Europe/Malta">Europe/Malta</option><option value="Europe/Mariehamn">Europe/Mariehamn</option><option value="Europe/Minsk">Europe/Minsk</option><option value="Europe/Monaco">Europe/Monaco</option><option value="Europe/Moscow">Europe/Moscow</option><option value="Europe/Oslo">Europe/Oslo</option><option value="Europe/Paris">Europe/Paris</option><option value="Europe/Podgorica">Europe/Podgorica</option><option value="Europe/Prague">Europe/Prague CEST CET central europe</option><option value="Europe/Riga">Europe/Riga</option><option value="Europe/Rome">Europe/Rome</option><option value="Europe/Samara">Europe/Samara</option><option value="Europe/San_Marino">Europe/San_Marino</option><option value="Europe/Sarajevo">Europe/Sarajevo</option><option value="Europe/Saratov">Europe/Saratov</option><option value="Europe/Simferopol">Europe/Simferopol</option><option value="Europe/Skopje">Europe/Skopje</option><option value="Europe/Sofia">Europe/Sofia</option><option value="Europe/Stockholm">Europe/Stockholm</option><option value="Europe/Tallinn">Europe/Tallinn</option><option value="Europe/Tirane">Europe/Tirane</option><option value="Europe/Ulyanovsk">Europe/Ulyanovsk</option><option value="Europe/Vaduz">Europe/Vaduz</option><option value="Europe/Vatican">Europe/Vatican</option><option value="Europe/Vienna">Europe/Vienna</option><option value="Europe/Vilnius">Europe/Vilnius</option><option value="Europe/Volgograd">Europe/Volgograd</option><option value="Europe/Warsaw">Europe/Warsaw</option><option value="Europe/Zagreb">Europe/Zagreb</option><option value="Europe/Zurich">Europe/Zurich</option><option value="Indian/Antananarivo">Indian/Antananarivo</option><option value="Indian/Chagos">Indian/Chagos</option><option value="Indian/Christmas">Indian/Christmas</option><option value="Indian/Cocos">Indian/Cocos</option><option value="Indian/Comoro">Indian/Comoro</option><option value="Indian/Kerguelen">Indian/Kerguelen</option><option value="Indian/Mahe">Indian/Mahe</option><option value="Indian/Maldives">Indian/Maldives</option><option value="Indian/Mauritius">Indian/Mauritius</option><option value="Indian/Mayotte">Indian/Mayotte</option><option value="Indian/Reunion">Indian/Reunion</option><option value="Pacific/Apia">Pacific/Apia</option><option value="Pacific/Auckland">Pacific/Auckland</option><option value="Pacific/Bougainville">Pacific/Bougainville</option><option value="Pacific/Chatham">Pacific/Chatham</option><option value="Pacific/Chuuk">Pacific/Chuuk</option><option value="Pacific/Easter">Pacific/Easter</option><option value="Pacific/Efate">Pacific/Efate</option><option value="Pacific/Fakaofo">Pacific/Fakaofo</option><option value="Pacific/Fiji">Pacific/Fiji</option><option value="Pacific/Funafuti">Pacific/Funafuti</option><option value="Pacific/Galapagos">Pacific/Galapagos</option><option value="Pacific/Gambier">Pacific/Gambier</option><option value="Pacific/Guadalcanal">Pacific/Guadalcanal</option><option value="Pacific/Guam">Pacific/Guam</option><option value="Pacific/Honolulu">Pacific/Honolulu</option><option value="Pacific/Kanton">Pacific/Kanton</option><option value="Pacific/Kiritimati">Pacific/Kiritimati</option><option value="Pacific/Kosrae">Pacific/Kosrae</option><option value="Pacific/Kwajalein">Pacific/Kwajalein</option><option value="Pacific/Majuro">Pacific/Majuro</option><option value="Pacific/Marquesas">Pacific/Marquesas</option><option value="Pacific/Midway">Pacific/Midway</option><option value="Pacific/Nauru">Pacific/Nauru</option><option value="Pacific/Niue">Pacific/Niue</option><option value="Pacific/Norfolk">Pacific/Norfolk</option><option value="Pacific/Noumea">Pacific/Noumea</option><option value="Pacific/Pago_Pago">Pacific/Pago_Pago</option><option value="Pacific/Palau">Pacific/Palau</option><option value="Pacific/Pitcairn">Pacific/Pitcairn</option><option value="Pacific/Pohnpei">Pacific/Pohnpei</option><option value="Pacific/Port_Moresby">Pacific/Port_Moresby</option><option value="Pacific/Rarotonga">Pacific/Rarotonga</option><option value="Pacific/Saipan">Pacific/Saipan</option><option value="Pacific/Tahiti">Pacific/Tahiti</option><option value="Pacific/Tarawa">Pacific/Tarawa</option><option value="Pacific/Tongatapu">Pacific/Tongatapu</option><option value="Pacific/Wake">Pacific/Wake</option><option value="Pacific/Wallis">Pacific/Wallis</option><option value="UTC">UTC GMT UTC</option></select><span class="select2 select2-container select2-container--default" dir="undefined" data-select2-id="select2-data-4-5h68" style="width: 590.5px;"><span class="selection"><span class="select2-selection select2-selection--single" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="7" aria-disabled="false" aria-labelledby="select2-frm-form-form-timezone-container" aria-controls="select2-frm-form-form-timezone-container"><span class="select2-selection__rendered" id="select2-frm-form-form-timezone-container" role="textbox" aria-readonly="true" title="Europe/Berlin">Europe/Berlin</span><span class="select2-selection__arrow" role="presentation"><b role="presentation"></b></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+
+
+	</div>
+
+	<div id="frm-form-form-url--pair" class="my-4">
+	<label for="frm-form-form-url" class="form-label">
+		Announcement url (X / Bluesky / Instagram)
+	</label>
+
+			<input type="url" name="url" tabindex="8" id="frm-form-form-url" data-nette-rules="[{&quot;op&quot;:&quot;:url&quot;,&quot;msg&quot;:&quot;Please enter a valid URL.&quot;}]" class="form-control">
+
+
+	</div>
+	</div>
+							</div>
+							<div class="col-12 col-md-12 col-xxl-6">
+	<h5>How to join event</h5>
+	<div class="ps-3 mb-5" style="border-width: 0 0 2px 2px; border-color: currentColor; border-style: solid; padding-left: 15px; overflow: hidden">
+	<div id="frm-form-form-howToJoin--pair" class="my-4 required">
+	<label for="" class="form-label">
+		Event will be hosted by:
+	</label>
+		<div class="form-check">
+			<input type="radio" name="howToJoin" id="frm-form-form-howToJoin-group-9001" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;Please select VRChat group/host that will be hosting the event&quot;}]" checked="" value="group-9001" class="form-check-input">
+			<label for="frm-form-form-howToJoin-group-9001" class="form-check-label">
+	Example Club
+	<a href="https://vrchat.com/home/group/grp_00000000-0000-4000-8000-000000000001" target="_blank">EXAMPLE.0001</a>
+			</label>
+		</div>
+
+
+	</div>
+	</div>
+
+	<h5 class="d-flex justify-content-between">
+		<span>
+			Performer slots (timetable)
+		</span>
+	</h5>
+
+	<div class="alert alert-warning">
+		Following section serves strictly for entering performer names. Please read
+		<a href="#performerSlotInstructions" class="link-warning text-decoration-underline" data-bs-toggle="collapse">
+			<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Click to open instructions">
+				further instructions
+				<i class="bi bi-info-circle"></i>
+			</span>
+		</a>
+	</div>
+
+	<div id="performerSlotInstructions" class="collapse">
+		<div class="alert alert-warning">
+			<ul>
+				<li class="my-2">
+					Always try to find performer by typing in first few letters and choosing from autocomplete result. If performer you want to enter is not in suggestions, you can create them by choosing last option in dropdown starting with "[Create new performer]". Please don't create duplicate performers with slightly different names and don't enter text that you want to be shown in performer slot. This input is meant only for entering performers.
+				</li>
+				<li class="my-2">
+					Each performer needs to be entered as separate entry.<br>
+
+					This is incorrect way of entering performers in slot:
+					<br>
+					<img src="/img/b2bperformers.png" class="mb-2">
+					<i class="bi bi-x-circle text-danger"></i>
+					<br>
+					Correct way to enter multiple performers in one slot:
+					<img src="/img/performers_correct.png">
+					<i class="bi bi-check-circle text-success"></i>
+				</li>
+				<li class="my-2">
+					Each performer slot can have one of following types:
+					<ul>
+						<li class="my-2"><strong>Performers:</strong> surprisingly for entering performers.</li>
+						<li class="my-2">
+							<strong>Intermission:</strong> this slot type is useful for events that contains intermissions or other activities that are not performances. Intermission can be max 30 minutes long and can not be placed at the start or end of event.
+						</li>
+						<li class="my-2">
+							<strong>TBD:</strong> use this type if you want to publish event but you don't have finalised lineup. This must be replaced by actual performer before event starts. This is not for signalling open decks! Open decks starts after event end.
+						</li>
+					</ul>
+				</li>
+			</ul>
+		</div>
+	</div>
+
+	<div class="pb-2 mb-5" style="border-width: 0 0 2px 2px; border-color: currentColor; border-style: solid; padding-left: 15px">
+		<div class="form-check">
+			<input type="checkbox" name="showSlots" tabindex="302" id="frm-form-form-showSlots" checked="" class="form-check-input">
+			<label for="frm-form-form-showSlots" class="form-check-label">Order of performers is accurate</label>
+		</div>
+		<div class="form-check">
+			<input class="form-check-input" type="checkbox" checked="" id="js-event-form-performer-slots-notes-toggle">
+			<label class="form-check-label" for="js-event-form-performer-slots-notes-toggle">
+				Show note inputs
+			</label>
+		</div>
+
+
+	<div style="padding: 10px; text-align: right;"><a data-bs-title="Copy timetable into clipboard." style="color: rgb(114, 137, 218); cursor: pointer;"><span class="fa fa-brands fa fa-discord"></span></a></div><div class="stripped-bg js-event-form-performer-timetable">
+				<div>
+					<div class="px-2 py-4  d-grid gap-2 position-relative js-event-form-performer-slot" style="grid-template-columns: auto 1fr">
+
+						<div class="d-inline-block position-absolute" style="top: 0">
+							<button type="submit" name="slots[136569][addSlotBefore]" tabindex="300" value="" formnovalidate="" class="btn btn-sm btn-primary position-absolute" style="transform: translate(-25%, -50%)" data-bs-toggle="tooltip" data-bs-title="Add slot here">
+								<i class="fa fa-plus"></i>
+							</button>
+						</div>
+
+						<div style="grid-row: 1 / 4" class="align-self-stretch position-relative d-flex">
+							<div class="align-self-center">
+								#1
+							</div>
+						</div>
+						<div class="d-flex gap-2 align-items-center" style="grid-row: 1 / 2">
+							<div style="width: 55px">
+
+			<input type="text" name="slots[136569][duration]" data-bs-title="Slot duration in minutes." data-bs-toggle="tooltip" class="js-event-form-performer-slot-duration form-control" id="frm-form-form-slots-136569-duration" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;Please enter slot duration.&quot;},{&quot;op&quot;:&quot;:integer&quot;,&quot;msg&quot;:&quot;Please enter an integer.&quot;}]" value="60">
+							</div>
+							<div class="flex-grow-1 js-event-form-performer-slot-time text-center"><span data-bs-html="true" data-bs-title="
+			&lt;div&gt;
+				&lt;strong&gt;Europe/Berlin:&lt;/strong&gt;&lt;br&gt;
+				3 September 2026
+				22:00
+			&lt;/div&gt;
+		">22:00</span><a data-bs-title="Copy timestamp into clipboard." style="margin-left: 5px; color: rgb(114, 137, 218); cursor: pointer;"><span class="fa fa-brands fa fa-discord"></span></a></div>
+							<div style="min-width: 140px;" data-bs-toggle="tooltip" data-bs-title="Slot type">
+
+			<select name="slots[136569][flag]" class="selectize form-control selectized" data-bs-title="Performer slot type" data-bs-toggle="tooltip" id="frm-form-form-slots-136569-flag" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;This field is required.&quot;}]" tabindex="-1" style="display: none;"><option value="performers" selected="selected">Performers</option></select><div class="selectize form-control selectize-control single"><div class="selectize-input items required full has-options has-items"><div class="item" data-value="performers">Performers</div><input type="select-one" autocomplete="new-password" autofill="no" tabindex="" id="frm-form-form-slots-136569-flag-selectized" style="width: 4px;"></div><div class="single selectize-dropdown selectize form-control" style="display: none;"><div class="selectize-dropdown-content" tabindex="-1"></div></div></div>
+							</div>
+						</div>
+						<div>
+							<div data-bs-toggle="tooltip" data-bs-title="List of performers">
+
+			<select name="slots[136569][performers][]" data-app-placeholder="Performers" id="frm-form-form-slots-136569-performers" multiple="" data-ajax-url="https://vrc.tl/admin/ajax/performer" class="select2 form-control select2-hidden-accessible" data-tags="true" data-select2-id="select2-data-frm-form-form-slots-136569-performers" ajax--url="https://vrc.tl/admin/ajax/performer" tabindex="-1" aria-hidden="true"><option value="300001" selected="" data-select2-id="select2-data-7-zlmw">Example DJ</option></select><span class="select2 select2-container select2-container--default" dir="undefined" data-select2-id="select2-data-6-n7m1" style="width: 548.422px;"><span class="selection"><span class="select2-selection select2-selection--multiple" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="-1" aria-disabled="false"><ul class="select2-selection__rendered" id="select2-frm-form-form-slots-136569-performers-container"><li class="select2-selection__choice" title="Example DJ" data-select2-id="select2-data-8-3rvr"><button type="button" class="select2-selection__choice__remove" tabindex="-1" title="Remove item" aria-label="Remove item" aria-describedby="select2-frm-form-form-slots-136569-performers-container-choice-gtqo-300001"><span aria-hidden="true">×</span></button><span class="select2-selection__choice__display" id="select2-frm-form-form-slots-136569-performers-container-choice-gtqo-300001">Example DJ</span></li></ul><span class="select2-search select2-search--inline"><textarea class="select2-search__field" type="search" tabindex="0" autocorrect="off" autocapitalize="none" spellcheck="false" role="searchbox" aria-autocomplete="list" autocomplete="off" aria-label="Search" aria-describedby="select2-frm-form-form-slots-136569-performers-container" placeholder="" style="width: 0.75em;"></textarea></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+							</div>
+
+						</div>
+						<div class="d-flex gap-2 js-performer-slot-notes">
+							<div class="flex-grow-1" data-bs-toggle="tooltip" data-bs-title="Public note">
+
+			<textarea name="slots[136569][publicNote]" class="app-expand-textarea-height-on-input form-control" maxlength="120" id="frm-form-form-slots-136569-publicNote" style="height: 70px;"></textarea>
+							</div>
+							<div class="flex-grow-1" data-bs-toggle="tooltip" data-bs-title="Internal note">
+
+			<textarea name="slots[136569][privateNote]" class="app-expand-textarea-height-on-input form-control" maxlength="120" id="frm-form-form-slots-136569-privateNote" style="height: 70px;"></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="position-relative">
+					<div class="d-inline-block position-absolute" style="top: 0">
+						<button type="submit" name="slot" tabindex="300" value="Add slot" formnovalidate="" class="btn btn-sm btn-primary position-absolute" style="transform: translate(-25%, -50%)" data-bs-toggle="tooltip" data-bs-title="Add slot here">
+							<i class="fa fa-plus"></i>
+						</button>
+					</div>
+				</div>
+	</div>
+	<div class="my-3">
+	</div>
+
+		<div id="tbdPresent" class="collapse mt-4" data-app-show-on-value="tbd" data-app-show-on-value-selector="[name$='[flag]']">
+			<div class="alert alert-warning mb-0">
+				Your timetable contains TBD slot. This type of slot must be replaced by performer ahead of event start.
+			</div>
+		</div>
+	</div>
+							</div>
+						</div>
+					</div>
+					<div class="col-12 col-md-6 col-xxl-4 col-xxxl-6">
+						<div class="row">
+							<div class="col-12 col-xxxl-6">
+	<h5>Event tags</h5>
+	<div style="border-width: 0 0 2px 2px; border-color: currentColor; border-style: solid" class="mb-5">
+		<div class="accordion accordion-flush" id="eventTagsAccordion">
+				<div class="accordion-item">
+					<h6 class="accordion-header">
+						<button class="accordion-button accordion-button_disabled 1" type="button" data-bs-target="#tagGroup_1">
+
+
+	NSFW / SFW
+
+						<span class="mx-2"> - </span><span data-app-tag-label="">NSFW</span></button>
+					</h6>
+					<div id="tagGroup_1" class="accordion-collapse 1" data-bs-parent="#eventTagsAccordion">
+						<div class="accordion-body">
+							<p class="mt-3">NSFW events are allowed on Timeline in certain categories, but main aspect of event must still be in line with chosen event category.<br>
+<br>
+NSFW events will be visible only to logged in users.<br>
+<br>
+If you adding event that has SFW and NSFW part, that is NSFW event.</p>
+							<div class="my-4">
+		<div class="form-check">
+			<input type="radio" name="flags[1]" id="frm-form-form-flags-1-1" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;You need to choose one event tag from category NSFW / SFW.&quot;}]" checked="" value="1" class="form-check-input">
+			<label for="frm-form-form-flags-1-1" class="form-check-label">
+		NSFW
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[1]" id="frm-form-form-flags-1-6" required="" data-nette-rules="[{&quot;op&quot;:&quot;:filled&quot;,&quot;msg&quot;:&quot;You need to choose one event tag from category NSFW / SFW.&quot;}]" value="6" class="form-check-input">
+			<label for="frm-form-form-flags-1-6" class="form-check-label">
+		SFW
+			</label>
+		</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h6 class="accordion-header">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tagGroup_4">
+
+
+	<img src="https://vrc.tl/files/event-tag-group-icon/4-6wt8b9vx2z.png" style="height: 2em" alt="Age gated">
+	Age gated
+
+						<span class="mx-2"> - </span><span data-app-tag-label="">
+		Age gated
+	</span></button>
+					</h6>
+					<div id="tagGroup_4" class="accordion-collapse collapse" data-bs-parent="#eventTagsAccordion">
+						<div class="accordion-body">
+							<p class="mt-3">Instance only accessible to 18+ age verified VRChat players.</p>
+							<div class="my-4">
+	<div id="frm-form-form-flags-4--pair" class="my-4 form-check">
+	<input type="checkbox" name="flags[4]" id="frm-form-form-flags-4" checked="" class="form-check-input">
+	<label for="frm-form-form-flags-4" class="form-label">
+		Age gated
+	</label>
+	</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h6 class="accordion-header">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tagGroup_6">
+
+
+	Avatar restriction
+
+						<span class="mx-2"> - </span><span data-app-tag-label="">
+		No avatar restriction
+			</span></button>
+					</h6>
+					<div id="tagGroup_6" class="accordion-collapse collapse" data-bs-parent="#eventTagsAccordion">
+						<div class="accordion-body">
+							<div class="my-4">
+		<div class="form-check">
+			<input type="radio" name="flags[6]" id="frm-form-form-flags-6-" value="" class="form-check-input">
+			<label for="frm-form-form-flags-6-" class="form-check-label">
+		(no tag)
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[6]" id="frm-form-form-flags-6-12" checked="" value="12" class="form-check-input">
+			<label for="frm-form-form-flags-6-12" class="form-check-label">
+		No avatar restriction
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[6]" id="frm-form-form-flags-6-13" value="13" class="form-check-input">
+			<label for="frm-form-form-flags-6-13" class="form-check-label">
+		Poor or better
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[6]" id="frm-form-form-flags-6-14" value="14" class="form-check-input">
+			<label for="frm-form-form-flags-6-14" class="form-check-label">
+		Medium or better
+			</label>
+		</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h6 class="accordion-header">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tagGroup_3">
+
+
+	Open decks
+
+						<span class="mx-2"> - </span><span data-app-tag-label="">
+		Open decks
+	</span></button>
+					</h6>
+					<div id="tagGroup_3" class="accordion-collapse collapse" data-bs-parent="#eventTagsAccordion">
+						<div class="accordion-body">
+							<div class="my-4">
+	<div id="frm-form-form-flags-3--pair" class="my-4 form-check">
+	<input type="checkbox" name="flags[3]" id="frm-form-form-flags-3" checked="" class="form-check-input">
+	<label for="frm-form-form-flags-3" class="form-label">
+		Open decks
+	</label>
+	</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h6 class="accordion-header">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tagGroup_5">
+
+
+	Photosensitivity
+
+						<span class="mx-2"> - </span><span data-app-tag-label="">
+		Severe flashing lights
+			</span></button>
+					</h6>
+					<div id="tagGroup_5" class="accordion-collapse collapse" data-bs-parent="#eventTagsAccordion">
+						<div class="accordion-body">
+							<p class="mt-3">Use "severe" if visual elements/effects that can flash rapidly and brightly can take up big portion of field of view.<br>
+i.e. Video screens, AreaLit/LTCGI, VRSL lights, screenspace shaders, audiolinked shaders, fog affected by video, etc.<br>
+<br>
+Use "mild" only if effects less severe and are concentrated in one part of map so player can quickly avoid effects by turning away from them.<br>
+<br>
+Use "with toggle" if you provide options to turn effects off at spawn point.</p>
+							<div class="my-4">
+		<div class="form-check">
+			<input type="radio" name="flags[5]" id="frm-form-form-flags-5-" value="" class="form-check-input">
+			<label for="frm-form-form-flags-5-" class="form-check-label">
+		(no tag)
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[5]" id="frm-form-form-flags-5-8" value="8" class="form-check-input">
+			<label for="frm-form-form-flags-5-8" class="form-check-label">
+		No flashing lights
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[5]" id="frm-form-form-flags-5-9" value="9" class="form-check-input">
+			<label for="frm-form-form-flags-5-9" class="form-check-label">
+		Mild flashing lights
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[5]" id="frm-form-form-flags-5-10" checked="" value="10" class="form-check-input">
+			<label for="frm-form-form-flags-5-10" class="form-check-label">
+		Severe flashing lights
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="flags[5]" id="frm-form-form-flags-5-11" value="11" class="form-check-input">
+			<label for="frm-form-form-flags-5-11" class="form-check-label">
+		Flashing lights with toggle
+			</label>
+		</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="accordion-item">
+					<h6 class="accordion-header">
+						<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tagGroup_2">
+
+
+	Platform
+
+						<span class="mx-2"> - </span><span data-app-tag-label="">Windows</span></button>
+					</h6>
+					<div id="tagGroup_2" class="accordion-collapse collapse" data-bs-parent="#eventTagsAccordion">
+						<div class="accordion-body">
+							<p class="mt-3">Windows - event map is compatible with Windows platform<br>
+<br>
+Android - event map is compatible with Android (Quest) platform<br>
+<br>
+iOS - event map is compatible with iOS platform</p>
+							<div class="my-4">
+
+			<select name="flags[2][]" class="select2 form-control select2-hidden-accessible" id="frm-form-form-flags-2" data-nette-rules="[{&quot;op&quot;:&quot;:maxLength&quot;,&quot;msg&quot;:&quot;You can choose only 3 tags in category Platform.&quot;,&quot;arg&quot;:3}]" multiple="" data-select2-id="select2-data-frm-form-form-flags-2" tabindex="-1" aria-hidden="true"><option value="2" selected="" data-select2-id="select2-data-10-85uy">Windows</option><option value="7">Android</option><option value="15">iOS</option></select><span class="select2 select2-container select2-container--default" dir="undefined" data-select2-id="select2-data-9-zjsa" style="width: auto;"><span class="selection"><span class="select2-selection select2-selection--multiple" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="-1" aria-disabled="false"><ul class="select2-selection__rendered" id="select2-frm-form-form-flags-2-container"><li class="select2-selection__choice" title="Windows" data-select2-id="select2-data-11-jioa"><button type="button" class="select2-selection__choice__remove" tabindex="-1" title="Remove item" aria-label="Remove item" aria-describedby="select2-frm-form-form-flags-2-container-choice-muqj-2"><span aria-hidden="true">×</span></button><span class="select2-selection__choice__display" id="select2-frm-form-form-flags-2-container-choice-muqj-2">Windows</span></li></ul><span class="select2-search select2-search--inline"><textarea class="select2-search__field" type="search" tabindex="0" autocorrect="off" autocapitalize="none" spellcheck="false" role="searchbox" aria-autocomplete="list" autocomplete="off" aria-label="Search" aria-describedby="select2-frm-form-form-flags-2-container" placeholder="" style="width: 0.75em;"></textarea></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+
+
+							</div>
+						</div>
+					</div>
+				</div>
+		</div>
+	</div>
+							</div>
+							<div class="col-12 col-xxxl-6">
+	<h5>Poster</h5>
+	<div style="border-width: 0 0 2px 2px; border-color: currentColor; border-style: solid; padding-left: 15px; overflow: hidden">
+	<div id="frm-form-form-posterType--pair" class="my-4">
+	<label for="" class="form-label">
+	Poster
+	<a href="#posterInstructions" class="link-warning" data-bs-toggle="collapse">
+		<span data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Click to open instructions">
+			<i class="bi bi-info-circle"></i>
+		</span>
+	</a>
+	</label>
+		<div class="form-check">
+			<input type="radio" name="posterType" tabindex="10" id="frm-form-form-posterType-upload" data-nette-rules="[{&quot;op&quot;:&quot;:equal&quot;,&quot;rules&quot;:[],&quot;control&quot;:&quot;posterType&quot;,&quot;toggle&quot;:{&quot;frm-form-form-posterUpload--pair&quot;:true},&quot;arg&quot;:&quot;upload&quot;},{&quot;op&quot;:&quot;:equal&quot;,&quot;rules&quot;:[],&quot;control&quot;:&quot;posterType&quot;,&quot;toggle&quot;:{&quot;frm-form-form-posterUrl--pair&quot;:true},&quot;arg&quot;:&quot;url&quot;}]" value="upload" class="form-check-input">
+			<label for="frm-form-form-posterType-upload" class="form-check-label">
+		Upload
+			</label>
+		</div>
+		<div class="form-check">
+			<input type="radio" name="posterType" tabindex="10" id="frm-form-form-posterType-url" data-nette-rules="[{&quot;op&quot;:&quot;:equal&quot;,&quot;rules&quot;:[],&quot;control&quot;:&quot;posterType&quot;,&quot;toggle&quot;:{&quot;frm-form-form-posterUpload--pair&quot;:true},&quot;arg&quot;:&quot;upload&quot;},{&quot;op&quot;:&quot;:equal&quot;,&quot;rules&quot;:[],&quot;control&quot;:&quot;posterType&quot;,&quot;toggle&quot;:{&quot;frm-form-form-posterUrl--pair&quot;:true},&quot;arg&quot;:&quot;url&quot;}]" checked="" value="url" class="form-check-input">
+			<label for="frm-form-form-posterType-url" class="form-check-label">
+		Url
+			</label>
+		</div>
+
+
+	</div>
+
+	<div id="frm-form-form-posterUpload--pair" class="my-3" hidden="">
+		<input type="file" name="posterUpload" tabindex="11" id="frm-form-form-posterUpload" data-nette-rules="[{&quot;op&quot;:&quot;:fileSize&quot;,&quot;msg&quot;:&quot;Please upload a file smaller than 104857600 bytes.&quot;,&quot;arg&quot;:104857600}]" class="form-control">
+		<div class="text-muted mt-1">Max 25 Mpx</div>
+	</div>
+
+	<div id="frm-form-form-posterUrl--pair" class="my-3">
+		<input type="text" name="posterUrl" tabindex="12" id="frm-form-form-posterUrl" class="form-control">
+		<div class="text-muted mt-1">Max 25 Mpx</div>
+	</div>
+		<div id="posterInstructions" class="collapse">
+			<div class="alert alert-warning">
+				Please upload here only posters. This is <b>NOT</b> meant for club logo.
+			</div>
+		</div>
+	</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<hr>
+				<div class="row">
+					<div>
+	<div id="frm-form-form-published--pair" class="my-4 form-check">
+	<input type="checkbox" name="published" tabindex="301" id="frm-form-form-published" class="form-check-input">
+	<label for="frm-form-form-published" class="form-label">
+		Publish to Timeline
+	</label>
+	</div>
+					</div>
+	<div class="my-3">
+			<input type="submit" name="_submit" data-app-submit-by-enter="1" tabindex="302" value="Save" class="btn btn-primary">
+			<input type="submit" name="refresh" class="d-none btn btn-primary" value="refresh" formnovalidate="">
+	</div>
+				</div>
+			</div>
+	<input type="hidden" name="_do" value="form-form-submit"></form>
+</body></html>

@@ -1,0 +1,91 @@
+{
+  "actionUrl": "/admin/event/detail/100002",
+  "doValue": "form-form-submit",
+  "organizerOptions": [{ "id": "9001", "label": "Example Club" }],
+  "selectedOrganizerIds": ["9001"],
+  "timezoneOptions": ["Europe/Berlin", "America/Los_Angeles", "Asia/Tokyo", "UTC"],
+  "howToJoinOptions": [{ "id": "group-9001", "label": "Example Club" }],
+  "selectedHowToJoin": "group-9001",
+  "flagCategories": {
+    "1": {
+      "key": "1",
+      "name": "NSFW / SFW",
+      "kind": "radio",
+      "options": [
+        { "id": "1", "label": "NSFW" },
+        { "id": "6", "label": "SFW" }
+      ]
+    },
+    "2": {
+      "key": "2",
+      "name": "Platform",
+      "kind": "multi",
+      "options": [
+        { "id": "2", "label": "Windows" },
+        { "id": "7", "label": "Android" },
+        { "id": "15", "label": "iOS" }
+      ]
+    },
+    "3": {
+      "key": "3",
+      "name": "Open decks",
+      "kind": "checkbox",
+      "options": [{ "id": "on", "label": "Open decks" }]
+    },
+    "4": {
+      "key": "4",
+      "name": "Age gated",
+      "kind": "checkbox",
+      "options": [{ "id": "on", "label": "Age gated" }]
+    },
+    "5": {
+      "key": "5",
+      "name": "Photosensitivity",
+      "kind": "radio",
+      "options": [
+        { "id": "", "label": "(no tag)" },
+        { "id": "8", "label": "No flashing lights" },
+        { "id": "9", "label": "Mild flashing" },
+        { "id": "10", "label": "Severe flashing effects" },
+        { "id": "11", "label": "Flashing with toggle" }
+      ]
+    },
+    "6": {
+      "key": "6",
+      "name": "Avatar restriction",
+      "kind": "radio",
+      "options": [
+        { "id": "", "label": "(no tag)" },
+        { "id": "12", "label": "No avatar restriction" },
+        { "id": "13", "label": "Some avatar restriction" }
+      ]
+    }
+  },
+  "selectedFlags": {
+    "1": ["1"],
+    "2": ["2"],
+    "6": ["12"]
+  },
+  "slots": [
+    {
+      "id": "136569",
+      "duration": 60,
+      "flag": "performers",
+      "performers": [{ "id": "300001", "label": "Example DJ" }],
+      "publicNote": "",
+      "privateNote": ""
+    }
+  ],
+  "current": {
+    "name": "what's poppin",
+    "description": "",
+    "start": "2026-09-03T22:00",
+    "timezone": "Europe/Berlin",
+    "url": "",
+    "instanceOpenMinutesBeforeStart": 0,
+    "showSlots": true,
+    "published": false,
+    "posterType": "url",
+    "posterUrl": ""
+  }
+}

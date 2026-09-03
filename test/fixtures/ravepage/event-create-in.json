@@ -1,0 +1,15 @@
+{
+  "title": "what's poppin",
+  "description": "",
+  "organizer_type": "group",
+  "organizer_id": "grp_00000000-0000-4000-8000-000000000001",
+  "starts_at": "2026-09-03T20:00:00Z",
+  "ends_at": "2026-09-03T21:00:00Z",
+  "timezone": "Europe/Berlin",
+  "status": "draft",
+  "visibility": "unlisted",
+  "is_public": false,
+  "open_decks": false,
+  "scene_type": "rave",
+  "platforms": ["windows"]
+}

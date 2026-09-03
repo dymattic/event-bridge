@@ -1,0 +1,10 @@
+{
+  "exact": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":300001,\"text\":\"Example DJ\"}]}"
+  },
+  "prefix": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":926,\"text\":\"Dyzzy\"},{\"id\":300001,\"text\":\"Example DJ\"},{\"id\":3874,\"text\":\"Dyke Dastardly\"},{\"id\":5846,\"text\":\"Dyv3ke\"},{\"id\":10433,\"text\":\"Dynamax\"},{\"id\":35,\"text\":\"Boy Howdy\"},{\"id\":232,\"text\":\"Andy pls\"},{\"id\":320,\"text\":\"Randy Derricott\"},{\"id\":366,\"text\":\"Lost Melody\"},{\"id\":799,\"text\":\"Brandynauta\"}]}"
+  }
+}
