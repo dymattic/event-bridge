@@ -88,6 +88,16 @@ describe('buildVrctlDetailFields', () => {
     expect(no.has('published')).toBe(false);
   });
 
+  it('always submits posterType; no poster in core re-submits the scraped URL', () => {
+    const core = { ...oneSlotCore(), poster: undefined };
+    const none = buildVrctlDetailFields(core, form, { publish: false });
+    expect(strVal(none, 'posterType')).toBe('url');
+    expect(strVal(none, 'posterUrl')).toBe(form.current.posterUrl ?? '');
+    const withExisting = { ...form, current: { ...form.current, posterUrl: 'https://example.invalid/kept.png' } };
+    const kept = buildVrctlDetailFields(core, withExisting, { publish: false });
+    expect(strVal(kept, 'posterUrl')).toBe('https://example.invalid/kept.png');
+  });
+
   it('maps flags to scraped option ids', () => {
     const out = buildVrctlDetailFields(oneSlotCore(), form, { publish: false });
     expect(strVal(out, 'flags[1]')).toBe('1'); // NSFW

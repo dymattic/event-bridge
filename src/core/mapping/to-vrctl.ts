@@ -156,13 +156,18 @@ export function buildVrctlDetailFields(core: EventCore, form: VrctlDetailForm, c
     if (id) out.push(['flags[6]', id]);
   }
 
-  // Poster.
+  // Poster. The live form always submits posterType (+ posterUrl for 'url');
+  // omitting it on an update would drop an existing poster, so with no poster
+  // in core we re-submit whatever URL the scraped form currently holds.
   if (ctx.poster) {
     out.push(['posterType', 'upload']);
     out.push(['posterUpload', { file: ctx.poster }]);
   } else if (core.poster && core.poster.kind === 'url') {
     out.push(['posterType', 'url']);
     out.push(['posterUrl', core.poster.url]);
+  } else {
+    out.push(['posterType', 'url']);
+    out.push(['posterUrl', form.current.posterUrl ?? '']);
   }
 
   out.push(['_submit', 'Save']);
