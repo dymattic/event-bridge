@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clubs I Manage</title>
+<meta name="csrf-token" content="TEST_CSRF_TOKEN">
+</head>
+<body>
+<div class="manage-container dashboard-page">
+  <header class="manage-header"><h1>Clubs I Manage</h1></header>
+  <section class="manage-section">
+    <div class="manage-section-title">Active Clubs</div>
+    <div class="club-grid">
+      <div class="club-card">
+        <div class="club-card-main">
+          <div class="club-card-info">
+            <div class="club-card-header">
+              <h3 class="club-name">Example Club</h3>
+              <span class="club-role role-owner">OWNER</span>
+            </div>
+          </div>
+        </div>
+        <div class="club-card-footer">
+          <a href="/manage/club/grp_00000000-0000-4000-8000-000000000001/events/new" class="btn btn-action-new-event">New Event</a>
+          <a href="/manage/club/grp_00000000-0000-4000-8000-000000000001/events" class="btn btn-action-events">Manage Events</a>
+          <a href="/manage/club/grp_00000000-0000-4000-8000-000000000001/settings" class="btn btn-action-settings">Settings</a>
+        </div>
+      </div>
+      <div class="club-card">
+        <div class="club-card-main">
+          <div class="club-card-info">
+            <div class="club-card-header">
+              <h3 class="club-name">Example Club Two</h3>
+              <span class="club-role role-manager">MANAGER</span>
+            </div>
+          </div>
+        </div>
+        <div class="club-card-footer">
+          <a href="/manage/club/grp_00000000-0000-4000-8000-000000000002/events" class="btn btn-action-events">Manage Events</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</body>
+</html>
