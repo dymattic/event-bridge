@@ -99,8 +99,11 @@ export async function mockPlatform(
   if (platform === 'vrctl') {
     await context.route('https://vrc.tl/**', (route) => {
       const u = new URL(route.request().url());
+      // Never fulfill with a 3xx: Chromium follows mocked redirects to the REAL
+      // network (observed in P5). Serve the sign-in page in place; the agent's
+      // detector treats "no grid marker" as logged-out.
       if (!loggedIn && u.pathname.startsWith('/admin/')) {
-        return route.fulfill({ status: 302, headers: { location: 'https://vrc.tl/sign/in' } });
+        return route.fulfill({ contentType: 'text/html', body: mock('vrctl-signin.html') });
       }
       if (u.pathname.startsWith('/sign/')) {
         return route.fulfill({ contentType: 'text/html', body: mock('vrctl-signin.html') });
