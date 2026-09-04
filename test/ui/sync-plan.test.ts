@@ -76,6 +76,29 @@ describe('scopedHash', () => {
   });
 });
 
+describe('projectScoped canonicalization (P7.2)', () => {
+  const withLineup = (perfs: string[], genres: string[]): EventCore =>
+    core({ music: { genres }, lineup: [{ order: 1, start: START, performers: perfs.map((n) => dj(n)), dancers: [] }] });
+
+  it('hashes equal when performers and genres are only reordered', async () => {
+    const a = await scopedHash(withLineup(['Alice', 'Bob'], ['House', 'Techno']), ALL);
+    const b = await scopedHash(withLineup(['Bob', 'Alice'], ['Techno', 'House']), ALL);
+    expect(a).toBe(b);
+  });
+
+  it('hashes equal when slots are reordered (canonical start order)', async () => {
+    const s1 = { order: 1, start: asIsoUtc('2030-01-05T22:00:00.000Z'), performers: [dj('A')], dancers: [] };
+    const s2 = { order: 2, start: asIsoUtc('2030-01-05T23:00:00.000Z'), performers: [dj('B')], dancers: [] };
+    expect(await scopedHash(core({ lineup: [s1, s2] }), ALL)).toBe(await scopedHash(core({ lineup: [s2, s1] }), ALL));
+  });
+
+  it('still differs for a real change (renamed performer or added genre)', async () => {
+    const base = await scopedHash(withLineup(['Alice', 'Bob'], ['House']), ALL);
+    expect(await scopedHash(withLineup(['Alice', 'Carol'], ['House']), ALL)).not.toBe(base);
+    expect(await scopedHash(withLineup(['Alice', 'Bob'], ['House', 'Trance']), ALL)).not.toBe(base);
+  });
+});
+
 describe('planSync states', () => {
   const cores = { vrcpop: core(), vrctl: core() };
 

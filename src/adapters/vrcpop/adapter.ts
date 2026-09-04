@@ -88,13 +88,13 @@ async function readEvent(agent: VrcpopAgent, group: OwnGroupRef, event: OwnEvent
   const editRes = await request('editPage', { group, event }, { agent });
   classifyRead(editRes, 'edit page');
   const parsed = parseEditPage(editRes.body ?? '');
-  let lineup: VrcpopLineupBody | undefined;
-  try {
-    const lineRes = await request('lineup', { event }, { agent });
-    lineup = parseReadJson(lineRes, 'lineup') as VrcpopLineupBody;
-  } catch {
-    lineup = undefined; // edit-page data-event is sufficient; lineup only enriches genres
-  }
+  // The lineup fetch enriches each slot with genre/energy that the edit-page
+  // data-event lacks. A swallowed failure would drop those fields (fromVrcpop
+  // falls back to data-event sets), silently changing the sync-scoped projection
+  // between reads and letting apply-mode push a degraded lineup. Fail loud: let
+  // the error propagate so assessLink excludes the ref and the editor shows it.
+  const lineRes = await request('lineup', { event }, { agent });
+  const lineup = parseReadJson(lineRes, 'lineup') as VrcpopLineupBody;
   return { core: fromVrcpop(parsed.dataEvent, lineup), version: parsed.version, dataEvent: parsed.dataEvent };
 }
 

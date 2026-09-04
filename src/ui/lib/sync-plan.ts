@@ -74,8 +74,18 @@ export interface SyncAssessment {
 
 // ---- scoped projection + hash ----
 
+// Canonicalization (projection only; mergeScoped keeps the real order): a platform
+// that returns performers/genres/slots in a different but equivalent order must
+// hash equal, so a re-read never looks like drift. A genuine change still differs.
+function byNameCi(a: { name: string }, b: { name: string }): number {
+  return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+}
+
 function scopedPerformer(p: Performer): { name: string; aliases: Performer['aliases'] } {
-  return { name: p.name, aliases: p.aliases };
+  const aliases = [...p.aliases].sort(
+    (a, b) => a.platform.localeCompare(b.platform) || (a.id ?? '').localeCompare(b.id ?? ''),
+  );
+  return { name: p.name, aliases };
 }
 
 function scopedSlot(s: Slot): Record<string, unknown> {
@@ -84,15 +94,25 @@ function scopedSlot(s: Slot): Record<string, unknown> {
     start: s.start,
     end: s.end,
     title: s.title,
-    performers: s.performers.map(scopedPerformer),
+    performers: [...s.performers].sort(byNameCi).map(scopedPerformer),
     vj: s.vj ? scopedPerformer(s.vj) : undefined,
-    dancers: s.dancers.map(scopedPerformer),
+    dancers: [...s.dancers].sort(byNameCi).map(scopedPerformer),
     genre: s.genre,
     energy: s.energy,
     notes: s.notes,
     publicNote: s.publicNote,
     privateNote: s.privateNote,
   };
+}
+
+// Genres are a set (order-insensitive); sort case-insensitively for a stable hash.
+function canonicalMusic(m: Music): Music {
+  return { ...m, genres: [...m.genres].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())) };
+}
+
+// Slots in start order (then declared order) so array position is deterministic.
+function canonicalSlots(lineup: Slot[]): Slot[] {
+  return [...lineup].sort((a, b) => a.start.localeCompare(b.start) || a.order - b.order);
 }
 
 export interface ScopedProjection {
@@ -125,11 +145,11 @@ export function projectScoped(core: EventCore, fields: SyncFields): ScopedProjec
       doorsOpen: core.doorsOpen,
       zone: core.zone,
       flags: core.flags,
-      music: core.music,
+      music: canonicalMusic(core.music),
       links: core.links,
     };
   }
-  if (fields.lineup) out.lineup = core.lineup.map(scopedSlot);
+  if (fields.lineup) out.lineup = canonicalSlots(core.lineup).map(scopedSlot);
   if (fields.poster) out.poster = core.poster && core.poster.kind !== 'bytes' ? core.poster : null;
   if (fields.publishState) out.publishState = core.visibility.publish;
   return out;

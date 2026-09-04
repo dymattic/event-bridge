@@ -87,6 +87,17 @@ describe('adapter reads', () => {
     expect(out.core.lineup[0]?.genre).toBe('Open Genre'); // enriched from the lineup body
   });
 
+  it('a failed lineup fetch throws (never silently degrades the core)', async () => {
+    const failing = (req: HttpRequest): HttpResult => {
+      if (req.method === 'GET' && req.path.startsWith('/api/event-lineup.php')) {
+        return { status: 500, finalUrl: 'https://vrcpop.com/api/event-lineup.php', headers: {}, body: 'boom' };
+      }
+      return site()(req);
+    };
+    const { agent } = makeFakeAgent(failing);
+    await expect(vrcpopAdapter.readEvent(agent, GRP, EVT)).rejects.toMatchObject({ code: 'UNKNOWN' });
+  });
+
   it('loads vocab + resolves a performer', async () => {
     const { agent } = makeFakeAgent(site());
     const vocab = await vrcpopAdapter.loadVocab(agent);

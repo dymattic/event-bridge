@@ -419,6 +419,28 @@ title → In sync; conflict blocks Apply until a per-field pick, no write before
 it; apply mode writes on Refresh + logs a sync job; off does nothing). The
 vrcpop mock's `recorder.eventName` simulates a "changed on re-read" edit.
 
+**Read integrity + canonical projection (P7.2).** Sync compares two consecutive
+reads by a scoped hash, so each read MUST be deterministic — a non-deterministic
+read reads as false drift ("n pending" that never clears) and, in apply mode,
+would WRITE it to the targets on every Refresh. Two guards:
+1. **vrcpop `readEvent` fails loud.** A failed `/api/event-lineup.php` fetch now
+   throws instead of the old `catch { lineup = undefined }`, which silently fell
+   back to the edit-page `data-event` sets (no per-slot genre/energy, different
+   performers). `assessLink` EXCLUDES a ref it can't fully read, so a transient
+   lineup failure never yields a degraded core that flips the hash or pushes a
+   stripped lineup; the editor surfaces the error instead.
+2. **`projectScoped` canonicalizes before hashing/diffing.** `music.genres` sorted
+   case-insensitively; each slot's `performers`/`dancers` sorted by name, aliases
+   by platform; slots in start order. Equivalent re-orderings hash equal; a real
+   change still differs. `mergeScoped` keeps the platform's real order when it
+   writes (canonicalization is projection-only).
+
+A link stays removable in the UI: `LogicalEventsTable` renders **Unlink** (and the
+Sync cell) on any linked row (`le.linkId`), in both the table and the mobile card.
+A link whose refs match no loaded row produces no row (`groupLogicalEvents` drops
+a zero-`found` link) — that fully-orphaned case only arises when every ref's event
+is deleted/unlisted; a link with any listed ref is always removable.
+
 ## Settings & the experimental rave.page toggle
 
 `src/runtime/settings.ts` owns `storage.local.settings`:
