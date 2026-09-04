@@ -9,7 +9,7 @@ install by `pnpm check:pins` (exact + registry `time[version]` >= 7 days).
 |---|---|---|---|
 | react | 19.2.8 | dashboard + popup UI; rave.page UI reuse (its primitives are React 19 + Tailwind 4; user decision 2026-09-03); kit peer (`^19`) | released 2026-07-21; **ships** |
 | react-dom | 19.2.8 | React DOM renderer (`createRoot`); kit peer (`^19`) | released 2026-07-21; **ships** |
-| @rave-page/ui | file:vendor/rave-page-ui-0.1.0.tgz | shared rave.page design-system kit (Button/Badge/Card/Dialog/form controls/SmartSelect/DataTable/Toast/…); UI-reuse rule (P0b) | **vendored tarball** (kit not on npm yet), MIT; provenance + sha256 in `vendor/PROVENANCE.md`; `check:pins` skips `file:` specs; transitive exact pins listed below; **ships** (compiled `dist/` + Tailwind CSS) |
+| @rave-page/ui | file:vendor/rave-page-ui-0.2.0.tgz | shared rave.page design-system kit (Button/Badge/Card/Dialog/form controls/SmartSelect/DataTable/Toast/…; 0.2.0 adds LineupBoard/lineup-math/VisibilityBadge/Avatar for P6.3); UI-reuse rule (P0b) | **vendored tarball** (kit not on npm yet), MIT; provenance + sha256 in `vendor/PROVENANCE.md`; `check:pins` skips `file:` specs; transitive exact pins listed below; **ships** (compiled `dist/` + Tailwind CSS) |
 | lucide-react | 1.34.0 | icons (design rule: Lucide only); kit peer (accepts `>=0.560 <2`) | released 2026-08-24; **ships** |
 | tailwindcss | 4.3.3 | design-token CSS engine; tokens vendored from rave.page | released 2026-07-16; dev-only (generated CSS ships) |
 | @tailwindcss/cli | 4.3.3 | `styles.css` -> `build/styles.css` build step (`tools/build.mjs`) | released 2026-07-16; dev-only |
@@ -35,6 +35,10 @@ by pnpm `minimumReleaseAge: 10080` at resolve; all released on/before
   `@radix-ui/react-tabs` 1.1.21, `@radix-ui/react-tooltip` 1.2.16
 - `class-variance-authority` 0.7.1, `clsx` 2.1.1, `tailwind-merge` 3.6.0,
   `dayjs` 1.11.20
+- kit 0.2.0 (LineupBoard drag/drop): `@dnd-kit/core` 6.3.1 (2024-12-05),
+  `@dnd-kit/sortable` 10.0.0 (2024-12-04), `@dnd-kit/utilities` 3.2.2
+  (2023-11-06), `@dnd-kit/modifiers` 9.0.0 (2024-12-04), transitive
+  `@dnd-kit/accessibility` 3.1.1 (2024-11-23); dates checked 2026-09-04
 
 These are the kit's own `dependencies` (bundled into its published contract),
 not event-bridge direct deps — hence they carry no separate 7-day-soak row
