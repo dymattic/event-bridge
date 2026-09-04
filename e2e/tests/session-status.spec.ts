@@ -1,23 +1,29 @@
-import { expect, mockPlatform, openPlatformTab, openPopup, test, type MockPlatform } from '../fixtures/extension';
+import { enableRavepage, expect, mockPlatform, openPlatformTab, openPopup, test, type MockPlatform } from '../fixtures/extension';
 
-// P3 changed rave.page: its status derives from the extension token store (a
-// connect gesture), NOT from a page session — no tab is opened and the SPA's
-// localStorage login is ignored. With no stored token it is always "Not
-// connected" here. The tab-session platforms (vrcpop, vrc.tl) keep the P2
-// behaviour but now speak "Signed in / Signed out".
+// rave.page is an experimental integration, OFF by default: its popup row is
+// hidden entirely until the toggle is on. When on, its status derives from the
+// extension token store (a connect gesture), NOT a page session — the SPA's
+// localStorage login is ignored, so with no stored token it reads "Not connected".
+// The tab-session platforms (vrcpop, vrc.tl) always show and speak "Signed in /
+// Signed out".
 const TAB_PLATFORMS: MockPlatform[] = ['vrcpop', 'vrctl'];
 const PLATFORMS: MockPlatform[] = ['vrcpop', 'vrctl', 'ravepage'];
 const EXPECT_TIMEOUT = 25_000;
 
-test('no platform tabs open -> "No tab open" for tab platforms, "Not connected" for rave.page', async ({ context }) => {
+test('default popup: two tab rows, rave.page hidden; enabling shows it "Not connected"', async ({ context }) => {
   const popup = await openPopup(context);
   for (const p of TAB_PLATFORMS) {
     await expect(popup.getByTestId(`status-${p}`)).toContainText('No tab open', { timeout: EXPECT_TIMEOUT });
   }
+  // Off by default -> no rave.page row at all.
+  await expect(popup.getByTestId('status-ravepage')).toHaveCount(0);
+  // Enable -> the row appears and reads "Not connected" (no stored token).
+  await enableRavepage(popup);
+  await popup.reload();
   await expect(popup.getByTestId('status-ravepage')).toContainText('Not connected', { timeout: EXPECT_TIMEOUT });
 });
 
-test('logged-in mocked tabs -> Signed in for tab platforms; rave.page stays Not connected (no stored token)', async ({ context }) => {
+test('logged-in mocked tabs -> Signed in for tab platforms; rave.page (enabled) stays Not connected', async ({ context }) => {
   for (const p of PLATFORMS) {
     await mockPlatform(context, p, 'logged-in');
     await openPlatformTab(context, p);
@@ -26,10 +32,13 @@ test('logged-in mocked tabs -> Signed in for tab platforms; rave.page stays Not 
   for (const p of TAB_PLATFORMS) {
     await expect(popup.getByTestId(`status-${p}`)).toContainText('Signed in', { timeout: EXPECT_TIMEOUT });
   }
+  await enableRavepage(popup);
+  await popup.reload();
+  // No stored token + SPA localStorage ignored -> Not connected even with a live tab.
   await expect(popup.getByTestId('status-ravepage')).toContainText('Not connected', { timeout: EXPECT_TIMEOUT });
 });
 
-test('logged-out mocked tabs -> Signed out for tab platforms; Not connected for rave.page', async ({ context }) => {
+test('logged-out mocked tabs -> Signed out for tab platforms; rave.page (enabled) Not connected', async ({ context }) => {
   for (const p of PLATFORMS) {
     await mockPlatform(context, p, 'logged-out');
     await openPlatformTab(context, p);
@@ -38,6 +47,8 @@ test('logged-out mocked tabs -> Signed out for tab platforms; Not connected for 
   for (const p of TAB_PLATFORMS) {
     await expect(popup.getByTestId(`status-${p}`)).toContainText('Signed out', { timeout: EXPECT_TIMEOUT });
   }
+  await enableRavepage(popup);
+  await popup.reload();
   await expect(popup.getByTestId('status-ravepage')).toContainText('Not connected', { timeout: EXPECT_TIMEOUT });
 });
 

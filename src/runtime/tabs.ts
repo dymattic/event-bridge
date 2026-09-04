@@ -4,6 +4,7 @@ import { ext } from '../shared/webext';
 import { BUILD_ID } from '../shared/build-id';
 import { BridgeError } from '../core/errors';
 import { ORIGINS, type AgentPing, type AgentPong, type Platform } from '../shared/agent-protocol';
+import { getRavepageInstance } from './settings';
 
 export interface PlatformMeta {
   platform: Platform;
@@ -12,11 +13,18 @@ export interface PlatformMeta {
   name: string;
 }
 
-export const PLATFORM_ORIGINS: Record<Platform, PlatformMeta> = {
-  vrcpop: { platform: 'vrcpop', origin: ORIGINS.vrcpop, entry: `${ORIGINS.vrcpop}/dashboard`, name: 'vrcpop.com' },
-  vrctl: { platform: 'vrctl', origin: ORIGINS.vrctl, entry: `${ORIGINS.vrctl}/admin/event`, name: 'vrc.tl' },
-  ravepage: { platform: 'ravepage', origin: ORIGINS.ravepage, entry: `${ORIGINS.ravepage}/`, name: 'rave.page' },
-};
+// Resolve a platform's origin/entry/name AT CALL TIME. vrcpop/vrctl are static;
+// rave.page derives its origin/entry from the configured instance (settings).
+export async function getPlatformMeta(platform: Platform): Promise<PlatformMeta> {
+  if (platform === 'ravepage') {
+    const { appOrigin } = await getRavepageInstance();
+    return { platform, origin: appOrigin, entry: `${appOrigin}/`, name: 'rave.page' };
+  }
+  const origin = ORIGINS[platform];
+  return platform === 'vrcpop'
+    ? { platform, origin, entry: `${origin}/dashboard`, name: 'vrcpop.com' }
+    : { platform, origin, entry: `${origin}/admin/event`, name: 'vrc.tl' };
+}
 
 // Fixed display order across UI surfaces: vrc.tl, vrcpop.com, rave.page.
 export const PLATFORMS: Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
@@ -95,7 +103,7 @@ export async function ensureAgent(
   platform: Platform,
   opts: { allowOpen: boolean; url?: string; active?: boolean },
 ): Promise<EnsureResult> {
-  const meta = PLATFORM_ORIGINS[platform];
+  const meta = await getPlatformMeta(platform);
   if (!(await hasPermission(meta.origin))) {
     throw new BridgeError('PERMISSION_MISSING', `host permission missing for ${meta.name}`);
   }
@@ -138,7 +146,8 @@ export async function ensureAgent(
 // Diagnostic: does tabs.query surface matching-origin tab URLs without the
 // "tabs" permission (host permission only)? Used by the e2e probe.
 export async function queryPlatformTabs(platform: Platform): Promise<{ tabId?: number; url?: string }[]> {
-  const tabs = await ext.tabs.query({ url: `${PLATFORM_ORIGINS[platform].origin}/*` });
+  const meta = await getPlatformMeta(platform);
+  const tabs = await ext.tabs.query({ url: `${meta.origin}/*` });
   return tabs.map((t) => ({ tabId: t.id, url: t.url }));
 }
 

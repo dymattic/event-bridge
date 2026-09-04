@@ -22,7 +22,7 @@ import type {
   PlatformAdapter,
   UpdateOpts,
 } from '../types';
-import { toBridgeError } from './client';
+import { ensureConfigured, toBridgeError } from './client';
 import { ROUTES } from './routes';
 import { caps } from './capabilities';
 import { status as authStatus } from './auth';
@@ -43,6 +43,7 @@ const CREATE_STEP = 'create';
 
 export async function listOwnClubs(): Promise<OwnClub[]> {
   try {
+    await ensureConfigured();
     const groups = await ROUTES.getMyGroups({}); // organizer-capable by default
     const out: OwnClub[] = [];
     const seen = new Set<string>();
@@ -67,6 +68,7 @@ export async function listOwnClubs(): Promise<OwnClub[]> {
 
 export async function listOwnEvents(organizer: OrganizerFilter): Promise<OwnEvent[]> {
   try {
+    await ensureConfigured();
     const events = await ROUTES.listEvents({ organizerType: organizer.organizerType, organizerId: organizer.organizerId });
     return events.map((e) => ({
       id: e.id ?? '',
@@ -99,6 +101,7 @@ function rawFrom(core: EventCore): RavepageRaw {
 
 export async function readEvent(id: string): Promise<EventCore> {
   try {
+    await ensureConfigured();
     const [event, slots, performers] = await Promise.all([
       ROUTES.getEvent({ eventId: id }),
       ROUTES.listSlots({ eventId: id }),
@@ -116,6 +119,7 @@ export async function readEvent(id: string): Promise<EventCore> {
 
 export async function loadVocab(): Promise<AdapterVocab> {
   try {
+    await ensureConfigured();
     const genres = await ROUTES.listGenres();
     return { genres: genres.map((g) => ({ id: g.id ?? '', name: g.name ?? '', slug: g.slug })) };
   } catch (e) {
@@ -125,6 +129,7 @@ export async function loadVocab(): Promise<AdapterVocab> {
 
 export async function resolvePerformer(query: string): Promise<PerformerMatch[]> {
   try {
+    await ensureConfigured();
     const performers = await ROUTES.searchPerformers({ q: query });
     return performers.map((p) => ({ id: p.id, name: p.name ?? '' }));
   } catch (e) {
@@ -379,6 +384,7 @@ function asObj(v: JsonValue): Record<string, JsonValue> {
 
 export async function executeStep(step: PlannedStep): Promise<JsonValue> {
   try {
+    await ensureConfigured();
     switch (step.routeId) {
       case 'events.create':
         return (await ROUTES.createEvent({ requestBody: step.request as unknown as EventCreateIn })) as unknown as JsonValue;

@@ -3,6 +3,7 @@
 // never persisted (/auth/refresh is 410 — renewal is a user re-connect). This
 // store NEVER reads the SPA's page localStorage tokens.
 import { ext } from '../../shared/webext';
+import { getRavepageInstance } from '../../runtime/settings';
 
 export interface StoredAuth {
   apiBase: string;
@@ -25,7 +26,15 @@ function isStoredAuth(v: unknown): v is StoredAuth {
 export async function getStored(): Promise<StoredAuth | null> {
   const got = await ext.storage.local.get(KEY);
   const v = got[KEY];
-  return isStoredAuth(v) ? v : null;
+  if (!isStoredAuth(v)) return null;
+  // Instance-scoped: a token minted for a different API origin (instance changed)
+  // is treated as absent and dropped.
+  const { apiOrigin } = await getRavepageInstance();
+  if (v.apiBase !== apiOrigin) {
+    void clear().catch(() => undefined);
+    return null;
+  }
+  return v;
 }
 
 export async function setStored(a: StoredAuth): Promise<void> {

@@ -2,7 +2,7 @@
 // Content scripts share the page's DOM + origin storage but NOT the page's JS
 // globals — vrcpop's `window.vrcpop.user` is read by parsing inline script TEXT,
 // never by touching the page window.
-import { ORIGINS, type SessionInfo } from '../shared/agent-protocol';
+import { ORIGINS, type Platform, type SessionInfo } from '../shared/agent-protocol';
 import { base64ToBytes } from '../shared/base64';
 import { BridgeError } from '../core/errors';
 
@@ -122,14 +122,18 @@ export function detectRavepage(now: number = Date.now()): SessionInfo {
 
 // ---- dispatch ----
 
-const DETECTORS: Record<string, () => Promise<SessionInfo> | SessionInfo> = {
-  [ORIGINS.vrcpop]: detectVrcpop,
-  [ORIGINS.vrctl]: detectVrctl,
-  [ORIGINS.ravepage]: () => detectRavepage(),
-};
-
-export async function detectSession(): Promise<SessionInfo> {
-  const detector = DETECTORS[location.origin];
-  if (!detector) throw new BridgeError('UNSUPPORTED', `no session detector for ${location.origin}`);
-  return detector();
+// vrcpop/vrctl are keyed by their static origins. rave.page's origin is
+// configurable, so the caller declares platform+origin and the agent verifies
+// location.origin matches before trusting it (no hardcoded rave.page host here).
+export async function detectSession(op: { platform?: Platform; origin?: string } = {}): Promise<SessionInfo> {
+  const here = location.origin;
+  if (op.platform === 'ravepage') {
+    if (op.origin && op.origin !== here) {
+      throw new BridgeError('UNSUPPORTED', `rave.page session op origin ${op.origin} != page ${here}`);
+    }
+    return detectRavepage();
+  }
+  if (here === ORIGINS.vrcpop) return detectVrcpop();
+  if (here === ORIGINS.vrctl) return detectVrctl();
+  throw new BridgeError('UNSUPPORTED', `no session detector for ${here}`);
 }

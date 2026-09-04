@@ -26,6 +26,8 @@ export {
   parseDashboard,
   parseEventsList,
   parseEditPage,
+  parseVrcpopCardDate,
+  eventToOwn,
 } from './parse';
 export type { DashboardParse, EventsListParse, EditPageParse } from './parse';
 export { makeVocab, parseGenres, parseEnergy, parsePerformerSearchAll, deletePayload } from './payloads';

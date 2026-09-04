@@ -6,15 +6,29 @@ import { NotificationProvider, Toast, TooltipProvider } from '@rave-page/ui';
 import { clearResourceCache } from '../../src/ui/lib/resource';
 import type { PlatformData, PlatformConn } from '../../src/ui/dashboard/lib/event-data';
 
-// event-data wraps the adapter registry (webext); mock it so the view renders
-// from fake resolved data. webext is mocked because Events imports the runtime.
+// event-data wraps the adapter registry (webext); mock it so the view renders from
+// fake resolved data. webext is mocked (Events imports the runtime + settings).
 const h = vi.hoisted(() => ({
   conns: {} as Record<string, PlatformConn>,
   data: {} as Record<string, PlatformData>,
+  store: {} as Record<string, unknown>,
 }));
 
 vi.mock('../../src/shared/webext', () => ({
-  ext: { tabs: { create: () => Promise.resolve({}) }, permissions: { contains: () => Promise.resolve(true) } },
+  ext: {
+    tabs: { create: () => Promise.resolve({}) },
+    permissions: { contains: () => Promise.resolve(true), request: () => Promise.resolve(true) },
+    storage: {
+      local: {
+        get: (k: string) => Promise.resolve(k in h.store ? { [k]: h.store[k] } : {}),
+        set: (o: Record<string, unknown>) => {
+          Object.assign(h.store, o);
+          return Promise.resolve();
+        },
+      },
+      onChanged: { addListener: () => undefined, removeListener: () => undefined },
+    },
+  },
 }));
 
 vi.mock('../../src/ui/dashboard/lib/event-data', () => ({
@@ -44,12 +58,11 @@ async function render(query = ''): Promise<void> {
       </TooltipProvider>,
     );
   });
-  await act(async () => {
-    await new Promise((r) => setTimeout(r, 0));
-  });
-  await act(async () => {
-    await new Promise((r) => setTimeout(r, 0));
-  });
+  for (let i = 0; i < 3; i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  }
 }
 
 beforeEach(() => {
@@ -57,6 +70,7 @@ beforeEach(() => {
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
+  h.store = { settings: { experimental: { ravepage: true } } }; // three platforms
   h.conns = {
     vrctl: { connected: true },
     vrcpop: { connected: true },
@@ -93,7 +107,7 @@ afterEach(() => {
 
 const RAW_ID = /^(grp_|evt_|usr_)|^user \d+$/;
 
-describe('Events view', () => {
+describe('Events view (rave.page toggle on)', () => {
   it('shows resolved titles + club names for all three platforms', async () => {
     await render();
     const text = container.textContent ?? '';
@@ -133,10 +147,26 @@ describe('Events view', () => {
     expect(newBtn).toBeTruthy();
     expect(newBtn?.disabled).toBe(true);
   });
+});
 
-  it('empty state when nothing is connected', async () => {
+describe('Events view (rave.page toggle off = default)', () => {
+  beforeEach(() => {
+    h.store = {}; // rave.page off
+  });
+
+  it('shows only vrc.tl + vrcpop events, never rave.page', async () => {
+    await render();
+    const text = container.textContent ?? '';
+    expect(text).toContain('just spinnin');
+    expect(text).toContain("what's poppin");
+    expect(text).not.toContain('rave night'); // gated out
+  });
+
+  it('empty-state connect list offers only the two enabled platforms', async () => {
     h.conns = { vrctl: { connected: false }, vrcpop: { connected: false }, ravepage: { connected: false } };
     await render();
     expect(container.querySelector('[data-testid="events-none-connected"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="events-connect-ravepage"]')).toBeNull();
+    expect(container.querySelector('[data-testid="events-connect-vrctl"]')).toBeTruthy();
   });
 });

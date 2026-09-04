@@ -1,6 +1,6 @@
 // #/events/:platform/:id e2e — the read-only detail renders the resolved lineup
 // (performer NAMES, not ids) for each platform, against mocks only.
-import { expect, openDashboard, openPlatformTab, test } from '../fixtures/extension';
+import { enableRavepage, expect, openDashboard, openPlatformTab, test } from '../fixtures/extension';
 import { mockVrcpopSite, newRecorder } from '../mocks/vrcpop-api';
 import { mockVrctlSite, type RecordedRequest } from '../mocks/vrctl-site';
 import { mockRavepageEvents, newRavepageRecorder, seedRavepageToken, RP_EVENT_1 } from '../mocks/ravepage-events';
@@ -17,6 +17,7 @@ async function setup(context: BrowserContext): Promise<Page> {
   await openPlatformTab(context, 'vrctl');
   const page = await openDashboard(context);
   await seedRavepageToken(page);
+  await enableRavepage(page); // rave.page detail route requires the toggle on
   return page;
 }
 

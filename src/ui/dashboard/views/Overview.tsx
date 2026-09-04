@@ -1,16 +1,19 @@
-// Default dashboard view: three equal platform cards (vrc.tl, vrcpop.com,
-// rave.page — the order the user lists them). No platform is primary. Tab
-// platforms derive status from the page session (getSessionStatus); rave.page
+// Default dashboard view: one equal card per ENABLED platform (vrc.tl, vrcpop.com,
+// and rave.page only when its experimental toggle is on). No platform is primary.
+// Tab platforms derive status from the page session (getSessionStatus); rave.page
 // from its token store (a connect gesture). All actions are user-triggered.
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, DashboardListRow, StatCard } from '@rave-page/ui';
-import type { Platform } from '../../../shared/agent-protocol';
+import { ORIGINS, type Platform } from '../../../shared/agent-protocol';
 import { getSessionStatus } from '../../../runtime/sessions';
 import { status as ravepageStatus, connect, disconnect } from '../../../adapters/ravepage/auth';
-import { ensureAgent, PLATFORM_ORIGINS } from '../../../runtime/tabs';
+import { ensureAgent } from '../../../runtime/tabs';
+import { enabledPlatforms, getSettings, onSettingsChange, type RavepageInstance, type Settings } from '../../../runtime/settings';
 import { ext } from '../../../shared/webext';
 import { RAVEPAGE_CAPS, VRCTL_CAPS, type DraftSupport } from '../../../core/capabilities';
 import { vrcpopCaps } from '../../../adapters/vrcpop/capabilities';
+import { PLATFORM_HOST, PLATFORM_NAME } from '../../lib/platform-meta';
+import { isUpcoming } from '../../lib/event-filters';
 import { ravepageStatusView, tabStatusView, type StatusView } from '../../lib/status';
 import { useResource } from '../../lib/resource';
 import { loadPlatformData } from '../lib/event-data';
@@ -23,7 +26,7 @@ function PlatformDetail({ platform, connected }: { platform: Platform; connected
   if (!connected) return null;
   const clubs = data?.clubs ?? [];
   const events = data?.events ?? [];
-  const upcoming = events.filter((e) => e.start && Date.parse(e.start) >= Date.now()).length;
+  const upcoming = events.filter((e) => isUpcoming(e)).length; // same rule as #/events
   const countByClub = new Map<string, number>();
   for (const e of events) countByClub.set(e.clubId, (countByClub.get(e.clubId) ?? 0) + 1);
   const busy = loading && !data;
@@ -51,11 +54,6 @@ function PlatformDetail({ platform, connected }: { platform: Platform; connected
     </div>
   );
 }
-
-// Fixed display order — vrc.tl, vrcpop.com, rave.page.
-const ORDER: Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
-
-const hostOf = (p: Platform): string => new URL(PLATFORM_ORIGINS[p].origin).host;
 
 // Minimal caps shape the Supports line needs (works for both the core tables and
 // vrcpop's tri-state-draft variant).
@@ -86,6 +84,8 @@ function supportsLine(c: SupportCaps): string {
 const CHECKING: StatusView = { text: 'Checking…', variant: 'secondary', noAccess: false };
 
 export default function Overview(): React.JSX.Element {
+  const [platforms, setPlatforms] = useState<Platform[]>(['vrctl', 'vrcpop']);
+  const [instance, setInstance] = useState<RavepageInstance | null>(null);
   const [statuses, setStatuses] = useState<Record<Platform, StatusView>>({
     vrctl: CHECKING,
     vrcpop: CHECKING,
@@ -96,14 +96,13 @@ export default function Overview(): React.JSX.Element {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const rpEnabled = platforms.includes('ravepage');
+
+  const load = useCallback(async (withRavepage: boolean) => {
     setBusy(true);
     try {
-      const [vt, vp, rp] = await Promise.all([
-        getSessionStatus('vrctl'),
-        getSessionStatus('vrcpop'),
-        ravepageStatus(),
-      ]);
+      const [vt, vp] = await Promise.all([getSessionStatus('vrctl'), getSessionStatus('vrcpop')]);
+      const rp = withRavepage ? await ravepageStatus() : { connected: false, reconnectSoon: false, label: undefined, expiresAt: undefined };
       setStatuses({
         vrctl: tabStatusView(vt),
         vrcpop: tabStatusView(vp),
@@ -116,9 +115,25 @@ export default function Overview(): React.JSX.Element {
     }
   }, []);
 
+  // Apply the toggle without a reload (subscribe to settings changes).
   useEffect(() => {
-    void load();
+    const apply = (s: Settings): void => {
+      const list = enabledPlatforms(s);
+      setPlatforms(list);
+      setInstance(s.ravepage);
+      void load(list.includes('ravepage'));
+    };
+    void getSettings().then(apply);
+    return onSettingsChange(apply);
   }, [load]);
+
+  const hostOf = (p: Platform): string => {
+    if (p !== 'ravepage') return PLATFORM_HOST[p];
+    if (!instance) return PLATFORM_NAME.ravepage;
+    const app = new URL(instance.appOrigin).host;
+    const api = new URL(instance.apiOrigin).host;
+    return app === api ? app : `${app} · ${api}`;
+  };
 
   const runAction = (fn: () => Promise<void>) => (): void => {
     setError(null);
@@ -126,19 +141,20 @@ export default function Overview(): React.JSX.Element {
     void fn()
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => {
-        void load();
+        void load(rpEnabled);
       });
   };
 
   const refresh = (): void => {
-    void load();
+    void load(rpEnabled);
   };
 
   // Firefox host-permission request — MUST run in the click gesture (no await
-  // before ext.permissions.request).
+  // before ext.permissions.request). Only tab platforms show a grant affordance.
   const grant = (p: Platform) => (): void => {
-    void ext.permissions.request({ origins: [`${PLATFORM_ORIGINS[p].origin}/*`] }).then((ok) => {
-      if (ok) void load();
+    if (p === 'ravepage') return;
+    void ext.permissions.request({ origins: [`${ORIGINS[p]}/*`] }).then((ok) => {
+      if (ok) void load(rpEnabled);
     });
   };
 
@@ -162,8 +178,8 @@ export default function Overview(): React.JSX.Element {
       </header>
 
       <div data-testid="overview-cards" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {ORDER.map((p) => {
-          const name = PLATFORM_ORIGINS[p].name;
+        {platforms.map((p) => {
+          const name = PLATFORM_NAME[p];
           const actions =
             p === 'ravepage' ? (
               <>

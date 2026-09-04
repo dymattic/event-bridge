@@ -81,6 +81,13 @@ One `manifest/base.json` shared; per-browser overlays deep-merged at assemble:
 
 Edit the manifest under `manifest/`, never the generated `dist/*/manifest.json`.
 
+`base.json` also declares `optional_host_permissions: ["https://*/*"]` — the
+runtime grant a **custom rave.page instance** needs (see Settings below). The
+manifest probe (`pnpm build && pnpm lint:firefox`) confirmed web-ext accepts this
+for Firefox (0 errors, 5 known innerHTML warnings), so it stays in the shared
+`base.json` — no per-browser split. The default dev rave.page hosts remain in the
+required `host_permissions`, so the default instance never prompts.
+
 ## Load unpacked
 
 **Chrome/Chromium:** `chrome://extensions` -> enable Developer mode ->
@@ -147,14 +154,19 @@ rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter stat
 
 | Hash | View |
 |---|---|
-| `#/` (default) | Overview (`views/Overview.tsx`) — three equal platform cards (vrc.tl, vrcpop.com, rave.page) |
+| `#/` (default) | Overview (`views/Overview.tsx`) — equal platform cards (vrc.tl, vrcpop.com; rave.page only when the toggle is on) |
 | `#/events` | Events (`views/Events.tsx`) — own events across every connected platform, filterable/searchable table |
 | `#/events?platform=…&club=…&status=…&time=…&from=…&to=…&q=…` | Events with URL-synced filters (shareable) |
 | `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete |
+| `#/settings` | Settings (`views/Settings.tsx`) — General + Experimental (rave.page toggle + instance) |
 | `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
-| `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) |
+| `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) — **gated** by the toggle |
 | `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
 | `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
+
+Top nav is "Overview · Events · Settings". When the rave.page toggle is off, the
+rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`) render an
+`EmptyState` (`ravepage-off`) linking to `#/settings` instead of the view.
 
 The Overview treats all three platforms identically (no primary platform): each
 card shows name + host, a session-status badge (`getSessionStatus` for
@@ -184,6 +196,66 @@ The registry (`src/adapters/registry.ts`) exposes `getAdapter(id)` + `ADAPTER_ID
 for all three platforms; the two agent-bound adapters live in each platform's
 `platform.ts`. e2e drives every route (`kit`/`vrcpop`/`vrctl` panel specs).
 
+**vrcpop card-date approximation.** The events-list card renders the date as a
+human label in the OWNER's timezone (e.g. `Thu, Sep 3, 2026 at 10:00 PM`).
+`parseVrcpopCardDate` (in `adapters/vrcpop/parse.ts`) strips ` at ` and
+`Date.parse`s the rest into an ISO instant for `OwnEvent.start` — a browser-local
+**approximation** good enough for listing/sorting/upcoming counts; the exact
+instant comes from `readEvent` (`start_timestamp_utc`). It returns `undefined`
+for an unparseable label — never the raw string (which would make `Date.parse`
+NaN and drop the row from the Overview upcoming count while `#/events` still
+listed it — the P6.1b bug). Overview and `#/events` share one rule,
+`event-filters.ts` `isUpcoming(row)` (`matchesTime('upcoming')` AND
+`status !== 'past'`), so the card count and the table never disagree.
+
+## Settings & the experimental rave.page toggle
+
+`src/runtime/settings.ts` owns `storage.local.settings`:
+
+```jsonc
+{
+  "closeOpenedTabs": true,
+  "testPrefix": "[event-bridge test] ",
+  "experimental": { "ravepage": false },        // rave.page integration, OFF by default
+  "ravepage": {                                  // configurable instance (self-hosted / federated)
+    "appOrigin": "https://development.rave.page",
+    "apiOrigin": "https://development.api.rave.page"
+  }
+}
+```
+
+`merge()` deep-merges nested defaults, so settings stored before these keys
+existed still load. Helpers: `isRavepageEnabled()`, `getRavepageInstance()`,
+`enabledPlatforms(s)` (fixed order `vrctl, vrcpop, ravepage`-if-enabled),
+`normalizeOrigin(input)` (trim; must parse as URL; `https:` only, `http:` for
+`localhost`/`127.0.0.1` only; drops path/query/hash/credentials; lowercases host).
+
+**Toggle off (default):** rave.page appears nowhere — no Overview card, no
+`#/events` row/filter option, no popup row, no Connect affordance. vrc.tl and
+vrcpop are unchanged. Overview/Events/popup subscribe to `onSettingsChange`, so
+flipping the toggle applies without a reload.
+
+**Configurable instance:** every rave.page host in `src/` resolves through
+settings — `client.ts` `ensureConfigured()` sets `OpenAPI.BASE` at each
+adapter/auth/upload entry point; `auth.ts` builds the bridge URL from `appOrigin`
+and exchanges against `apiOrigin`; `tabs.ts` `getPlatformMeta('ravepage')` and
+`ui/lib/platform-meta.ts` derive origin/host/`eventUrl` from settings; the agent
+(`session.dom.ts`, `ravepage-grant.dom.ts`) never hardcodes the origin — the
+dashboard passes the expected origin in the op and the agent verifies
+`location.origin` matches. The stored token records its `apiBase`; a token whose
+`apiBase` ≠ the configured `apiOrigin` is treated as absent (cleared), so changing
+the instance disconnects.
+
+**Permission behaviour for a custom instance:** Settings → Save normalizes both
+origins; if either differs from the default (required) hosts it calls
+`ext.permissions.request({origins:[appOrigin+'/*', apiOrigin+'/*']})` **inside the
+click gesture** (Firefox needs the gesture live). Chrome prompts for the new host
+permissions on Save; Firefox treats host permissions as optional and prompts the
+same way (backed by `optional_host_permissions` in `base.json`). On denial the old
+instance is kept + an error toast; on grant it persists, clears the token,
+invalidates the resource caches, and toasts "reconnect to continue". "Reset to
+defaults" restores the dev instance.
+
 ## e2e mocks
 
 Tests never hit the real platforms. `e2e/fixtures/extension.ts` exposes
@@ -195,9 +267,16 @@ in `e2e/mocks/` (sanitized: placeholder group id, organizer 9001, CSRF
 script; the vrc.tl logged-out mock 302-redirects `/admin/event` to `/sign/in`;
 the rave.page mock sets `localStorage.auth_token` to an unsigned test JWT with a
 future `exp`. Helpers: `openPopup`, `openDashboard`, `openPlatformTab`,
-`getExtensionId`. Specs: `session-status.spec.ts` (no-tab / logged-in /
-logged-out / `tabs.query` probe), `agent-blob.spec.ts` (3 MiB sha256 round-trip
-over a real port), plus the P0 `smoke.spec.ts`.
+`getExtensionId`, and `enableRavepage(page)` — turns the experimental rave.page
+toggle on by writing `{settings:{experimental:{ravepage:true}}}` into
+`chrome.storage.local` from a privileged extension page (never by hardcoding the
+flag in production code); `merge()` deep-merges the rest of the defaults. rave.page
+specs (`ravepage-connect`, `event-detail`, `events`, `overview`) and the
+three-card path in `settings.spec.ts` call it before navigating. Specs:
+`settings.spec.ts` (default two cards, toggle-on three cards without reload,
+`#/events` gating, `ravepage-off` route state), `session-status.spec.ts`,
+`agent-blob.spec.ts` (3 MiB sha256 round-trip over a real port), plus the P0
+`smoke.spec.ts`.
 
 ## Verified platform facts
 

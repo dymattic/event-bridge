@@ -12,6 +12,7 @@ import { getAdapter } from '../../../adapters/registry';
 import type { OwnClub } from '../../../adapters/types';
 import { getSessionStatus } from '../../../runtime/sessions';
 import { status as ravepageStatus } from '../../../adapters/ravepage/auth';
+import { isRavepageEnabled } from '../../../runtime/settings';
 import { READ_GAP_MS, THIRD_PARTY } from '../../lib/platform-meta';
 import type { EventRow } from '../../lib/event-filters';
 
@@ -37,7 +38,9 @@ async function paceHost(platform: Platform): Promise<void> {
 }
 
 export async function loadConnections(): Promise<Record<Platform, PlatformConn>> {
-  const [vt, vp, rp] = await Promise.all([getSessionStatus('vrctl'), getSessionStatus('vrcpop'), ravepageStatus()]);
+  const enabled = await isRavepageEnabled();
+  const [vt, vp] = await Promise.all([getSessionStatus('vrctl'), getSessionStatus('vrcpop')]);
+  const rp = enabled ? await ravepageStatus() : { connected: false, reconnectSoon: false, label: undefined, expiresAt: undefined };
   return {
     vrctl: { connected: vt.state === 'logged-in', label: vt.info?.label },
     vrcpop: { connected: vp.state === 'logged-in', label: vp.info?.label },

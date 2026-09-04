@@ -10,7 +10,7 @@
 // are accepted. Rejects TIMEOUT after timeoutMs. Listeners removed on settle.
 import { BUILD_ID } from '../shared/build-id';
 import { BridgeError } from '../core/errors';
-import { ORIGINS, type GrantResult } from '../shared/agent-protocol';
+import type { GrantResult } from '../shared/agent-protocol';
 
 const HELLO = {
   type: 'event-bridge:hello',
@@ -35,9 +35,11 @@ function isDesktopGrant(d: unknown): d is DesktopGrantMsg {
   return m.type === 'rave-page:desktop-grant' && typeof m.code === 'string' && typeof m.api === 'string';
 }
 
-export function awaitGrant(timeoutMs: number): Promise<GrantResult> {
-  if (location.origin !== ORIGINS.ravepage) {
-    return Promise.reject(new BridgeError('UNSUPPORTED', `grantAwait only on ${ORIGINS.ravepage}`));
+// `origin` = the configured rave.page app origin the dashboard expects. The agent
+// runs the handshake only when it is actually on that origin.
+export function awaitGrant(timeoutMs: number, origin: string): Promise<GrantResult> {
+  if (location.origin !== origin) {
+    return Promise.reject(new BridgeError('UNSUPPORTED', `grantAwait expected ${origin}, on ${location.origin}`));
   }
   return new Promise<GrantResult>((resolve, reject) => {
     const hello = (): void => window.postMessage(HELLO, location.origin);

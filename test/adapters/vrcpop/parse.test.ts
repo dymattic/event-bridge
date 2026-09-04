@@ -2,8 +2,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseCsrf, parseDashboard, parseEditPage, parseEventsList } from '../../../src/adapters/vrcpop/parse';
-import { isOwnEventRef, isOwnGroupRef } from '../../../src/adapters/vrcpop/types';
+import { eventToOwn, parseCsrf, parseDashboard, parseEditPage, parseEventsList, parseVrcpopCardDate } from '../../../src/adapters/vrcpop/parse';
+import { isOwnEventRef, isOwnGroupRef, ownEventRef, type VrcpopEventRef } from '../../../src/adapters/vrcpop/types';
 import { isBridgeError } from '../../../src/core/errors';
 
 const FIX = join(process.cwd(), 'test', 'fixtures', 'vrcpop');
@@ -57,6 +57,49 @@ describe('parseEventsList', () => {
   it('draft id comes from data-draft-id', () => {
     const draft = out.events.find((e) => e.status === 'draft');
     expect(draft?.ref.id).toBe(100002);
+  });
+});
+
+// The exact instant is owner-tz approximate → assertions stay timezone-independent
+// (ISO shape + correct year-month + same instant as Date.parse), never a fixed UTC time.
+const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+describe('parseVrcpopCardDate', () => {
+  it('parses the human card label to an ISO instant', () => {
+    const r1 = parseVrcpopCardDate('Thu, Sep 3, 2026 at 10:00 PM');
+    expect(r1).toMatch(ISO);
+    expect(r1?.startsWith('2026-09')).toBe(true);
+    expect(Date.parse(r1 ?? '')).toBe(Date.parse('Thu, Sep 3, 2026 10:00 PM'));
+    expect(parseVrcpopCardDate('Sat, Jan 5, 2030 at 8:00 PM')?.startsWith('2030-01')).toBe(true);
+  });
+  it('undefined for garbage / empty (never NaN, never the raw label)', () => {
+    expect(parseVrcpopCardDate('coming soon')).toBeUndefined();
+    expect(parseVrcpopCardDate('')).toBeUndefined();
+  });
+});
+
+describe('eventToOwn', () => {
+  const ref = (over: Partial<VrcpopEventRef>): VrcpopEventRef => ({
+    id: 100001,
+    title: "what's poppin",
+    date: 'Thu, Sep 3, 2026 at 10:00 PM',
+    status: 'upcoming',
+    ref: ownEventRef(100001),
+    ...over,
+  });
+
+  it('start is an ISO instant, never the human label', () => {
+    const own = eventToOwn(ref({}));
+    expect(own.start).toMatch(ISO);
+    expect(own.start).not.toContain('at'); // not the label
+    expect(own.id).toBe('100001');
+    expect(own.visibility).toBe('public');
+  });
+  it('undated label -> start undefined (not NaN); draft -> draft visibility', () => {
+    const own = eventToOwn(ref({ date: 'soon™', status: 'draft' }));
+    expect(own.start).toBeUndefined();
+    expect(own.status).toBe('draft');
+    expect(own.visibility).toBe('draft');
   });
 });
 

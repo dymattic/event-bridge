@@ -2,11 +2,11 @@
 // planned request(s) in a collapsible preview before confirming (the plan/execute
 // split CLAUDE.md requires), destructive-styled + platform-named when the event is
 // public/published, then runs planDelete -> execute and invalidates caches.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ConfirmDialog, useNotification } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
 import { isBridgeError } from '../../../core/errors';
-import { PLATFORM_HOST } from '../../lib/platform-meta';
+import { PLATFORM_NAME, platformHost } from '../../lib/platform-meta';
 import { invalidate } from '../../lib/resource';
 import { deletePreview, executeDelete } from '../lib/event-data';
 
@@ -39,10 +39,22 @@ export function DeleteEventDialog({
 }): React.JSX.Element | null {
   const { addNotification } = useNotification();
   const [busy, setBusy] = useState(false);
+  // rave.page host is instance-configurable → resolve async; fall back to the name.
+  const [host, setHost] = useState<string>(target ? PLATFORM_NAME[target.platform] : '');
+  const platform = target?.platform;
+  useEffect(() => {
+    if (!platform) return;
+    let alive = true;
+    void platformHost(platform).then((h) => {
+      if (alive) setHost(h);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [platform]);
   if (!target) return null;
 
   const destructive = isPublic(target);
-  const host = PLATFORM_HOST[target.platform];
   const message = destructive
     ? `This removes the event from ${host} immediately.`
     : `Delete the draft “${target.title}” on ${host}?`;

@@ -9,10 +9,24 @@ const h = vi.hoisted(() => ({
   statuses: {} as Record<string, { state: string; info?: { label?: string } }>,
   rp: { connected: false, reconnectSoon: false } as { connected: boolean; label?: string; expiresAt?: string; reconnectSoon: boolean },
   data: {} as Record<string, PlatformData>,
+  store: {} as Record<string, unknown>,
 }));
 
 vi.mock('../../src/shared/webext', () => ({
-  ext: { permissions: { contains: () => Promise.resolve(true), request: () => Promise.resolve(true) }, runtime: { sendMessage: () => Promise.resolve(undefined) } },
+  ext: {
+    permissions: { contains: () => Promise.resolve(true), request: () => Promise.resolve(true) },
+    runtime: { sendMessage: () => Promise.resolve(undefined) },
+    storage: {
+      local: {
+        get: (k: string) => Promise.resolve(k in h.store ? { [k]: h.store[k] } : {}),
+        set: (o: Record<string, unknown>) => {
+          Object.assign(h.store, o);
+          return Promise.resolve();
+        },
+      },
+      onChanged: { addListener: () => undefined, removeListener: () => undefined },
+    },
+  },
 }));
 vi.mock('../../src/runtime/sessions', () => ({
   getSessionStatus: (p: string) => Promise.resolve(h.statuses[p] ?? { state: 'no-tab' }),
@@ -49,12 +63,13 @@ beforeEach(() => {
   root = createRoot(container);
   h.statuses = { vrctl: { state: 'logged-out' }, vrcpop: { state: 'logged-in', info: { label: 'Example User' } }, ravepage: { state: 'logged-out' } };
   h.rp = { connected: false, reconnectSoon: false };
+  h.store = {}; // rave.page off by default
   h.data = {
     vrcpop: {
       clubs: [{ id: 'grp_a', organizerType: 'group', name: 'Club Pop', vrchatGroupId: 'grp_a', canOrganize: true }],
       events: [
-        { platform: 'vrcpop', id: '100001', title: 'up', start: '2027-01-01T20:00:00Z', status: 'published', clubId: 'grp_a', clubName: 'Club Pop' },
-        { platform: 'vrcpop', id: '100002', title: 'past', start: '2020-01-01T20:00:00Z', status: 'published', clubId: 'grp_a', clubName: 'Club Pop' },
+        { platform: 'vrcpop', id: '100001', title: 'up', start: '2027-01-01T20:00:00Z', status: 'upcoming', clubId: 'grp_a', clubName: 'Club Pop' },
+        { platform: 'vrcpop', id: '100002', title: 'past', start: '2020-01-01T20:00:00Z', status: 'past', clubId: 'grp_a', clubName: 'Club Pop' },
       ],
     },
   };
@@ -71,19 +86,26 @@ describe('Overview connected-state listings', () => {
     await render();
     expect(testid('platform-detail-vrcpop')).toBeTruthy();
     expect(testid('platform-clubs-vrcpop')?.textContent ?? '').toContain('Club Pop');
-    expect(testid('platform-upcoming-vrcpop')?.textContent ?? '').toContain('1'); // 1 upcoming of 2
-    // Button asChild merges its props onto the child <a>, so the testid IS the anchor.
+    // isUpcoming: future 'upcoming' counts, past 'past' does not -> 1 of 2.
+    expect(testid('platform-upcoming-vrcpop')?.textContent ?? '').toContain('1');
     expect(testid('platform-view-events-vrcpop')?.getAttribute('href')).toBe('#/events?platform=vrcpop');
   });
 
-  it('shows the resolved session name (not a raw id) on the connected card', async () => {
+  it('a vrcpop row with a future (owner-tz-parsed) start counts as upcoming (card == #/events)', async () => {
+    // parseVrcpopCardDate turns the human label into this ISO; the card must count it.
+    h.data = {
+      vrcpop: {
+        clubs: [{ id: 'grp_a', organizerType: 'group', name: 'Club Pop', vrchatGroupId: 'grp_a', canOrganize: true }],
+        events: [{ platform: 'vrcpop', id: '1727', title: "what's poppin", start: '2030-01-05T20:00:00.000Z', status: 'upcoming', clubId: 'grp_a', clubName: 'Club Pop' }],
+      },
+    };
     await render();
-    expect(testid('platform-status-vrcpop')?.textContent ?? '').toContain('Example User');
+    expect(testid('platform-upcoming-vrcpop')?.textContent ?? '').toContain('1');
   });
 
-  it('renders no connected detail for a signed-out platform', async () => {
+  it('renders no rave.page card while the toggle is off', async () => {
     await render();
-    expect(testid('platform-detail-vrctl')).toBeNull();
-    expect(testid('platform-detail-ravepage')).toBeNull();
+    expect(testid('platform-detail-vrctl')).toBeNull(); // signed out
+    expect(testid('platform-card-ravepage')).toBeNull(); // toggle off
   });
 });

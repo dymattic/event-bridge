@@ -3,13 +3,14 @@
 // each platform's reads paced in event-data), renders a searchable/filterable kit
 // DataTable of resolved rows, and hosts the read-only detail links + delete flow.
 // Filters are URL-synced in the hash query so filtered views are shareable.
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, LoadingSpinner } from '@rave-page/ui';
 import { ext } from '../../../shared/webext';
 import type { Platform } from '../../../shared/agent-protocol';
 import { connect } from '../../../adapters/ravepage/auth';
 import { ensureAgent } from '../../../runtime/tabs';
-import { PLATFORM_NAME, PLATFORM_ORDER, eventUrl } from '../../lib/platform-meta';
+import { enabledPlatforms, getSettings, onSettingsChange } from '../../../runtime/settings';
+import { PLATFORM_NAME, eventUrl } from '../../lib/platform-meta';
 import { useResource } from '../../lib/resource';
 import {
   DEFAULT_FILTERS,
@@ -37,11 +38,19 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
     goto(q ? `#/events?${q}` : '#/events');
   };
 
+  // rave.page appears only when the experimental toggle is on.
+  const [enabled, setEnabled] = useState<Platform[]>(['vrctl', 'vrcpop']);
+  useEffect(() => {
+    void getSettings().then((s) => setEnabled(enabledPlatforms(s)));
+    return onSettingsChange((s) => setEnabled(enabledPlatforms(s)));
+  }, []);
+
   const conns = useResource('connections', loadConnections);
   const c = conns.data;
   const vt = useResource(c?.vrctl.connected ? 'platform:vrctl' : null, () => loadPlatformData('vrctl'));
   const vp = useResource(c?.vrcpop.connected ? 'platform:vrcpop' : null, () => loadPlatformData('vrcpop'));
-  const rp = useResource(c?.ravepage.connected ? 'platform:ravepage' : null, () => loadPlatformData('ravepage'));
+  // rave.page data only when the toggle is on AND connected.
+  const rp = useResource(enabled.includes('ravepage') && c?.ravepage.connected ? 'platform:ravepage' : null, () => loadPlatformData('ravepage'));
 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
@@ -58,13 +67,13 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
     ...(vp.data?.clubs ?? []).map((cl) => ({ id: cl.id, name: cl.name, platform: 'vrcpop' as const })),
     ...(rp.data?.clubs ?? []).map((cl) => ({ id: cl.id, name: cl.name, platform: 'ravepage' as const })),
   ];
-  const connectedPlatforms: Platform[] = PLATFORM_ORDER.filter((p) => c?.[p].connected);
+  const connectedPlatforms: Platform[] = enabled.filter((p) => c?.[p].connected);
   const anyConnected = connectedPlatforms.length > 0;
   const anyLoading = vt.loading || vp.loading || rp.loading;
   const visible = filterAndSort(rows, filters);
 
   const onOpen = (row: EventRow): void => {
-    void ext.tabs.create({ url: eventUrl(row.platform, row.id, row.clubId) });
+    void eventUrl(row.platform, row.id, row.clubId).then((url) => ext.tabs.create({ url }));
   };
   const onView = (row: EventRow): void => goto(`#/events/${row.platform}/${row.id}`);
   const onDelete = (row: EventRow): void =>
@@ -107,7 +116,7 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
           description="event-bridge lists your own clubs and events once you sign in — no platform is required to use the others."
           action={
             <div className="flex flex-col gap-2 w-full max-w-xs">
-              {PLATFORM_ORDER.map((p) => (
+              {enabled.map((p) => (
                 <ConnectRow key={p} platform={p} connected={c?.[p].connected ?? false} onChanged={refresh} />
               ))}
             </div>

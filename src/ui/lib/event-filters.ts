@@ -49,6 +49,13 @@ function matchesTime(row: EventRow, time: TimeFilter, now: number): boolean {
   return time === 'upcoming' ? ms >= now : ms < now;
 }
 
+// Single source of truth for "counts as upcoming" (Overview card + #/events agree).
+// Upcoming by time AND not explicitly a past-status row (a platform may mark a row
+// past even when its listing date is unparseable/approximate).
+export function isUpcoming(row: EventRow, now: number = Date.now()): boolean {
+  return matchesTime(row, 'upcoming', now) && row.status !== 'past';
+}
+
 function matchesRange(row: EventRow, from?: string, to?: string): boolean {
   const ms = startMs(row);
   if (from) {

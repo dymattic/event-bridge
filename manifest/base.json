@@ -24,5 +24,6 @@
     "https://vrcpop.com/*",
     "https://development.rave.page/*",
     "https://development.api.rave.page/*"
-  ]
+  ],
+  "optional_host_permissions": ["https://*/*"]
 }

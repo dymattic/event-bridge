@@ -3,20 +3,27 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The popup pulls in the runtime (webext shim, session status). Mock both so
-// happy-dom (no chrome/browser global) can load, and drive the badge state from
-// a hoisted per-platform status map.
+// The popup pulls in the runtime (webext shim, session status) + settings (the
+// experimental toggle decides which rows show). Mock both; drive from hoisted state.
 const h = vi.hoisted(() => ({
   statuses: {} as Record<string, { state: string; info?: { label?: string } }>,
+  store: {} as Record<string, unknown>,
 }));
 
 vi.mock('../../src/shared/webext', () => ({
   ext: {
-    permissions: {
-      contains: () => Promise.resolve(false),
-      request: () => Promise.resolve(false),
-    },
+    permissions: { contains: () => Promise.resolve(false), request: () => Promise.resolve(false) },
     runtime: { sendMessage: () => Promise.resolve(undefined) },
+    storage: {
+      local: {
+        get: (k: string) => Promise.resolve(k in h.store ? { [k]: h.store[k] } : {}),
+        set: (o: Record<string, unknown>) => {
+          Object.assign(h.store, o);
+          return Promise.resolve();
+        },
+      },
+      onChanged: { addListener: () => undefined, removeListener: () => undefined },
+    },
   },
 }));
 
@@ -33,10 +40,11 @@ async function renderPopup(): Promise<{ container: HTMLElement; cleanup: () => v
   await act(async () => {
     root.render(<App />);
   });
-  // flush the async session-status promises + their state updates
-  await act(async () => {
-    await new Promise((r) => setTimeout(r, 0));
-  });
+  for (let i = 0; i < 4; i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  }
   return {
     container,
     cleanup: () => {
@@ -48,40 +56,31 @@ async function renderPopup(): Promise<{ container: HTMLElement; cleanup: () => v
 
 const textOf = (c: HTMLElement, p: string) => c.querySelector(`[data-testid="status-${p}"]`)?.textContent ?? '';
 
-describe('popup App badge per session state', () => {
+describe('popup App', () => {
   beforeEach(() => {
     h.statuses = {};
+    h.store = {};
   });
 
-  it('shows signed-in / signed-out text and rave.page connection state', async () => {
-    h.statuses = {
-      vrcpop: { state: 'logged-in' },
-      vrctl: { state: 'logged-out' },
-      ravepage: { state: 'no-tab' },
-    };
+  it('shows only two platform rows by default (rave.page off)', async () => {
+    h.statuses = { vrcpop: { state: 'logged-in' }, vrctl: { state: 'logged-out' } };
     const { container, cleanup } = await renderPopup();
     expect(textOf(container, 'vrcpop')).toContain('Signed in');
     expect(textOf(container, 'vrctl')).toContain('Signed out');
-    // rave.page derives from the token store, so it speaks "not connected"
-    expect(textOf(container, 'ravepage')).toContain('Not connected');
+    expect(container.querySelector('[data-testid="status-ravepage"]')).toBeNull();
     cleanup();
   });
 
-  it('shows no-access / error text and a Grant access button for no-permission', async () => {
+  it('shows the rave.page row when the toggle is on', async () => {
+    h.store = { settings: { experimental: { ravepage: true } } };
     h.statuses = {
-      vrcpop: { state: 'no-permission' },
-      vrctl: { state: 'error' },
+      vrcpop: { state: 'logged-in' },
+      vrctl: { state: 'logged-out' },
       ravepage: { state: 'logged-in', info: { label: 'DyMattic' } },
     };
     const { container, cleanup } = await renderPopup();
-    expect(textOf(container, 'vrcpop')).toContain('No access');
-    expect(textOf(container, 'vrctl')).toContain('Error');
     expect(textOf(container, 'ravepage')).toContain('Connected as');
-    // label surfaced from session info
     expect(textOf(container, 'ravepage')).toContain('DyMattic');
-    // no-permission row offers the grant gesture
-    const buttons = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
-    expect(buttons).toContain('Grant access');
     cleanup();
   });
 

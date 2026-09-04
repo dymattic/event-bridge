@@ -5,6 +5,7 @@ import {
   filterAndSort,
   filterEvents,
   filtersToQuery,
+  isUpcoming,
   queryToFilters,
   sortEvents,
   type EventRow,
@@ -69,6 +70,23 @@ describe('filterAndSort', () => {
 describe('distinctStatuses', () => {
   it('unique sorted statuses', () => {
     expect(distinctStatuses(rows)).toEqual(['draft', 'promoted', 'published']);
+  });
+});
+
+describe('isUpcoming (card + #/events agree)', () => {
+  const row = (over: Partial<EventRow>): EventRow => ({ platform: 'vrcpop', id: '1', title: 't', clubId: 'c', clubName: 'C', ...over });
+  it('future start -> true', () => {
+    expect(isUpcoming(row({ start: '2026-09-10T20:00:00Z' }), NOW)).toBe(true);
+  });
+  it('past start -> false', () => {
+    expect(isUpcoming(row({ start: '2026-08-01T20:00:00Z' }), NOW)).toBe(false);
+  });
+  it('undated -> true (treated as upcoming for a listing)', () => {
+    expect(isUpcoming(row({ start: undefined }), NOW)).toBe(true);
+  });
+  it("status 'past' -> false even with a future/undated start", () => {
+    expect(isUpcoming(row({ start: '2026-09-10T20:00:00Z', status: 'past' }), NOW)).toBe(false);
+    expect(isUpcoming(row({ start: undefined, status: 'past' }), NOW)).toBe(false);
   });
 });
 

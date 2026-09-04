@@ -51,8 +51,10 @@ function makeExt() {
 const iso = (msFromNow: number): string => new Date(Date.now() + msFromNow).toISOString();
 const auth = (exp: string): StoredAuth => ({ apiBase: 'https://development.api.rave.page', token: 't', exp, userId: 'usr_1', label: 'DJ', obtainedAt: iso(0) });
 
+let fake: ReturnType<typeof makeExt>;
 beforeEach(() => {
-  h.ext = makeExt();
+  fake = makeExt();
+  h.ext = fake;
 });
 
 describe('token-store', () => {
@@ -85,6 +87,17 @@ describe('token-store', () => {
     await setStored(auth(iso(86_400_000)));
     await clear();
     expect(await getStored()).toBeNull();
+  });
+
+  it('drops a token whose apiBase != the configured instance apiOrigin (instance-scoped)', async () => {
+    await setStored(auth(iso(10 * 86_400_000))); // apiBase = development.api.rave.page
+    // Point at a custom instance whose apiOrigin differs from the token's apiBase.
+    await fake.storage.local.set({ settings: { ravepage: { appOrigin: 'https://app.custom.example', apiOrigin: 'https://api.custom.example' } } });
+    expect(await getStored()).toBeNull();
+    // getStored also cleared it: reverting the instance does not resurrect it.
+    await fake.storage.local.set({ settings: {} });
+    expect(await getStored()).toBeNull();
+    expect(await getValidToken()).toBeNull();
   });
 
   it('onChange fires on write and stops after unsubscribe', async () => {

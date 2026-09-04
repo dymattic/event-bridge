@@ -2,7 +2,7 @@
 // return >=1 own club + 2 own events; the table shows resolved titles + club names
 // with NO raw ids, filters/search narrow rows, the mobile viewport renders cards,
 // and delete shows the exact planned request + sends it (recorded on the mock).
-import { expect, openDashboard, openPlatformTab, test } from '../fixtures/extension';
+import { enableRavepage, expect, openDashboard, openPlatformTab, test } from '../fixtures/extension';
 import { mockVrcpopSite, newRecorder, type VrcpopRecorder } from '../mocks/vrcpop-api';
 import { mockVrctlSite, type RecordedRequest } from '../mocks/vrctl-site';
 import { mockRavepageEvents, newRavepageRecorder, seedRavepageToken, type RavepageRecorder } from '../mocks/ravepage-events';
@@ -22,6 +22,7 @@ async function setupAll(context: BrowserContext): Promise<{ page: Page; vp: Vrcp
   await openPlatformTab(context, 'vrctl');
   const page = await openDashboard(context);
   await seedRavepageToken(page);
+  await enableRavepage(page); // rave.page is an equal integration here only with the toggle on
   await page.evaluate(() => {
     location.hash = '#/events?time=all';
   });

@@ -39,7 +39,7 @@ export async function getSessionStatus(platform: Platform): Promise<SessionStatu
     return { state: 'error', error: { code: 'UNKNOWN', message: e instanceof Error ? e.message : String(e) } };
   }
   try {
-    const info = await callAgent(tabId, { op: 'session' });
+    const info = await callAgent(tabId, { op: 'session', platform });
     return { state: info.loggedIn ? 'logged-in' : 'logged-out', info };
   } catch (e) {
     return {

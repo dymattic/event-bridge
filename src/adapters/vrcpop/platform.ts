@@ -32,6 +32,7 @@ import { withAgent } from '../../ui/dashboard/lib/runtime-client';
 import { getSessionStatus } from '../../runtime/sessions';
 import { vrcpopAdapter as native } from './adapter';
 import { vrcpopCaps } from './capabilities';
+import { eventToOwn } from './parse';
 import {
   ownEventRef,
   ownGroupRef,
@@ -39,7 +40,6 @@ import {
   type OwnGroupRef,
   type VrcpopAgent,
   type VrcpopClub,
-  type VrcpopEventRef,
 } from './types';
 
 const EMPTY_REPORT: LossReport = { dropped: [], approximated: [], required: [] };
@@ -51,10 +51,6 @@ function withVrcpop<T>(fn: (agent: VrcpopAgent) => Promise<T>): Promise<T> {
 function clubToOwn(c: VrcpopClub): OwnClub {
   // vrcpop's grp_ id IS the VRChat group id (cross-platform club anchor).
   return { id: c.groupId, organizerType: 'group', name: c.name, vrchatGroupId: c.groupId, canOrganize: true };
-}
-
-function eventToOwn(e: VrcpopEventRef): OwnEvent {
-  return { id: String(e.id), title: e.title, start: e.date, status: e.status, visibility: e.status === 'draft' ? 'draft' : 'public' };
 }
 
 function groupRefFor(organizerId: string): OwnGroupRef {

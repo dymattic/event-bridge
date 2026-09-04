@@ -1,16 +1,16 @@
-// Configures the generated OpenAPI client for the rave.page DEV API and maps
-// generated ApiError -> BridgeError. This is the ONLY place API_BASE appears.
+// Configures the generated OpenAPI client for the rave.page API (instance-scoped)
+// and maps generated ApiError -> BridgeError. The API origin is NOT a constant
+// here: it comes from settings (getRavepageInstance) via ensureConfigured, so a
+// self-hosted/federated rave.page can be targeted.
 import { OpenAPI } from './api-client/core/OpenAPI';
 import { ApiError } from './api-client/core/ApiError';
 import type { ApiRequestOptions } from './api-client/core/ApiRequestOptions';
 import { BridgeError, isBridgeError, type BridgeErrorCode } from '../../core/errors';
+import { getRavepageInstance } from '../../runtime/settings';
 import { clear, getValidToken } from './token-store';
 
-// Dev-only base. Swap here (single constant) if a prod base is ever approved.
-export const API_BASE = 'https://development.api.rave.page';
-
-// The generated spec has no servers[]; wire BASE + a Bearer resolver here.
-OpenAPI.BASE = API_BASE;
+// The generated spec has no servers[]; wire a Bearer resolver once at load. BASE
+// is set per-call by ensureConfigured (below), never a hardcoded host.
 OpenAPI.WITH_CREDENTIALS = false; // Bearer only; never send cross-origin cookies
 OpenAPI.TOKEN = async (options: ApiRequestOptions): Promise<string> => {
   // /auth/exchange is anonymous-public (called before any token exists).
@@ -19,6 +19,19 @@ OpenAPI.TOKEN = async (options: ApiRequestOptions): Promise<string> => {
   if (!t) throw new BridgeError('NOT_LOGGED_IN', 'not connected to rave.page');
   return t;
 };
+
+// Point the generated client at an API origin.
+export function configureClient(apiOrigin: string): void {
+  OpenAPI.BASE = apiOrigin;
+}
+
+// Set OpenAPI.BASE from the configured instance. Awaited at the start of every
+// adapter/auth/upload entry point. Returns the API origin for direct fetches.
+export async function ensureConfigured(): Promise<string> {
+  const { apiOrigin } = await getRavepageInstance();
+  configureClient(apiOrigin);
+  return apiOrigin;
+}
 
 function apiErrorMessage(err: ApiError): { message: string; details: unknown } {
   const body = err.body as { message?: unknown; details?: unknown } | string | null | undefined;

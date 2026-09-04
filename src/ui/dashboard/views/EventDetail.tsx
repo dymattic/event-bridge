@@ -103,7 +103,7 @@ function Detail({ platform, id, core }: { platform: Platform; id: string; core: 
           <h1 data-testid="event-detail-title" className="font-orbitron text-2xl text-foreground">{core.title}</h1>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="explore" data-testid="event-detail-open" onClick={() => void ext.tabs.create({ url: eventUrl(platform, id, core.organizer.platformIds[platform] ?? core.organizer.vrchatGroupId) })}>
+          <Button type="button" variant="explore" data-testid="event-detail-open" onClick={() => void eventUrl(platform, id, core.organizer.platformIds[platform] ?? core.organizer.vrchatGroupId).then((url) => ext.tabs.create({ url }))}>
             Open on {PLATFORM_NAME[platform]}
           </Button>
           <Button type="button" variant="outline" data-testid="event-detail-edit" disabled tooltip="Editing comes in the next step (P6.2).">

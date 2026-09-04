@@ -64,7 +64,7 @@ function eventsListHtml(): string {
     `<div class="manage-container">
 <section class="manage-section" data-section="events"><div class="event-list">
   <div class="event-card"><div class="event-card-info"><h4>what's poppin</h4>
-    <div class="event-card-meta"><span><span class="icon95 icon95-calendar"></span> Thu, Sep 3, 2026 at 10:00 PM</span><span>1 sets</span></div>
+    <div class="event-card-meta"><span><span class="icon95 icon95-calendar"></span> Sat, Jan 5, 2030 at 10:00 PM</span><span>1 sets</span></div>
   </div><div class="event-card-actions">
     <a href="/manage/club/${GROUP_ID}/events/100001" class="btn btn-secondary">Edit</a>
     <button class="btn btn-danger" onclick="deleteEvent(100001)">Delete</button>
@@ -73,7 +73,7 @@ function eventsListHtml(): string {
 <section class="manage-section drafts-section" data-section="drafts"><div class="event-list">
   <div class="event-card event-card--draft" data-draft-id="100002"><input type="checkbox" class="draft-pick__box" value="100002">
     <div class="event-card-info"><h4>draft night</h4>
-    <div class="event-card-meta"><span><span class="icon95 icon95-calendar"></span> Fri, Sep 11, 2026 at 9:00 PM</span><span>2 sets</span></div></div>
+    <div class="event-card-meta"><span><span class="icon95 icon95-calendar"></span> Sun, Feb 9, 2031 at 9:00 PM</span><span>2 sets</span></div></div>
     <div class="event-card-actions"><a href="/manage/club/${GROUP_ID}/events/100002" class="btn btn-secondary">Edit</a></div>
   </div>
 </div></section>

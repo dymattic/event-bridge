@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, openDashboard, test } from '../fixtures/extension';
+import { enableRavepage, expect, openDashboard, test } from '../fixtures/extension';
 import type { BrowserContext, Page } from '@playwright/test';
 
 const mocksDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'mocks');
@@ -82,6 +82,7 @@ test('Connect opens the bridge tab and the handshake reaches the consent card', 
   await bridge.goto(BRIDGE_URL);
 
   const dashboard = await openDashboard(context);
+  await enableRavepage(dashboard); // dev panel is gated behind the experimental toggle
   // rave.page dev panel moved off the default route (now the Overview).
   await dashboard.evaluate(() => {
     location.hash = '#/dev/ravepage';
@@ -100,6 +101,7 @@ test('connected session: who-am-i, groups, create draft (recorded EventCreateIn)
 
   const dashboard = await openDashboard(context);
   await seedToken(dashboard);
+  await enableRavepage(dashboard); // dev panel is gated behind the experimental toggle
   await dashboard.evaluate(() => {
     location.hash = '#/dev/ravepage';
   });

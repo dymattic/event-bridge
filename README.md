@@ -27,6 +27,21 @@ and events by name, never raw ids.
 
 In progress: create, edit, the lineup editor, cross-platform transfer, and sync.
 
+## Experimental: rave.page integration
+
+The rave.page integration is an **experimental feature, off by default**. vrc.tl
+and vrcpop.com work fully without it; nothing about event-bridge requires
+rave.page. Turn it on under **Settings → Experimental** and rave.page joins as a
+third equal integration.
+
+Because rave.page is being made open-source and federated, its **instance is
+configurable**: point event-bridge at any self-hosted or federated rave.page by
+setting the app origin (default `https://development.rave.page`) and API origin
+(default `https://development.api.rave.page`) in Settings. A custom instance
+needs a one-time host-permission grant (your browser prompts on Save). Changing
+the instance disconnects the current session — the stored token is
+instance-scoped, so reconnect to continue.
+
 ## Independent project
 
 event-bridge is an independent, open-source tool (WTFPL). It is **not affiliated

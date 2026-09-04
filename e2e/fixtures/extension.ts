@@ -67,6 +67,13 @@ export async function openPopup(context: BrowserContext): Promise<Page> {
   return page;
 }
 
+// Enable the experimental rave.page integration by writing the extension's own
+// settings (allowed — extension storage only, never production code). Call from a
+// privileged extension page (dashboard/popup) BEFORE navigating/reloading the view.
+export async function enableRavepage(page: Page): Promise<void> {
+  await page.evaluate(() => chrome.storage.local.set({ settings: { experimental: { ravepage: true } } }));
+}
+
 // Open (and settle) a platform tab pointed at its entry URL. Requires the
 // platform to be mocked first.
 export async function openPlatformTab(context: BrowserContext, platform: MockPlatform): Promise<Page> {

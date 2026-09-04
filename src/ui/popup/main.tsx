@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { NotificationProvider, Toast, TooltipProvider } from '@rave-page/ui';
 import { App } from './App';
-import { ensureAgent, queryPlatformTabs, PLATFORM_ORIGINS } from '../../runtime/tabs';
+import { ensureAgent, queryPlatformTabs, getPlatformMeta } from '../../runtime/tabs';
 import { callAgent, sendBlob } from '../../runtime/agent-transport';
 import { getSessionStatus } from '../../runtime/sessions';
 
@@ -15,11 +15,11 @@ declare global {
       callAgent: typeof callAgent;
       sendBlob: typeof sendBlob;
       getSessionStatus: typeof getSessionStatus;
-      PLATFORM_ORIGINS: typeof PLATFORM_ORIGINS;
+      getPlatformMeta: typeof getPlatformMeta;
     };
   }
 }
-window.__eventBridgeRuntime = { ensureAgent, queryPlatformTabs, callAgent, sendBlob, getSessionStatus, PLATFORM_ORIGINS };
+window.__eventBridgeRuntime = { ensureAgent, queryPlatformTabs, callAgent, sendBlob, getSessionStatus, getPlatformMeta };
 
 const el = document.getElementById('root');
 if (el)

@@ -4,12 +4,17 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   detectRavepage,
+  detectSession,
   hasVrctlGrid,
   jwtExp,
   parseVrcpopLabel,
   parseVrctlLabel,
   parseVrcpopUser,
 } from '../../src/agent/session.dom';
+
+function setUrl(u: string): void {
+  (window as unknown as { happyDOM: { setURL: (url: string) => void } }).happyDOM.setURL(u);
+}
 
 const fixture = (p: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', p), 'utf8');
 
@@ -98,5 +103,26 @@ describe('detectRavepage', () => {
   it('expired exp -> logged out', () => {
     localStorage.setItem('auth_token', unsignedJwt({ exp: Math.floor(Date.now() / 1000) - 10 }));
     expect(detectRavepage().loggedIn).toBe(false);
+  });
+});
+
+describe('detectSession (configurable rave.page origin, no hardcode)', () => {
+  it('rejects a rave.page session op whose expected origin != the page', async () => {
+    setUrl('https://development.rave.page/');
+    await expect(detectSession({ platform: 'ravepage', origin: 'https://other.example' })).rejects.toMatchObject({
+      code: 'UNSUPPORTED',
+    });
+  });
+
+  it('runs the rave.page detector on a custom instance origin when it matches', async () => {
+    setUrl('https://custom.rave.example/');
+    localStorage.clear();
+    const info = await detectSession({ platform: 'ravepage', origin: 'https://custom.rave.example' });
+    expect(info.loggedIn).toBe(false); // no token stored -> logged out (no throw)
+  });
+
+  it('UNSUPPORTED on an origin with no detector', async () => {
+    setUrl('https://unknown.example/');
+    await expect(detectSession({})).rejects.toMatchObject({ code: 'UNSUPPORTED' });
   });
 });

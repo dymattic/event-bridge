@@ -7,7 +7,7 @@
 // takes injectable deps so tests can stub the network.
 import { BridgeError } from '../../core/errors';
 import type { PosterFile } from '../../core/schema';
-import { API_BASE, toBridgeError } from './client';
+import { ensureConfigured, toBridgeError } from './client';
 import { ROUTES } from './routes';
 import { clear, getValidToken } from './token-store';
 import type { ChunkUploadNativeResponse } from './api-client/models/ChunkUploadNativeResponse';
@@ -67,7 +67,8 @@ async function rawPutChunk(uploadId: string, index: number, bytes: Uint8Array): 
   const token = await getValidToken();
   if (!token) throw new BridgeError('NOT_LOGGED_IN', 'no valid rave.page token');
   const checksum = chunkChecksumHeader(await sha256Hex(bytes));
-  const url = `${API_BASE}/media-upload/${encodeURIComponent(uploadId)}/chunks/${index}`;
+  const apiOrigin = await ensureConfigured();
+  const url = `${apiOrigin}/media-upload/${encodeURIComponent(uploadId)}/chunks/${index}`;
   let res: Response;
   try {
     // MediaUploadService.uploadChunk sends no request body and no X-Chunk-Checksum
@@ -108,6 +109,7 @@ export function defaultUploadDeps(): UploadDeps {
 // assign uses it). Resumes from the server's uploaded_chunk_numbers.
 export async function uploadMedia(file: PosterFile, deps: UploadDeps = defaultUploadDeps()): Promise<string> {
   try {
+    await ensureConfigured();
     const fileHash = await deps.digest(file.bytes);
     const init = await deps.initiate({
       file_hash: fileHash,
@@ -159,6 +161,7 @@ export async function setEventPoster(eventId: string, file: PosterFile, deps?: U
 
 export async function removeEventPoster(eventId: string): Promise<void> {
   try {
+    await ensureConfigured();
     await ROUTES.deletePoster({ eventId });
   } catch (e) {
     throw toBridgeError(e);

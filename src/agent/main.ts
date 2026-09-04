@@ -183,7 +183,7 @@ async function dispatch(req: AgentRequest): Promise<AgentResponse> {
       case 'ping':
         return reply(req.id, 'ping', { buildId: BUILD_ID, origin: location.origin });
       case 'session':
-        return reply(req.id, 'session', await detectSession());
+        return reply(req.id, 'session', await detectSession({ platform: req.platform, origin: req.origin }));
       case 'http':
         return reply(req.id, 'http', await handleHttp(req.request));
       case 'blobBegin':
@@ -195,7 +195,7 @@ async function dispatch(req: AgentRequest): Promise<AgentResponse> {
       case 'blobDrop':
         return reply(req.id, 'blobDrop', blobDrop(req));
       case 'grantAwait':
-        return reply(req.id, 'grantAwait', await awaitGrant(req.timeoutMs));
+        return reply(req.id, 'grantAwait', await awaitGrant(req.timeoutMs, req.origin));
     }
   } catch (e) {
     return toErr(req.id, e);

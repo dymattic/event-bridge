@@ -8,14 +8,32 @@ vi.mock('../../../src/shared/webext', () => ({
   },
 }));
 
-import { toBridgeError } from '../../../src/adapters/ravepage/client';
+import { configureClient, ensureConfigured, toBridgeError } from '../../../src/adapters/ravepage/client';
+import { OpenAPI } from '../../../src/adapters/ravepage/api-client/core/OpenAPI';
 import { ApiError } from '../../../src/adapters/ravepage/api-client/core/ApiError';
 import { CancelError } from '../../../src/adapters/ravepage/api-client/core/CancelablePromise';
 import { BridgeError } from '../../../src/core/errors';
+import { RAVEPAGE_DEFAULT_INSTANCE } from '../../../src/runtime/settings';
 import { createFake } from '../../runtime/fake-ext';
 
 beforeEach(() => {
   h.ext = createFake().ext;
+});
+
+describe('ensureConfigured', () => {
+  it('sets OpenAPI.BASE from the default instance when storage is empty', async () => {
+    configureClient('https://stale.example'); // prove it changes
+    const base = await ensureConfigured();
+    expect(base).toBe(RAVEPAGE_DEFAULT_INSTANCE.apiOrigin);
+    expect(OpenAPI.BASE).toBe(RAVEPAGE_DEFAULT_INSTANCE.apiOrigin);
+  });
+
+  it('sets OpenAPI.BASE from a configured custom instance', async () => {
+    h.ext = createFake({ storage: { settings: { ravepage: { appOrigin: 'https://app.custom.example', apiOrigin: 'https://api.custom.example' } } } }).ext;
+    const base = await ensureConfigured();
+    expect(base).toBe('https://api.custom.example');
+    expect(OpenAPI.BASE).toBe('https://api.custom.example');
+  });
 });
 
 function apiError(status: number, body: unknown): ApiError {

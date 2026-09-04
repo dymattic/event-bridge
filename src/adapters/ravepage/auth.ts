@@ -6,15 +6,14 @@
 //   -> decode JWT exp (unverified) -> store -> GET /auth/me -> identity.
 // No refresh (/auth/refresh is 410) -> renewal = a user re-connect gesture.
 import { BridgeError } from '../../core/errors';
-import { ORIGINS } from '../../shared/agent-protocol';
 import { ensureAgent } from '../../runtime/tabs';
 import { callAgent } from '../../runtime/agent-transport';
+import { getRavepageInstance } from '../../runtime/settings';
 import type { ConnectionStatus } from '../types';
-import { API_BASE, toBridgeError } from './client';
+import { ensureConfigured, toBridgeError } from './client';
 import { ROUTES } from './routes';
 import { clear, getStored, RECONNECT_WINDOW_MS, setStored, type StoredAuth } from './token-store';
 
-const BRIDGE_URL = `${ORIGINS.ravepage}/desktop/bridge?target=extension`;
 const GRANT_TIMEOUT_MS = 180_000;
 
 // Unverified base64url decode of the JWT `exp` (seconds) -> ISO string.
@@ -49,14 +48,17 @@ function statusFrom(a: StoredAuth | null, now: number): ConnectionStatus {
 // User-triggered ONLY. Opens the bridge page active, awaits the grant, exchanges
 // it, stores the token, and reads identity.
 export async function connect(): Promise<ConnectionStatus> {
-  const { tabId } = await ensureAgent('ravepage', { allowOpen: true, url: BRIDGE_URL, active: true });
+  const { appOrigin, apiOrigin } = await getRavepageInstance();
+  await ensureConfigured();
+  const bridgeUrl = `${appOrigin}/desktop/bridge?target=extension`;
+  const { tabId } = await ensureAgent('ravepage', { allowOpen: true, url: bridgeUrl, active: true });
   const grant = await callAgent(
     tabId,
-    { op: 'grantAwait', timeoutMs: GRANT_TIMEOUT_MS },
+    { op: 'grantAwait', timeoutMs: GRANT_TIMEOUT_MS, origin: appOrigin },
     { timeoutMs: GRANT_TIMEOUT_MS + 5_000 },
   );
-  if (grant.api !== API_BASE) {
-    throw new BridgeError('UNSUPPORTED', `grant is for ${grant.api}, expected ${API_BASE}`);
+  if (grant.api !== apiOrigin) {
+    throw new BridgeError('UNSUPPORTED', `grant is for ${grant.api}, expected ${apiOrigin}`);
   }
   try {
     const exchanged = await ROUTES.exchangeDesktopGrant({ requestBody: { code: grant.code } });
@@ -65,7 +67,7 @@ export async function connect(): Promise<ConnectionStatus> {
     // exchanged.refresh intentionally discarded — never persisted.
     const expIso = decodeExpIso(token);
     // Store BEFORE /auth/me so the Bearer resolver can read the token.
-    const base: StoredAuth = { apiBase: API_BASE, token, exp: expIso, userId: '', label: '', obtainedAt: new Date().toISOString() };
+    const base: StoredAuth = { apiBase: apiOrigin, token, exp: expIso, userId: '', label: '', obtainedAt: new Date().toISOString() };
     await setStored(base);
     const me = await ROUTES.getCurrentUser();
     const userId = me.id ?? '';
@@ -88,6 +90,7 @@ export async function status(now: number = Date.now()): Promise<ConnectionStatus
 // Re-fetch identity from /auth/me (dev panel "Who am I").
 export async function whoAmI(): Promise<{ userId: string; label: string }> {
   try {
+    await ensureConfigured();
     const me = await ROUTES.getCurrentUser();
     const userId = me.id ?? '';
     const label = me.display_name || me.username || userId;

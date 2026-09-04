@@ -10,12 +10,12 @@ import type { BridgeErrorCode } from '../core/errors';
 
 export type Platform = 'vrcpop' | 'vrctl' | 'ravepage';
 
-// Canonical origins (dev API base for rave.page). Entry URLs + display names
-// live in src/runtime/tabs.ts (page-side).
-export const ORIGINS: Record<Platform, string> = {
+// Static origins for the third-party platforms. rave.page's origin is
+// configurable (settings) and passed explicitly in ops, so it is NOT here.
+// Entry URLs + display names live in src/runtime/tabs.ts (page-side).
+export const ORIGINS: Record<'vrcpop' | 'vrctl', string> = {
   vrcpop: 'https://vrcpop.com',
   vrctl: 'https://vrc.tl',
-  ravepage: 'https://development.rave.page',
 };
 
 export interface SessionInfo {
@@ -58,8 +58,12 @@ export interface HttpResult {
 export interface PingOp {
   op: 'ping';
 }
+// The caller declares which platform + expected origin it is probing; the agent
+// verifies location.origin matches before trusting a configurable (rave.page) origin.
 export interface SessionOp {
   op: 'session';
+  platform?: Platform;
+  origin?: string;
 }
 export interface HttpOp {
   op: 'http';
@@ -86,11 +90,13 @@ export interface BlobDropOp {
   op: 'blobDrop';
   blobId: string;
 }
-// rave.page desktop-grant handshake (P3). Runs only on the rave.page dev origin;
-// waits for the /desktop/bridge page to post a grant code. See ravepage-grant.dom.ts.
+// rave.page desktop-grant handshake (P3). `origin` is the configured rave.page
+// app origin the caller expects; the agent verifies location.origin matches it
+// (no hardcoded host). Waits for the /desktop/bridge page to post a grant code.
 export interface GrantAwaitOp {
   op: 'grantAwait';
   timeoutMs: number;
+  origin: string;
 }
 
 export type AgentOp =

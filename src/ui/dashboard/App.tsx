@@ -7,13 +7,13 @@
 // event-bridge is platform-neutral: the Overview is the product; the dev panels
 // are per-platform developer tools reachable from the footer.
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@rave-page/ui';
+import { Button, EmptyState, LoadingSpinner } from '@rave-page/ui';
 import { BUILD_ID } from '../../shared/build-id';
 import { isBridgeError } from '../../core/errors';
 import { asIanaZone, asIsoUtc } from '../../core/time';
 import type { EventCore } from '../../core/schema';
 import type { Platform } from '../../shared/agent-protocol';
-import { getSettings } from '../../runtime/settings';
+import { getSettings, isRavepageEnabled, onSettingsChange } from '../../runtime/settings';
 import { ravepageAdapter, runPlan } from '../../adapters/ravepage/adapter';
 import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
@@ -21,6 +21,7 @@ import Overview from './views/Overview';
 import Events from './views/Events';
 import EventDetail from './views/EventDetail';
 import KitShowcase from './views/KitShowcase';
+import Settings from './views/Settings';
 import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
 import { VrctlDevPanel } from './dev/VrctlDevPanel';
 
@@ -54,9 +55,9 @@ function testDraftCore(prefix: string, club: OwnClub): EventCore {
   };
 }
 
-// Developer tool for manual + e2e checks against development.rave.page. Reachable
-// at #/dev/ravepage (not the default route) — rave.page is one integration of
-// three, not the product's home.
+// Developer tool for manual + e2e checks against the configured rave.page instance.
+// Reachable at #/dev/ravepage (not the default route) — rave.page is one integration
+// of three, not the product's home.
 function RavepageDevPanel() {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -125,7 +126,7 @@ function RavepageDevPanel() {
   return (
     <main className="p-4 bg-background min-h-screen">
       <h2 className="font-orbitron text-xl text-foreground">rave.page dev panel</h2>
-      <p className="text-2xs text-muted-foreground mb-3">build {BUILD_ID} · development.rave.page manual + e2e checks</p>
+      <p className="text-2xs text-muted-foreground mb-3">build {BUILD_ID} · configured rave.page instance · manual + e2e checks</p>
 
       <p data-testid="rp-status" className="text-sm text-foreground mb-3">
         {connected
@@ -240,7 +241,27 @@ function useHashRoute(): string {
 const TOP_NAV: { hash: string; label: string; match: (path: string) => boolean }[] = [
   { hash: '#/', label: 'Overview', match: (p) => p === '/' },
   { hash: '#/events', label: 'Events', match: (p) => p.startsWith('/events') },
+  { hash: '#/settings', label: 'Settings', match: (p) => p === '/settings' },
 ];
+
+// Shown when a rave.page-only route is reached while the integration is off.
+function RavepageOff(): React.JSX.Element {
+  return (
+    <main className="p-4 bg-background min-h-screen">
+      <EmptyState
+        data-testid="ravepage-off"
+        headingLevel="h2"
+        title="rave.page integration is off"
+        description="Optional integration, off by default. Enable it in Settings to use rave.page here."
+        action={
+          <Button asChild>
+            <a href="#/settings">Open Settings</a>
+          </Button>
+        }
+      />
+    </main>
+  );
+}
 
 function TopNav({ path }: { path: string }): React.JSX.Element {
   return (
@@ -268,22 +289,38 @@ export function App() {
   const query = qIdx === -1 ? '' : raw.slice(qIdx + 1);
   const detail = /^\/events\/([^/]+)\/(.+)$/.exec(path);
 
-  const view =
-    path === '/kit' ? (
-      <KitShowcase />
-    ) : path === '/dev/ravepage' ? (
-      <RavepageDevPanel />
-    ) : path === '/dev/vrcpop' ? (
-      <VrcpopDevPanel />
-    ) : path === '/dev/vrctl' ? (
-      <VrctlDevPanel />
-    ) : detail && isPlatform(detail[1] ?? '') ? (
-      <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
-    ) : path === '/events' ? (
-      <Events query={query} />
-    ) : (
-      <Overview />
-    );
+  // null = still loading; gate rave.page-only routes when the toggle is off.
+  const [rpEnabled, setRpEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    void isRavepageEnabled().then(setRpEnabled);
+    return onSettingsChange((s) => setRpEnabled(s.experimental.ravepage));
+  }, []);
+
+  const ravepageRoute = path === '/dev/ravepage' || (detail !== null && detail[1] === 'ravepage');
+
+  let view: React.JSX.Element;
+  if (ravepageRoute && rpEnabled !== true) {
+    view = rpEnabled === false ? <RavepageOff /> : <main className="p-4"><LoadingSpinner /></main>;
+  } else {
+    view =
+      path === '/kit' ? (
+        <KitShowcase />
+      ) : path === '/settings' ? (
+        <Settings />
+      ) : path === '/dev/ravepage' ? (
+        <RavepageDevPanel />
+      ) : path === '/dev/vrcpop' ? (
+        <VrcpopDevPanel />
+      ) : path === '/dev/vrctl' ? (
+        <VrctlDevPanel />
+      ) : detail && isPlatform(detail[1] ?? '') ? (
+        <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
+      ) : path === '/events' ? (
+        <Events query={query} />
+      ) : (
+        <Overview />
+      );
+  }
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <TopNav path={path} />

@@ -12,6 +12,7 @@
 //               data-club-scene-type|data-default-hosts], data-event.version
 import { BridgeError } from '../../core/errors';
 import type { EventCore } from '../../core/schema';
+import type { OwnEvent } from '../types';
 import { fromVrcpop, type VrcpopDataEvent } from '../../core/mapping/from-vrcpop';
 import { ownEventRef, ownGroupRef, type VrcpopClub, type VrcpopEventRef, type VrcpopEventStatus } from './types';
 
@@ -126,6 +127,29 @@ export function parseEventsList(html: string): EventsListParse {
     events.push({ id, title, date, status, ref: ownEventRef(id) });
   }
   return { groupId: md.groupId, groupName: md.groupName, csrf, events };
+}
+
+// vrcpop renders the card date in the OWNER's timezone (e.g.
+// "Thu, Sep 3, 2026 at 10:00 PM"), so a browser-local parse is an APPROXIMATION
+// — good enough for listing/sorting/upcoming counts; the exact instant comes from
+// readEvent (start_timestamp_utc). Returns an ISO string, or undefined when the
+// label doesn't parse. NEVER put the raw label into OwnEvent.start (Date.parse ->
+// NaN there breaks the upcoming count).
+export function parseVrcpopCardDate(label: string): string | undefined {
+  const ms = Date.parse(label.replace(' at ', ' '));
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined;
+}
+
+// Map a parsed listing ref to the shared OwnEvent. start is an ISO instant
+// (approx) or undefined — never the human label.
+export function eventToOwn(e: VrcpopEventRef): OwnEvent {
+  return {
+    id: String(e.id),
+    title: e.title,
+    start: parseVrcpopCardDate(e.date),
+    status: e.status,
+    visibility: e.status === 'draft' ? 'draft' : 'public',
+  };
 }
 
 // ---- /manage/club/<grp>/events/<id>/edit ----
