@@ -82,6 +82,11 @@ test('Connect opens the bridge tab and the handshake reaches the consent card', 
   await bridge.goto(BRIDGE_URL);
 
   const dashboard = await openDashboard(context);
+  // rave.page dev panel moved off the default route (now the Overview).
+  await dashboard.evaluate(() => {
+    location.hash = '#/dev/ravepage';
+  });
+  await dashboard.reload();
   await expect(dashboard.getByTestId('rp-status')).toContainText('Not connected');
   await dashboard.getByTestId('rp-connect').click(); // opens/injects the bridge agent
 
@@ -95,6 +100,9 @@ test('connected session: who-am-i, groups, create draft (recorded EventCreateIn)
 
   const dashboard = await openDashboard(context);
   await seedToken(dashboard);
+  await dashboard.evaluate(() => {
+    location.hash = '#/dev/ravepage';
+  });
   await dashboard.reload();
   await expect(dashboard.getByTestId('rp-status')).toContainText('Connected', { timeout: 15_000 });
   await expect(dashboard.getByTestId('rp-status')).toContainText('Example DJ');

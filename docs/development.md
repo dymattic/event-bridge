@@ -11,33 +11,38 @@ pnpm dev              # esbuild watch + tailwind --watch (sourcemaps on)
 `pnpm build` runs `tools/build.mjs` (esbuild: 4 IIFE bundles background/agent/
 popup/dashboard, React 19 via `jsx: automatic`; then `@tailwindcss/cli`
 compiles `src/ui/styles.css` -> `build/styles.css`) then `tools/assemble.mjs`
-(merges manifests, copies bundles + built CSS + HTML + icons + `src/ui/fonts/*`
-into each `dist/` target). `dist/` and `build/` are git-ignored.
+(merges manifests, copies bundles + built CSS + HTML + icons into each `dist/`
+target). `dist/` and `build/` are git-ignored.
 
 ## UI stack (@rave-page/ui)
 
-React 19 + Tailwind 4 on `@rave-page/ui` — the shared rave.page design-system
-kit (Button, Badge, Card/DashboardCard/StatCard, Dialog family, form controls,
-SmartSelect, Date/DateTime pickers, DataTable, Toast, …) plus its `tokens.css`
-(brand palette, semantic `--color-*`, `--control-h` density, Orbitron
-`font-orbitron`, z-ladder, `--breakpoint-xxl`). No hand-rolled widgets or
-ad-hoc colours where a kit component/token exists; missing primitives are added
-upstream in the kit, never forked here. Extension-specific views stay in
-`src/ui/`. `views/KitShowcase.tsx` renders every export (wired at `#/kit`).
+React 19 + Tailwind 4 on `@rave-page/ui` — the shared design-system kit (Button,
+Badge, Card/DashboardCard/StatCard, Dialog family, form controls, SmartSelect,
+Date/DateTime pickers, DataTable, Toast, …) plus its `tokens.css` (semantic
+`--color-*`, `--control-h` density, `font-orbitron` token, z-ladder,
+`--breakpoint-xxl`). event-bridge is an independent tool, not a rave.page
+product: it consumes the kit only as a component library and applies its OWN
+neutral theme over it (see the `@theme` override in `styles.css`). No
+hand-rolled widgets or ad-hoc colours where a kit component/token exists;
+missing primitives are added upstream in the kit, never forked here.
+Extension-specific views stay in `src/ui/`. `views/KitShowcase.tsx` renders
+every export (wired at `#/kit`).
 
 `src/ui/styles.css` is the Tailwind entry:
 
 ```css
 @import "tailwindcss";
 @import "@rave-page/ui/tokens.css";
+@theme { --color-brand-base: #14B8A6; /* … neutral teal palette … */ }
 @source "../../node_modules/@rave-page/ui/src";   /* node_modules is auto-ignored; opt the kit back in */
 @source "./**/*.tsx";                             /* the extension's own components */
 ```
 
-It adds only the extension's own Orbitron `@font-face` (dist-relative
-`fonts/…` url — we do NOT import the kit's `font.css`, whose url wouldn't
-resolve from `dist/`) and the `body` defaults. Orbitron + its OFL license ship
-in `dist/*/fonts/`.
+The `@theme` block (placed AFTER the kit tokens import so it wins the merge)
+re-skins the kit's brand tokens with the extension's neutral teal palette, and
+maps `--font-orbitron` to the system font stack (`ui-sans-serif, system-ui,
+sans-serif`) — no bundled display font ships. `styles.css` also sets the `body`
+defaults (dark scheme, semantic surfaces).
 
 **Providers.** Mount once at each React root (`popup/main.tsx`,
 `dashboard/main.tsx`): `TooltipProvider` (backs any `Button`/`IconButtonWithTooltip`
@@ -140,15 +145,22 @@ ports). Codes are `BridgeError`/`BridgeErrorCode` from `src/core/errors.ts`.
 
 ## Dashboard routes
 
-`src/ui/dashboard/App.tsx` is a minimal hash router (no router dep) with a small
-dev nav:
+`src/ui/dashboard/App.tsx` is a minimal hash router (no router dep) with a muted
+footer nav ("Overview · Developer: rave.page · vrcpop · vrc.tl · Kit"):
 
 | Hash | View |
 |---|---|
-| `#/` (default) | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) |
+| `#/` (default) | Overview (`views/Overview.tsx`) — three equal platform cards (vrc.tl, vrcpop.com, rave.page) |
 | `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
+| `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) |
 | `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
 | `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
+
+The Overview treats all three platforms identically (no primary platform): each
+card shows name + host, a session-status badge (`getSessionStatus` for
+vrc.tl/vrcpop; the rave.page token store for rave.page), a `caps`-derived
+"Supports" line, and user-triggered actions (Open + Refresh for the tab
+platforms; Connect/Disconnect + Refresh for rave.page).
 
 The registry (`src/adapters/registry.ts`) exposes `getAdapter(id)` + `ADAPTER_IDS`
 for all three platforms; the two agent-bound adapters live in each platform's

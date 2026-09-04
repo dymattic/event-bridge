@@ -1,28 +1,20 @@
-import { Badge, Button, type BadgeProps } from '@rave-page/ui';
+import { Badge, Button } from '@rave-page/ui';
 import { ext } from '../../shared/webext';
 import { BUILD_ID } from '../../shared/build-id';
 import type { BackgroundRequest } from '../../shared/messages';
-import type { SessionState } from '../../runtime/sessions';
+import { ravepageStatusView, tabStatusView, type StatusView } from '../lib/status';
 import { usePlatformSessions, type PlatformRow } from './hooks/usePlatformSessions';
 import { usePermission } from './hooks/usePermission';
 
-const STATE_TEXT: Record<SessionState, string> = {
-  'logged-in': 'Logged in',
-  'logged-out': 'Logged out',
-  'no-tab': 'No tab open',
-  'no-permission': 'No access',
-  error: 'Error',
-};
-
-// Hue = intent (kit Badge variants): mint confirm, amber warn, neutral chrome
-// when absent, brand-base soft for the error/no-access states.
-const STATE_VARIANT: Record<SessionState, BadgeProps['variant']> = {
-  'logged-in': 'success',
-  'logged-out': 'warning',
-  'no-tab': 'secondary',
-  'no-permission': 'error',
-  error: 'error',
-};
+// Same wording as the dashboard Overview cards: tab platforms speak
+// signed-in/out; rave.page speaks connected/not-connected (token store).
+function statusViewFor(row: PlatformRow): StatusView {
+  if (row.platform === 'ravepage') {
+    const connected = row.status.state === 'logged-in';
+    return ravepageStatusView(connected, row.status.info?.label, row.status.info?.expiresAt);
+  }
+  return tabStatusView(row.status);
+}
 
 function Row({ row, onGranted }: { row: PlatformRow; onGranted: () => void }) {
   const { request } = usePermission(row.platform);
@@ -33,16 +25,15 @@ function Row({ row, onGranted }: { row: PlatformRow; onGranted: () => void }) {
       if (ok) onGranted();
     });
   };
-  const label = row.status.info?.label ? ` (${row.status.info.label})` : '';
+  const view = statusViewFor(row);
   return (
     <li className="flex items-center justify-between border-b border-border py-2">
       <span className="text-foreground">{row.name}</span>
       <div className="flex items-center gap-2">
-        <Badge data-testid={`status-${row.platform}`} variant={STATE_VARIANT[row.status.state]}>
-          {STATE_TEXT[row.status.state]}
-          {label}
+        <Badge data-testid={`status-${row.platform}`} variant={view.variant}>
+          {view.text}
         </Badge>
-        {row.status.state === 'no-permission' && (
+        {view.noAccess && (
           <Button type="button" variant="outline" size="sm" onClick={grant}>
             Grant access
           </Button>

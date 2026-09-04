@@ -43,9 +43,10 @@ here; the kit owns their justification, and pnpm still refuses any that resolve
 
 Vendored assets (not npm deps):
 
-- **Orbitron (OFL 1.1)** — brand font copied from the rave.page design system
-  (`rave-page-design-system/fonts/`); the license file (`Orbitron-OFL.txt`)
-  ships next to the font in `dist/*/fonts/`. Re-sync from rave.page, don't fork.
+- None. The extension ships no bundled display font — `styles.css` re-skins the
+  kit with a neutral theme and maps `--font-orbitron` to the system font stack
+  (`ui-sans-serif, system-ui, sans-serif`), so no font file is copied into
+  `dist/`.
 
 Tooling not installed (run via `pnpm dlx`, never a dep):
 

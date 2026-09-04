@@ -18,7 +18,8 @@ export const PLATFORM_ORIGINS: Record<Platform, PlatformMeta> = {
   ravepage: { platform: 'ravepage', origin: ORIGINS.ravepage, entry: `${ORIGINS.ravepage}/`, name: 'rave.page' },
 };
 
-export const PLATFORMS: Platform[] = ['vrcpop', 'vrctl', 'ravepage'];
+// Fixed display order across UI surfaces: vrc.tl, vrcpop.com, rave.page.
+export const PLATFORMS: Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
 
 const TAB_READY_TIMEOUT_MS = 15_000;
 const opened = new Set<number>();

@@ -1,10 +1,11 @@
-// Dashboard shell: minimal hash router + dev nav. Routes:
-//   #/kit         -> @rave-page/ui showcase (KitShowcase)
-//   #/dev/vrcpop  -> vrcpop dev panel
-//   #/dev/vrctl   -> vrc.tl dev panel
-//   default (#/)  -> the rave.page dev panel (RavepageDevPanel, keeps rp-* testids)
-// Real routing lands with the P6+ UI; this is the smallest thing that wires the
-// existing panels + showcase into one built page for manual + e2e checks.
+// Dashboard shell: minimal hash router + muted footer nav. Routes:
+//   default (#/)      -> Overview (three equal platform cards)
+//   #/kit             -> @rave-page/ui showcase (KitShowcase)
+//   #/dev/ravepage    -> rave.page dev panel (RavepageDevPanel, keeps rp-* testids)
+//   #/dev/vrcpop      -> vrcpop dev panel
+//   #/dev/vrctl       -> vrc.tl dev panel
+// event-bridge is platform-neutral: the Overview is the product; the dev panels
+// are per-platform developer tools reachable from the footer.
 import { useCallback, useEffect, useState } from 'react';
 import { BUILD_ID } from '../../shared/build-id';
 import { isBridgeError } from '../../core/errors';
@@ -14,6 +15,7 @@ import { getSettings } from '../../runtime/settings';
 import { ravepageAdapter, runPlan } from '../../adapters/ravepage/adapter';
 import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
+import Overview from './views/Overview';
 import KitShowcase from './views/KitShowcase';
 import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
 import { VrctlDevPanel } from './dev/VrctlDevPanel';
@@ -43,6 +45,9 @@ function testDraftCore(prefix: string, club: OwnClub): EventCore {
   };
 }
 
+// Developer tool for manual + e2e checks against development.rave.page. Reachable
+// at #/dev/ravepage (not the default route) — rave.page is one integration of
+// three, not the product's home.
 function RavepageDevPanel() {
   const [status, setStatus] = useState<ConnectionStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -110,10 +115,8 @@ function RavepageDevPanel() {
 
   return (
     <main className="p-4 bg-background min-h-screen">
-      <h1 className="font-orbitron text-2xl text-foreground">
-        event-bridge <span data-testid="brand" className="text-brand-base">.page</span>
-      </h1>
-      <p className="text-2xs text-muted-foreground mb-3">build {BUILD_ID} · rave.page dev panel</p>
+      <h2 className="font-orbitron text-xl text-foreground">rave.page dev panel</h2>
+      <p className="text-2xs text-muted-foreground mb-3">build {BUILD_ID} · development.rave.page manual + e2e checks</p>
 
       <p data-testid="rp-status" className="text-sm text-foreground mb-3">
         {connected
@@ -181,27 +184,32 @@ function RavepageDevPanel() {
   );
 }
 
+// Footer nav: "Overview · Developer: rave.page · vrcpop · vrc.tl · Kit".
 const NAV: { hash: string; label: string }[] = [
-  { hash: '#/', label: 'rave.page' },
-  { hash: '#/kit', label: 'Kit' },
+  { hash: '#/', label: 'Overview' },
+  { hash: '#/dev/ravepage', label: 'rave.page' },
   { hash: '#/dev/vrcpop', label: 'vrcpop' },
   { hash: '#/dev/vrctl', label: 'vrc.tl' },
+  { hash: '#/kit', label: 'Kit' },
 ];
 
-function DevNav({ route }: { route: string }) {
+function FooterNav({ route }: { route: string }) {
   return (
-    <nav data-testid="dev-nav" className="flex flex-wrap items-center gap-4 px-4 py-2 border-b border-border bg-card">
-      {NAV.map((n) => {
+    <nav data-testid="footer-nav" className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 border-t border-border bg-card text-2xs text-muted-foreground">
+      {NAV.map((n, i) => {
         const active = `#${route}` === n.hash;
         return (
-          <a
-            key={n.hash}
-            href={n.hash}
-            data-testid={`nav-${n.label}`}
-            className={`text-sm underline-offset-2 hover:underline ${active ? 'text-brand-base' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            {n.label}
-          </a>
+          <span key={n.hash} className="flex items-center gap-2">
+            {i === 1 && <span>Developer:</span>}
+            <a
+              href={n.hash}
+              data-testid={`nav-${n.label}`}
+              className={`underline-offset-2 hover:underline ${active ? 'text-foreground' : 'hover:text-foreground'}`}
+            >
+              {n.label}
+            </a>
+            {i < NAV.length - 1 && <span aria-hidden="true">·</span>}
+          </span>
         );
       })}
     </nav>
@@ -223,17 +231,19 @@ export function App() {
   const view =
     route === '/kit' ? (
       <KitShowcase />
+    ) : route === '/dev/ravepage' ? (
+      <RavepageDevPanel />
     ) : route === '/dev/vrcpop' ? (
       <VrcpopDevPanel />
     ) : route === '/dev/vrctl' ? (
       <VrctlDevPanel />
     ) : (
-      <RavepageDevPanel />
+      <Overview />
     );
   return (
-    <div className="min-h-screen bg-background">
-      <DevNav route={route} />
-      {view}
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1">{view}</div>
+      <FooterNav route={route} />
     </div>
   );
 }

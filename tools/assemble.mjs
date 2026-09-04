@@ -9,7 +9,6 @@ const root = process.cwd();
 const buildDir = join(root, 'build');
 const manifestDir = join(root, 'manifest');
 const uiDir = join(root, 'src', 'ui');
-const fontsDir = join(uiDir, 'fonts');
 const iconsDir = join(root, 'icons');
 
 const EXPECTED = ['background.js', 'agent.js', 'popup.js', 'dashboard.js', 'styles.css'];
@@ -49,11 +48,6 @@ for (const target of ['chrome', 'firefox']) {
     for (const f of readdirSync(iconsDir)) {
       if (f.endsWith('.png')) copyFileSync(join(iconsDir, f), join(outDir, f));
     }
-  }
-  if (existsSync(fontsDir)) {
-    const outFonts = join(outDir, 'fonts');
-    mkdirSync(outFonts, { recursive: true });
-    for (const f of readdirSync(fontsDir)) copyFileSync(join(fontsDir, f), join(outFonts, f));
   }
   console.log(`assembled dist/${target}`);
 }

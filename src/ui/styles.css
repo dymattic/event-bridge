@@ -1,13 +1,35 @@
 /* Tailwind entry for the extension pages (popup + dashboard).
  *
- * Design tokens (brand palette, semantic --color-*, --control-h density,
- * z-ladder, font-orbitron, --breakpoint-xxl, text-2xs/3xs) and every component
- * class come from @rave-page/ui, the shared rave.page design-system kit. This
- * file adds ONLY the extension's own Orbitron @font-face (dist-relative url) and
- * body defaults. Re-sync tokens by re-vendoring the kit (`pnpm vendor:ui`) -
- * never by copying token blocks back here. */
+ * The @rave-page/ui kit supplies the component classes, semantic --color-*,
+ * --control-h density, z-ladder, --breakpoint-xxl and text-2xs/3xs. event-bridge
+ * is an independent tool, NOT a rave.page product: the @theme override below
+ * re-skins the kit's brand tokens with the extension's own neutral (teal)
+ * palette so nothing carries rave.page's pink/violet identity. Re-sync semantic
+ * tokens by re-vendoring the kit (`pnpm vendor:ui`) - never by copying token
+ * blocks here. */
 @import "tailwindcss";
 @import "@rave-page/ui/tokens.css";
+
+/* Extension theme override. Placed AFTER the kit tokens import so these values
+   win the @theme merge (later declaration overrides). Neutral teal identity,
+   deliberately distinct from rave.page's pink/violet/mint. --font-orbitron is
+   kept as a token NAME (the kit's `font-orbitron` classes reference it) but now
+   resolves to the system font stack - no bundled display font. */
+@theme {
+    --color-brand-base:        #14B8A6;
+    --color-brand-hot:         #2DD4BF;
+    --color-brand-deep:        #0F766E;
+    --color-brand-violet:      #6366F1;
+    --color-brand-mint:        #22C55E;
+    --color-brand-amber:       #F59E0B;
+    --color-brand-base-soft:   #5EEAD4;
+    --color-brand-mint-soft:   #86EFAC;
+    --color-brand-violet-soft: #A5B4FC;
+    /* Legacy aliases map to the neutral palette (base / violet). */
+    --color-brand-cyan:        #14B8A6;
+    --color-brand-magenta:     #6366F1;
+    --font-orbitron: ui-sans-serif, system-ui, sans-serif;
+}
 
 /* Tailwind auto-ignores node_modules, so opt the kit's class strings back in
    explicitly (required - the kit's variant classes live in its src/). Keep
@@ -16,17 +38,7 @@
 @source "../../node_modules/@rave-page/ui/src";
 @source "./**/*.tsx";
 
-/* Orbitron ships in dist/*/fonts/ (assemble copies src/ui/fonts). We do NOT
-   import the kit's font.css: its url() is relative to the kit's src/styles/ and
-   would not resolve from our built dist/styles.css. */
-@font-face {
-    font-family: 'Orbitron';
-    src: url('fonts/Orbitron-VariableFont_wght.ttf') format('truetype');
-    font-weight: 400 900;
-    font-display: swap;
-}
-
-/* Extension page defaults (rave.page body: dark, brand font). */
+/* Extension page defaults: dark scheme, semantic surface tokens, system font. */
 body {
     color-scheme: dark;
     background-color: hsl(var(--background));

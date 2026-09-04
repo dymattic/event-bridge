@@ -53,16 +53,17 @@ describe('popup App badge per session state', () => {
     h.statuses = {};
   });
 
-  it('shows logged-in / logged-out / no-tab text', async () => {
+  it('shows signed-in / signed-out text and rave.page connection state', async () => {
     h.statuses = {
       vrcpop: { state: 'logged-in' },
       vrctl: { state: 'logged-out' },
       ravepage: { state: 'no-tab' },
     };
     const { container, cleanup } = await renderPopup();
-    expect(textOf(container, 'vrcpop')).toContain('Logged in');
-    expect(textOf(container, 'vrctl')).toContain('Logged out');
-    expect(textOf(container, 'ravepage')).toContain('No tab open');
+    expect(textOf(container, 'vrcpop')).toContain('Signed in');
+    expect(textOf(container, 'vrctl')).toContain('Signed out');
+    // rave.page derives from the token store, so it speaks "not connected"
+    expect(textOf(container, 'ravepage')).toContain('Not connected');
     cleanup();
   });
 
@@ -75,7 +76,7 @@ describe('popup App badge per session state', () => {
     const { container, cleanup } = await renderPopup();
     expect(textOf(container, 'vrcpop')).toContain('No access');
     expect(textOf(container, 'vrctl')).toContain('Error');
-    expect(textOf(container, 'ravepage')).toContain('Logged in');
+    expect(textOf(container, 'ravepage')).toContain('Connected as');
     // label surfaced from session info
     expect(textOf(container, 'ravepage')).toContain('DyMattic');
     // no-permission row offers the grant gesture

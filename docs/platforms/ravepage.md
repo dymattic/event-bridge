@@ -100,8 +100,9 @@ URL posters ride the event body (`cover_image_url`); a platform ref uses
 
 ## Dev panel
 
-The default dashboard route (`#/`, `RavepageDevPanel` in `App.tsx`): Connect /
-Disconnect, status, Who am I, My groups, Create test draft (draft + unlisted +
-`is_public:false`, one slot, one performer), Delete it. rave.page **development**
+The rave.page dev route (`#/dev/ravepage`, `RavepageDevPanel` in `App.tsx`):
+Connect / Disconnect, status, Who am I, My groups, Create test draft (draft +
+unlisted + `is_public:false`, one slot, one performer), Delete it. rave.page
+**development**
 may be exercised with draft/unlisted events, cleaned up afterwards (repo rule: no
 test events on vrc.tl/vrcpop).
