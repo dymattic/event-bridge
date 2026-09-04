@@ -43,7 +43,8 @@ function page(title: string, body: string): string {
 function dashboardHtml(loggedIn: boolean): string {
   return page(
     'Clubs I Manage',
-    `<div class="manage-container dashboard-page"><h1>Clubs I Manage</h1>
+    `<nav class="nav-sec--account"><div class="sidebar-user-status"><span class="sidebar-user-name">Example User</span><a href="/api/club/?action=logout" class="sidebar-logout-link">Logout</a></div></nav>
+<div class="manage-container dashboard-page"><h1>Clubs I Manage</h1>
 <section class="manage-section"><div class="club-grid">
   <div class="club-card"><div class="club-card-main"><div class="club-card-info"><div class="club-card-header">
     <h3 class="club-name">Example Club</h3><span class="club-role role-owner">OWNER</span>

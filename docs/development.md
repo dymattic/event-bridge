@@ -140,12 +140,17 @@ ports). Codes are `BridgeError`/`BridgeErrorCode` from `src/core/errors.ts`.
 
 ## Dashboard routes
 
-`src/ui/dashboard/App.tsx` is a minimal hash router (no router dep) with a muted
-footer nav ("Overview · Developer: rave.page · vrcpop · vrc.tl · Kit"):
+`src/ui/dashboard/App.tsx` is a minimal hash router (no router dep) with a top
+nav ("Overview · Events") and a muted footer nav ("Overview · Developer:
+rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter state
+(`#/events?platform=…&club=…&q=…`); the router splits path from query:
 
 | Hash | View |
 |---|---|
 | `#/` (default) | Overview (`views/Overview.tsx`) — three equal platform cards (vrc.tl, vrcpop.com, rave.page) |
+| `#/events` | Events (`views/Events.tsx`) — own events across every connected platform, filterable/searchable table |
+| `#/events?platform=…&club=…&status=…&time=…&from=…&to=…&q=…` | Events with URL-synced filters (shareable) |
+| `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete |
 | `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
 | `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) |
 | `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
@@ -153,9 +158,27 @@ footer nav ("Overview · Developer: rave.page · vrcpop · vrc.tl · Kit"):
 
 The Overview treats all three platforms identically (no primary platform): each
 card shows name + host, a session-status badge (`getSessionStatus` for
-vrc.tl/vrcpop; the rave.page token store for rave.page), a `caps`-derived
-"Supports" line, and user-triggered actions (Open + Refresh for the tab
-platforms; Connect/Disconnect + Refresh for rave.page).
+vrc.tl/vrcpop; the rave.page token store for rave.page) that surfaces the
+resolved account **name** (never a raw id), a `caps`-derived "Supports" line,
+and user-triggered actions (Open + Refresh for the tab platforms;
+Connect/Disconnect + Refresh for rave.page). When a platform is connected the
+card also lists own clubs (name, type, per-club event count), an upcoming-event
+StatCard, and a "View events" link into `#/events`.
+
+### Events surface (P6.1)
+
+Real listings, resolved ids. `src/ui/lib/` holds the reusable data layer:
+`resource.ts` (a zero-dep stale-while-revalidate cache + `useResource`,
+`invalidate(prefix)`, `refresh()`, 5-min TTL), `format.ts` (Intl date/time +
+relative-day), `platform-meta.ts` (names/hosts, "open on platform" URL builders,
+the 300 ms third-party read gap), and `event-filters.ts` (pure filter/sort +
+hash-query sync). `src/ui/dashboard/lib/event-data.ts` wraps the adapter registry:
+own clubs → own events per club, **paced ≥300 ms between reads to a third-party
+host** (rave.page, our own API, is not paced), with platforms loaded in parallel
+by their independent `useResource` keys. Delete uses the adapter plan/execute
+split — the exact planned request is shown in a collapsible preview before
+`ConfirmDialog` (destructive-styled + platform-named for public/published
+events), then `planDelete` → `execute`, cache invalidate + toast.
 
 The registry (`src/adapters/registry.ts`) exposes `getAdapter(id)` + `ADAPTER_IDS`
 for all three platforms; the two agent-bound adapters live in each platform's

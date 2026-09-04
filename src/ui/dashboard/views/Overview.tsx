@@ -3,7 +3,7 @@
 // platforms derive status from the page session (getSessionStatus); rave.page
 // from its token store (a connect gesture). All actions are user-triggered.
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@rave-page/ui';
+import { Badge, Button, DashboardListRow, StatCard } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getSessionStatus } from '../../../runtime/sessions';
 import { status as ravepageStatus, connect, disconnect } from '../../../adapters/ravepage/auth';
@@ -12,7 +12,45 @@ import { ext } from '../../../shared/webext';
 import { RAVEPAGE_CAPS, VRCTL_CAPS, type DraftSupport } from '../../../core/capabilities';
 import { vrcpopCaps } from '../../../adapters/vrcpop/capabilities';
 import { ravepageStatusView, tabStatusView, type StatusView } from '../../lib/status';
+import { useResource } from '../../lib/resource';
+import { loadPlatformData } from '../lib/event-data';
 import { PlatformCard } from '../components/PlatformCard';
+
+// Connected-state card body: own clubs (name + type + per-club event count) and a
+// StatCard of upcoming own events, with a link into the full events view.
+function PlatformDetail({ platform, connected }: { platform: Platform; connected: boolean }): React.JSX.Element | null {
+  const { data, loading } = useResource(connected ? `platform:${platform}` : null, () => loadPlatformData(platform));
+  if (!connected) return null;
+  const clubs = data?.clubs ?? [];
+  const events = data?.events ?? [];
+  const upcoming = events.filter((e) => e.start && Date.parse(e.start) >= Date.now()).length;
+  const countByClub = new Map<string, number>();
+  for (const e of events) countByClub.set(e.clubId, (countByClub.get(e.clubId) ?? 0) + 1);
+  const busy = loading && !data;
+
+  return (
+    <div className="flex flex-col gap-3" data-testid={`platform-detail-${platform}`}>
+      <StatCard label="Upcoming events" value={busy ? '…' : upcoming} data-testid={`platform-upcoming-${platform}`} />
+      <div className="flex flex-col gap-1.5" data-testid={`platform-clubs-${platform}`}>
+        {busy && <span className="text-2xs text-muted-foreground">Loading clubs…</span>}
+        {clubs.map((c) => (
+          <DashboardListRow asButton={false} key={c.id} data-testid="platform-club">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-foreground">{c.name}</span>
+              <span className="flex items-center gap-2">
+                <Badge variant="outline">{c.organizerType}</Badge>
+                {data && <span className="text-2xs text-muted-foreground">{countByClub.get(c.id) ?? 0} events</span>}
+              </span>
+            </div>
+          </DashboardListRow>
+        ))}
+      </div>
+      <Button asChild variant="outline" data-testid={`platform-view-events-${platform}`}>
+        <a href={`#/events?platform=${platform}`}>View events</a>
+      </Button>
+    </div>
+  );
+}
 
 // Fixed display order — vrc.tl, vrcpop.com, rave.page.
 const ORDER: Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
@@ -54,6 +92,7 @@ export default function Overview(): React.JSX.Element {
     ravepage: CHECKING,
   });
   const [rpConnected, setRpConnected] = useState(false);
+  const [connected, setConnected] = useState<Record<Platform, boolean>>({ vrctl: false, vrcpop: false, ravepage: false });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +110,7 @@ export default function Overview(): React.JSX.Element {
         ravepage: ravepageStatusView(rp.connected, rp.label, rp.expiresAt),
       });
       setRpConnected(rp.connected);
+      setConnected({ vrctl: vt.state === 'logged-in', vrcpop: vp.state === 'logged-in', ravepage: rp.connected });
     } finally {
       setBusy(false);
     }
@@ -160,7 +200,9 @@ export default function Overview(): React.JSX.Element {
               supports={supportsLine(CAPS[p])}
               actions={actions}
               onGrant={grant(p)}
-            />
+            >
+              <PlatformDetail platform={p} connected={connected[p]} />
+            </PlatformCard>
           );
         })}
       </div>

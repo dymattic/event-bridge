@@ -32,10 +32,24 @@ function collectScriptText(): string {
   return Array.from(document.scripts, (s) => s.textContent ?? '').join('\n');
 }
 
+// Signed-in Discord display name from the account menu (`.sidebar-user-name`,
+// present on every manage page's sidebar). Returns undefined when absent (logged
+// out, or a page without the sidebar) — NEVER a raw id.
+export function parseVrcpopLabel(html: string): string | undefined {
+  const m = /<span[^>]*class="[^"]*\bsidebar-user-name\b[^"]*"[^>]*>([^<]*)<\/span>/i.exec(html);
+  const name = m?.[1]?.trim();
+  return name ? name : undefined;
+}
+
 async function detectVrcpop(): Promise<SessionInfo> {
   const parsed = parseVrcpopUser(collectScriptText());
   if (parsed) {
-    return { loggedIn: parsed.loggedIn, label: parsed.userId != null ? `user ${parsed.userId}` : undefined };
+    const label = parseVrcpopLabel(document.documentElement.outerHTML);
+    return {
+      loggedIn: parsed.loggedIn,
+      label: parsed.loggedIn ? label : undefined,
+      userId: parsed.userId != null ? String(parsed.userId) : undefined,
+    };
   }
   // Fallback when the inline script is absent: probe an auth-gated endpoint.
   const res = await fetch('/api/user/?action=likes', { credentials: 'same-origin' });
@@ -49,12 +63,28 @@ export function hasVrctlGrid(html: string): boolean {
   return html.includes('snippet-grid-grid') || html.includes('datagrid-grid-grid');
 }
 
+// Account name from the admin navbar account dropdown (the toggle span sitting
+// just before the menu linking to /admin/my-account). Returns undefined when
+// absent — NEVER a raw id.
+export function parseVrctlLabel(html: string): string | undefined {
+  const anchor = html.indexOf('/admin/my-account');
+  if (anchor === -1) return undefined;
+  const before = html.slice(0, anchor);
+  const re = /<button[^>]*dropdown-toggle[^>]*>\s*<span>([^<]*)<\/span>/gi;
+  let last: string | undefined;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(before)) !== null) last = m[1];
+  const name = last?.trim();
+  return name ? name : undefined;
+}
+
 async function detectVrctl(): Promise<SessionInfo> {
   const res = await fetch('/admin/event', { credentials: 'same-origin', redirect: 'follow' });
   // Logged out -> Nette bounces to a sign-in page outside /admin/.
   if (!new URL(res.url).pathname.startsWith('/admin/')) return { loggedIn: false };
   const html = await res.text();
-  return { loggedIn: hasVrctlGrid(html) };
+  if (!hasVrctlGrid(html)) return { loggedIn: false };
+  return { loggedIn: true, label: parseVrctlLabel(html) };
 }
 
 // ---- rave.page ----

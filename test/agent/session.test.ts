@@ -1,6 +1,17 @@
 // @vitest-environment happy-dom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { detectRavepage, hasVrctlGrid, jwtExp, parseVrcpopUser } from '../../src/agent/session.dom';
+import {
+  detectRavepage,
+  hasVrctlGrid,
+  jwtExp,
+  parseVrcpopLabel,
+  parseVrctlLabel,
+  parseVrcpopUser,
+} from '../../src/agent/session.dom';
+
+const fixture = (p: string): string => readFileSync(join(process.cwd(), 'test', 'fixtures', p), 'utf8');
 
 function b64u(s: string): string {
   return Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -27,6 +38,26 @@ describe('parseVrcpopUser', () => {
       loggedIn: true,
       userId: 42,
     });
+  });
+});
+
+describe('parseVrcpopLabel', () => {
+  it('reads the Discord display name from the account sidebar', () => {
+    expect(parseVrcpopLabel(fixture('vrcpop/dashboard.html'))).toBe('Example User');
+  });
+  it('never returns a raw id (undefined when absent)', () => {
+    expect(parseVrcpopLabel('<div>no sidebar here</div>')).toBeUndefined();
+    expect(parseVrcpopLabel('<span class="sidebar-user-name">  </span>')).toBeUndefined();
+  });
+});
+
+describe('parseVrctlLabel', () => {
+  it('reads the account name from the admin navbar dropdown', () => {
+    expect(parseVrctlLabel(fixture('vrctl/admin-header.html'))).toBe('Example User');
+    expect(parseVrctlLabel(fixture('vrctl/admin-grid.html'))).toBe('Example User');
+  });
+  it('undefined when the account menu is absent', () => {
+    expect(parseVrctlLabel('<nav><a href="/logout">Logout</a></nav>')).toBeUndefined();
   });
 });
 

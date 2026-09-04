@@ -7,8 +7,13 @@
 <body>
 <nav>
   <a href="/admin/organizer">My club</a>
-  <a href="/admin/my-account">My account</a>
-  <a href="/logout">Logout</a>
+  <div class="dropdown nav-item">
+    <button class="btn nav-link dropdown-toggle" data-bs-toggle="dropdown"><span>Example User</span></button>
+    <div class="dropdown-menu dropdown-menu-end">
+      <a href="/admin/my-account" class="dropdown-item">My account</a>
+      <a href="/logout" class="dropdown-item">Logout</a>
+    </div>
+  </div>
 </nav>
 <a href="/admin/event/choose-organizer">Create new event</a>
 <div id="snippet-grid-grid-grid">

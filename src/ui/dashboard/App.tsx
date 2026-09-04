@@ -7,18 +7,27 @@
 // event-bridge is platform-neutral: the Overview is the product; the dev panels
 // are per-platform developer tools reachable from the footer.
 import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@rave-page/ui';
 import { BUILD_ID } from '../../shared/build-id';
 import { isBridgeError } from '../../core/errors';
 import { asIanaZone, asIsoUtc } from '../../core/time';
 import type { EventCore } from '../../core/schema';
+import type { Platform } from '../../shared/agent-protocol';
 import { getSettings } from '../../runtime/settings';
 import { ravepageAdapter, runPlan } from '../../adapters/ravepage/adapter';
 import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
 import Overview from './views/Overview';
+import Events from './views/Events';
+import EventDetail from './views/EventDetail';
 import KitShowcase from './views/KitShowcase';
 import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
 import { VrctlDevPanel } from './dev/VrctlDevPanel';
+
+const PLATFORMS: readonly Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
+function isPlatform(v: string): v is Platform {
+  return (PLATFORMS as readonly string[]).includes(v);
+}
 
 function errMessage(e: unknown): string {
   if (isBridgeError(e)) return `${e.code}: ${e.message}`;
@@ -226,24 +235,60 @@ function useHashRoute(): string {
   return hash;
 }
 
+// Primary nav: Overview · Events (the product surfaces). Dev panels stay in the
+// muted footer. event-bridge is platform-neutral — no platform-specific top item.
+const TOP_NAV: { hash: string; label: string; match: (path: string) => boolean }[] = [
+  { hash: '#/', label: 'Overview', match: (p) => p === '/' },
+  { hash: '#/events', label: 'Events', match: (p) => p.startsWith('/events') },
+];
+
+function TopNav({ path }: { path: string }): React.JSX.Element {
+  return (
+    <nav data-testid="top-nav" className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card">
+      <span className="font-orbitron text-sm text-foreground mr-2">event-bridge</span>
+      {TOP_NAV.map((n) => (
+        <Button
+          key={n.hash}
+          asChild
+          size="sm"
+          variant={n.match(path) ? 'secondary' : 'ghost'}
+          data-testid={`topnav-${n.label.toLowerCase()}`}
+        >
+          <a href={n.hash}>{n.label}</a>
+        </Button>
+      ))}
+    </nav>
+  );
+}
+
 export function App() {
-  const route = useHashRoute().replace(/^#/, '') || '/';
+  const raw = useHashRoute().replace(/^#/, '') || '/';
+  const qIdx = raw.indexOf('?');
+  const path = qIdx === -1 ? raw : raw.slice(0, qIdx);
+  const query = qIdx === -1 ? '' : raw.slice(qIdx + 1);
+  const detail = /^\/events\/([^/]+)\/(.+)$/.exec(path);
+
   const view =
-    route === '/kit' ? (
+    path === '/kit' ? (
       <KitShowcase />
-    ) : route === '/dev/ravepage' ? (
+    ) : path === '/dev/ravepage' ? (
       <RavepageDevPanel />
-    ) : route === '/dev/vrcpop' ? (
+    ) : path === '/dev/vrcpop' ? (
       <VrcpopDevPanel />
-    ) : route === '/dev/vrctl' ? (
+    ) : path === '/dev/vrctl' ? (
       <VrctlDevPanel />
+    ) : detail && isPlatform(detail[1] ?? '') ? (
+      <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
+    ) : path === '/events' ? (
+      <Events query={query} />
     ) : (
       <Overview />
     );
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <TopNav path={path} />
       <div className="flex-1">{view}</div>
-      <FooterNav route={route} />
+      <FooterNav route={path} />
     </div>
   );
 }

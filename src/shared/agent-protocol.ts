@@ -20,7 +20,8 @@ export const ORIGINS: Record<Platform, string> = {
 
 export interface SessionInfo {
   loggedIn: boolean;
-  label?: string;
+  label?: string; // resolved display name (never a raw id) — shown in UI
+  userId?: string; // raw account id kept for internals only, never a UI label
   expiresAt?: string; // ISO 8601
 }
 

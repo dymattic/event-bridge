@@ -14,9 +14,10 @@ export interface PlatformCardProps {
   supports: string;
   actions: React.ReactNode;
   onGrant: () => void; // Firefox host-permission request (runs in the click gesture)
+  children?: React.ReactNode; // connected-state detail (clubs, upcoming count, View events)
 }
 
-export function PlatformCard({ platform, name, host, status, supports, actions, onGrant }: PlatformCardProps): React.JSX.Element {
+export function PlatformCard({ platform, name, host, status, supports, actions, onGrant, children }: PlatformCardProps): React.JSX.Element {
   return (
     <Card data-testid={`platform-card-${platform}`} className="flex flex-col">
       <CardHeader>
@@ -37,6 +38,7 @@ export function PlatformCard({ platform, name, host, status, supports, actions, 
         <p data-testid={`platform-supports-${platform}`} className="text-2xs text-muted-foreground">
           {supports}
         </p>
+        {children}
         <div className="flex flex-wrap gap-2">{actions}</div>
       </CardContent>
     </Card>
