@@ -1,0 +1,58 @@
+{
+  "title": "Example Warehouse Night",
+  "description": "A sanitized sample event for the lineup editor dev harness.",
+  "start": "2026-09-10T20:00:00.000Z",
+  "end": "2026-09-10T23:30:00.000Z",
+  "zone": "Europe/Berlin",
+  "organizer": { "name": "Example Collective", "platformIds": {} },
+  "lineup": [
+    {
+      "order": 1,
+      "start": "2026-09-10T20:00:00.000Z",
+      "end": "2026-09-10T21:00:00.000Z",
+      "title": "Opening",
+      "performers": [
+        {
+          "name": "Example DJ 1",
+          "aliases": [
+            { "platform": "vrctl", "name": "Example DJ 1" },
+            { "platform": "vrcpop", "name": "Example DJ 1" }
+          ]
+        }
+      ],
+      "vj": { "name": "Example VJ", "aliases": [] },
+      "dancers": [{ "name": "Example Dancer", "aliases": [] }],
+      "genre": "Techno",
+      "energy": "High",
+      "notes": "Warm up",
+      "publicNote": "Doors at 8",
+      "privateNote": "Backstage code 42"
+    },
+    {
+      "order": 2,
+      "start": "2026-09-10T21:30:00.000Z",
+      "end": "2026-09-10T22:30:00.000Z",
+      "performers": [
+        {
+          "name": "Example DJ 2",
+          "aliases": [{ "platform": "ravepage", "name": "Example DJ 2" }]
+        }
+      ],
+      "dancers": []
+    },
+    {
+      "order": 3,
+      "start": "2026-09-10T22:30:00.000Z",
+      "end": "2026-09-10T23:30:00.000Z",
+      "performers": [{ "name": "Example DJ 3", "aliases": [] }],
+      "dancers": []
+    }
+  ],
+  "hosts": [],
+  "dancers": [],
+  "visibility": { "publish": false, "audience": "unlisted" },
+  "flags": {},
+  "music": { "genres": [] },
+  "links": {},
+  "extras": {}
+}

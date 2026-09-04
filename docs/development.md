@@ -155,6 +155,7 @@ rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter stat
 | `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) |
 | `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
 | `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
+| `#/dev/lineup` | Lineup editor harness (`dev/LineupDevPanel.tsx`) — the reusable `LineupEditor` on a sample event, target checkboxes, live core `Slot[]` JSON |
 
 The Overview treats all three platforms identically (no primary platform): each
 card shows name + host, a session-status badge (`getSessionStatus` for

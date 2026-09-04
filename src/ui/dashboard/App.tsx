@@ -23,6 +23,7 @@ import EventDetail from './views/EventDetail';
 import KitShowcase from './views/KitShowcase';
 import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
 import { VrctlDevPanel } from './dev/VrctlDevPanel';
+import { LineupDevPanel } from './dev/LineupDevPanel';
 
 const PLATFORMS: readonly Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
 function isPlatform(v: string): v is Platform {
@@ -199,6 +200,7 @@ const NAV: { hash: string; label: string }[] = [
   { hash: '#/dev/ravepage', label: 'rave.page' },
   { hash: '#/dev/vrcpop', label: 'vrcpop' },
   { hash: '#/dev/vrctl', label: 'vrc.tl' },
+  { hash: '#/dev/lineup', label: 'Lineup' },
   { hash: '#/kit', label: 'Kit' },
 ];
 
@@ -277,6 +279,8 @@ export function App() {
       <VrcpopDevPanel />
     ) : path === '/dev/vrctl' ? (
       <VrctlDevPanel />
+    ) : path === '/dev/lineup' ? (
+      <LineupDevPanel />
     ) : detail && isPlatform(detail[1] ?? '') ? (
       <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
     ) : path === '/events' ? (
