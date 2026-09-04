@@ -6,12 +6,12 @@ rave.page checkout needed). Interim until the kit ships on npm (plan P8).
 
 | Field | Value |
 |---|---|
-| Package | `@rave-page/ui@0.1.0` |
-| Tarball | `vendor/rave-page-ui-0.1.0.tgz` |
-| sha256 | `eb5bb6cc096b9bab2e0d25b7a03c9db401b1813cd6269d2ff51c04c68143ecdf` |
-| Kit commit | `8dc7613977866cefe33c8e92db2d63e6b2ecb9a1` |
-| Kit branch | `wt-uikit` |
-| Vendored (UTC) | 2026-09-03T17:43:14Z |
+| Package | `@rave-page/ui@0.1.1` |
+| Tarball | `vendor/rave-page-ui-0.1.1.tgz` |
+| sha256 | `2721183830e12d607130f5f0d0e542ece49bf1124bf61188ab09077f022bf82b` |
+| Kit commit | `b0c4e0e19a945c27922e93b010a640c0e721e2ec` |
+| Kit branch | `wt-uikit-glow` |
+| Vendored (UTC) | 2026-09-04T08:07:41Z |
 
 The packed tarball ships `dist/` (compiled ESM + `.d.ts`), `src/` (Tailwind
 scans it via `@source`), `src/styles/{tokens,font}.css`, `fonts/` (Orbitron +

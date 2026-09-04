@@ -23,7 +23,7 @@
     "vendor:ui": "node tools/vendor-ui.mjs"
   },
   "dependencies": {
-    "@rave-page/ui": "file:vendor/rave-page-ui-0.1.0.tgz",
+    "@rave-page/ui": "file:vendor/rave-page-ui-0.1.1.tgz",
     "lucide-react": "1.34.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"

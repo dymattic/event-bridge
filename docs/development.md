@@ -245,3 +245,16 @@ alive until Ctrl+C. The user logs in on development.rave.page themselves in that
 window; the lead attaches tooling (Playwright/CDP) via
 `http://127.0.0.1:9222`. rave.page development is exercised with draft/unlisted
 events only, cleaned up afterwards (repo rule: no test events on vrc.tl/vrcpop).
+
+### Gotchas
+
+- **Enable Developer mode in the `.profile` once.** In that window open
+  `chrome://extensions` and turn on Developer mode. Without it, any
+  `chrome.runtime.reload()` (or the extension reloading itself) on a
+  `--load-extension` build disables the extension as "may have been corrupted"
+  and it vanishes mid-session. Developer mode persists in the profile; after a
+  disable, re-enable it and press Reload.
+- **Attach over CDP, never own the browser.** Drive the running window with
+  `chromium.connectOverCDP('http://127.0.0.1:9222')`. Detach with
+  `process.exit` - never `browser.close()`, which would kill the user's
+  logged-in session.
