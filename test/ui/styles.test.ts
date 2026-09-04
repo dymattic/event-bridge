@@ -4,22 +4,19 @@ import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(resolve('src/ui/styles.css'), 'utf8');
 
-describe('styles.css themes the @rave-page/ui kit with a neutral palette', () => {
+describe('styles.css consumes the @rave-page/ui kit', () => {
   it('imports the kit design tokens', () => {
     expect(css).toContain('@import "@rave-page/ui/tokens.css"');
   });
 
-  it('adds an @theme override that re-skins the brand tokens to neutral teal', () => {
-    expect(css).toContain('@theme');
-    expect(css).toContain('--color-brand-base:        #14B8A6');
-    expect(css).toContain('--color-brand-mint:        #22C55E');
-    // system font stack, not a bundled display font
-    expect(css).toContain('--font-orbitron: ui-sans-serif, system-ui, sans-serif');
+  it('does not re-theme the brand tokens (kit tokens.css owns them, used as-is)', () => {
+    expect(css).not.toContain('@theme');
+    expect(css).not.toContain('--color-brand-base');
   });
 
-  it('ships no Orbitron @font-face / bundled font', () => {
-    expect(css).not.toContain('@font-face');
-    expect(css).not.toContain('Orbitron');
+  it('ships the Orbitron @font-face (dist-relative url)', () => {
+    expect(css).toContain('@font-face');
+    expect(css).toContain("url('fonts/Orbitron-VariableFont_wght.ttf')");
   });
 
   it('opts the kit source back into Tailwind scanning (node_modules is auto-ignored)', () => {
@@ -28,9 +25,10 @@ describe('styles.css themes the @rave-page/ui kit with a neutral palette', () =>
 });
 
 // The kit >=0.1.1 derives its brand glows from --color-brand-base at runtime
-// (shadow-brand-*), so the extension's teal override re-tints them. A kit that
-// re-introduces hardcoded rgba(247,8,100)/#f70864 box-shadows would defeat the
-// override -> guard the vendored source (build-independent; fresh on install).
+// (shadow-brand-*), so a consumer re-theming the brand base re-tints them. A kit
+// that re-introduces hardcoded rgba(247,8,100)/#f70864 box-shadows would defeat
+// that -> guard the vendored source (build-independent; fresh on install). This
+// guards the kit contract, not the extension's theme (which is the kit as-is).
 describe('vendored @rave-page/ui brand glows are themeable (no hardcoded pink)', () => {
   const kitBase = 'node_modules/@rave-page/ui/src/base';
   const read = (f: string) => readFileSync(resolve(kitBase, f), 'utf8');

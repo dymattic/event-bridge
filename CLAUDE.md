@@ -58,13 +58,15 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
 - **Typed everything, zero unchecked `any`.** TS `strict`; casts only at real
   boundaries with a comment.
 - **Platform-neutral product.** event-bridge is an independent tool, not a
-  rave.page product (user rule 2026-09-04). vrc.tl, vrcpop.com and rave.page
-  get identical treatment in UI, copy, docs and identity: one equal card per
-  platform (order vrc.tl, vrcpop.com, rave.page), no platform highlighted, no
-  rave.page wordmark or brand palette as the extension's look — the shared kit
-  is themed with the extension's own neutral tokens in `src/ui/styles.css`.
-  rave.page-specific mechanics (API, auth handoff page) are integration
-  details, never the framing.
+  product of any platform (user rule 2026-09-04, clarified 10:36). Neutrality
+  is FUNCTIONAL: vrc.tl, vrcpop.com and rave.page are equal integrations - one
+  identical card per platform (order vrc.tl, vrcpop.com, rave.page), no platform
+  is a prerequisite for using the others, no flow starts with or requires a
+  rave.page connection, and no copy implies that. The visual identity is
+  intentionally rave.page's design system: the shared kit `@rave-page/ui` with
+  its own brand tokens (pink base, Orbitron, mint/violet/amber intents) is used
+  as-is - do NOT re-theme it. The product name stays plain "event-bridge" (never
+  a rave.page-style wordmark).
 - **UI reuse over reinvention.** Dashboard/popup are built on `@rave-page/ui`,
   the shared design-system kit owned by the rave.page repo (`packages/ui`;
   user decision 2026-09-03), plus its `tokens.css`. No hand-rolled widgets or

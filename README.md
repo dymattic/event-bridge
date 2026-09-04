@@ -13,11 +13,9 @@ sync, migrate lineups between them.
 
 event-bridge is an independent, open-source tool (WTFPL). It is **not affiliated
 with, endorsed by, or a product of** vrc.tl, vrcpop.com or rave.page — the three
-are equal integrations. Each connects differently: rave.page happens to expose a
-public API and an auth-handoff page, while vrc.tl and vrcpop.com are driven
-entirely through your own logged-in browser session (they have no public write
-API). The UI ships its own neutral theme; it's built on the `@rave-page/ui`
-component library, but uses it only as a component kit, not as branding.
+are equal integrations, and no platform account is a prerequisite: connect only
+the platforms you use. It's built with rave.page's open design-system kit
+[`@rave-page/ui`](https://rave.page) (MIT) and shares that look by design.
 
 Status: pre-alpha, under construction.
 

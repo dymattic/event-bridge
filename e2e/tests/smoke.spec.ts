@@ -1,15 +1,15 @@
 import { expect, test } from '../fixtures/extension';
 
-test('dashboard renders heading + neutral theme applied', async ({ context, extensionId }) => {
+test('dashboard renders heading + kit theme applied', async ({ context, extensionId }) => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/dashboard.html`);
   await expect(page.getByRole('heading', { name: 'event-bridge' })).toBeVisible();
 
-  // Prove the CSS pipeline applied the neutral theme: a kit Button (default
-  // variant) paints the neutral primary #14B8A6, not rave.page's pink.
+  // Prove the CSS pipeline applied the kit theme: a kit Button (default variant)
+  // paints the kit brand-base #F70864.
   const primary = page.getByRole('button', { name: 'Open vrc.tl' });
   await expect(primary).toBeVisible();
-  expect(await primary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(20, 184, 166)');
+  expect(await primary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(247, 8, 100)');
 
   const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bodyBg).not.toBe('rgba(0, 0, 0, 0)');

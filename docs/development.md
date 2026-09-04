@@ -11,38 +11,33 @@ pnpm dev              # esbuild watch + tailwind --watch (sourcemaps on)
 `pnpm build` runs `tools/build.mjs` (esbuild: 4 IIFE bundles background/agent/
 popup/dashboard, React 19 via `jsx: automatic`; then `@tailwindcss/cli`
 compiles `src/ui/styles.css` -> `build/styles.css`) then `tools/assemble.mjs`
-(merges manifests, copies bundles + built CSS + HTML + icons into each `dist/`
-target). `dist/` and `build/` are git-ignored.
+(merges manifests, copies bundles + built CSS + HTML + icons + `src/ui/fonts/*`
+into each `dist/` target). `dist/` and `build/` are git-ignored.
 
 ## UI stack (@rave-page/ui)
 
-React 19 + Tailwind 4 on `@rave-page/ui` — the shared design-system kit (Button,
-Badge, Card/DashboardCard/StatCard, Dialog family, form controls, SmartSelect,
-Date/DateTime pickers, DataTable, Toast, …) plus its `tokens.css` (semantic
-`--color-*`, `--control-h` density, `font-orbitron` token, z-ladder,
-`--breakpoint-xxl`). event-bridge is an independent tool, not a rave.page
-product: it consumes the kit only as a component library and applies its OWN
-neutral theme over it (see the `@theme` override in `styles.css`). No
-hand-rolled widgets or ad-hoc colours where a kit component/token exists;
-missing primitives are added upstream in the kit, never forked here.
-Extension-specific views stay in `src/ui/`. `views/KitShowcase.tsx` renders
-every export (wired at `#/kit`).
+React 19 + Tailwind 4 on `@rave-page/ui` — the shared rave.page design-system
+kit (Button, Badge, Card/DashboardCard/StatCard, Dialog family, form controls,
+SmartSelect, Date/DateTime pickers, DataTable, Toast, …) plus its `tokens.css`
+(brand palette, semantic `--color-*`, `--control-h` density, Orbitron
+`font-orbitron`, z-ladder, `--breakpoint-xxl`). No hand-rolled widgets or
+ad-hoc colours where a kit component/token exists; missing primitives are added
+upstream in the kit, never forked here. Extension-specific views stay in
+`src/ui/`. `views/KitShowcase.tsx` renders every export (wired at `#/kit`).
 
 `src/ui/styles.css` is the Tailwind entry:
 
 ```css
 @import "tailwindcss";
 @import "@rave-page/ui/tokens.css";
-@theme { --color-brand-base: #14B8A6; /* … neutral teal palette … */ }
 @source "../../node_modules/@rave-page/ui/src";   /* node_modules is auto-ignored; opt the kit back in */
 @source "./**/*.tsx";                             /* the extension's own components */
 ```
 
-The `@theme` block (placed AFTER the kit tokens import so it wins the merge)
-re-skins the kit's brand tokens with the extension's neutral teal palette, and
-maps `--font-orbitron` to the system font stack (`ui-sans-serif, system-ui,
-sans-serif`) — no bundled display font ships. `styles.css` also sets the `body`
-defaults (dark scheme, semantic surfaces).
+It adds only the extension's own Orbitron `@font-face` (dist-relative
+`fonts/…` url — we do NOT import the kit's `font.css`, whose url wouldn't
+resolve from `dist/`) and the `body` defaults. Orbitron + its OFL license ship
+in `dist/*/fonts/`.
 
 **Providers.** Mount once at each React root (`popup/main.tsx`,
 `dashboard/main.tsx`): `TooltipProvider` (backs any `Button`/`IconButtonWithTooltip`
