@@ -43,6 +43,12 @@ describe('settings defaults + merge', () => {
     expect(s.ravepage).toEqual(RAVEPAGE_DEFAULT_INSTANCE);
   });
 
+  it('defaults the editor duration and deep-merges a stored editor block', async () => {
+    expect((await getSettings()).editor.defaultDurationMin).toBe(120);
+    h.ext = createFake({ storage: { settings: { editor: { defaultDurationMin: 90 } } } }).ext;
+    expect((await getSettings()).editor.defaultDurationMin).toBe(90);
+  });
+
   it('deep-merges a partial nested object (keeps the other default fields)', async () => {
     h.ext = createFake({ storage: { settings: { ravepage: { apiOrigin: 'https://api.custom.example' } } } }).ext;
     const s = await getSettings();

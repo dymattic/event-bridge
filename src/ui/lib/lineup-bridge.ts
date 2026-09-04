@@ -13,6 +13,11 @@ import { CAPS } from '../../core/capabilities';
 import type { LineupCapabilities, LineupPerformer, LineupSlot, PerformerPick } from '@rave-page/ui';
 import { PLATFORM_NAME, PLATFORM_ORDER } from './platform-meta';
 
+// Default slot length (minutes) the quick-add / generator uses, and the assumed
+// duration of a timed slot with no explicit end (deriveEnd reuses this — do not
+// duplicate the number).
+export const DEFAULT_SLOT_MINUTES = 60;
+
 // Stable slot id from the 1-based core order (survives reorder: reorderSlots
 // keeps the id, only renumbers `order`). fromBoard matches `previous` by it.
 function slotKey(order: number): string {

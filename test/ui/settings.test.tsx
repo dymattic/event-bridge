@@ -121,6 +121,17 @@ describe('Settings view', () => {
     expect(id('settings-ravepage-app-origin')).toBeNull();
   });
 
+  it('Editor card shows the default event length', async () => {
+    await render();
+    expect(id<HTMLInputElement>('settings-editor-duration')?.value).toBe('120');
+  });
+
+  it('Editor card reflects a stored event length', async () => {
+    h.store = { settings: { editor: { defaultDurationMin: 45 } } };
+    await render();
+    expect(id<HTMLInputElement>('settings-editor-duration')?.value).toBe('45');
+  });
+
   it('shows the instance card with default origins when the toggle is on', async () => {
     h.store = { settings: { experimental: { ravepage: true } } };
     await render();

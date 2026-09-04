@@ -228,7 +228,13 @@ checked target sequentially.
   `fromCore`, `toCore` (local↔UTC via `time.ts` with the form zone; instants store
   the event-zone wall string, and a `source` snapshot lets an untouched time
   round-trip to the exact ISO — no millis/DST re-snapping), and `formIssues`
-  (= `validateEvent(toCore)` plus zone-invalid / end-before-start / doors-after-start).
+  (= `validateEvent` on the derived core plus zone-invalid / doors-after-start; no
+  form-field end check — end is derived, so a moved start never trips a stale end).
+  `deriveEnd(core, {defaultDurationMin, sourceEnd?})` computes the end the user
+  never types: latest slot end (a timed slot lacking an end is `DEFAULT_SLOT_MINUTES`
+  long — the shared `lineup-bridge` constant), else start + `defaultDurationMin`;
+  edit keeps the source end unless the derived end is LATER (a grown lineup extends,
+  a shrunk one never truncates). DST-safe via `time.ts` instant math.
   `toCore(fromCore(x))` is lossless (round-trip tested against `lineup-sample.json`
   and a `from-ravepage` core). PURE — node-testable, no runtime/adapters import.
 - **Shared plan runner** `src/ui/dashboard/lib/run-plan.ts` — `runPlan(platform,
@@ -256,6 +262,14 @@ checked target sequentially.
   while any target has validation issues or unmet `required`. On failure the runner
   stops and offers "Retry from failed step" and, when a create already succeeded,
   "Delete created event on <platform>" (never automatic).
+- **Start-only times (P7.1).** Basics asks only for the **Start** (required); the
+  End field is gone and **Doors open** moved under a *More times* disclosure. The
+  end is derived (`deriveEnd`) in the editor's `core` memo before planning, so
+  previews / LossReport / validation see it; each Review target shows *Ends <local>
+  (from lineup / default N h)* — what will be sent (vrcpop `end_time`, rave.page
+  `ends_at`; vrc.tl uses slot times, noted inline). The no-lineup default is
+  `Settings.editor.defaultDurationMin` (default 120). Rationale: slot count/length
+  are chosen on the Lineup tab, so a separate end entry was redundant.
 
 ### Unified events + clubs (P6b)
 
@@ -422,9 +436,13 @@ vrcpop mock's `recorder.eventName` simulates a "changed on re-read" edit.
     "mode": "off",                               // off | notify | apply
     "source": "last-edited",                     // last-edited | a Platform
     "fields": { "details": true, "lineup": true, "poster": true, "publishState": false }
-  }
+  },
+  "editor": { "defaultDurationMin": 120 }        // event length when no lineup sets the end (P7.1)
 }
 ```
+
+The Settings view has an **Editor** card (`settings-editor-duration`, a
+`type=number` input) for `editor.defaultDurationMin`.
 
 `merge()` deep-merges nested defaults, so settings stored before these keys
 existed still load. Helpers: `isRavepageEnabled()`, `getRavepageInstance()`,

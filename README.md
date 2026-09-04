@@ -30,9 +30,10 @@ and events by name, never raw ids.
   switch the time filter to *past* or *all* to work with them.
 - **Event detail.** A read-only view of one event with the resolved lineup
   (performer names, B2B, VJ/dancers/hosts), poster, flags, genres and links.
-- **Create and edit events.** Enter an event once — title, times, lineup (drag-and-
-  drop slots with searchable performers), flags, genres, links and poster — and
-  post it to the platforms you tick, each with its own club. Before anything is
+- **Create and edit events.** Enter an event once — title, start time, lineup (drag-
+  and-drop slots with searchable performers), flags, genres, links and poster — and
+  post it to the platforms you tick, each with its own club. Only the start time is
+  required; the end follows the lineup (or a default event length you set). Before anything is
   sent, a per-platform review shows what maps cleanly, what's dropped or
   approximated, what a platform requires (e.g. vrc.tl's NSFW/SFW), and the exact
   request; publishing stays off unless you turn it on (vrcpop asks first). Editing

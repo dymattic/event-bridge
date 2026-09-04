@@ -19,7 +19,7 @@ import {
 import type { IanaZone, IsoUtc, Performer, Slot } from '../../../core/schema';
 import type { Platform } from '../../../shared/agent-protocol';
 import { addMinutes } from '../../../core/time';
-import { capsFor, fromBoard, nextSlotStart, pickToPerformer, toBoard } from '../../lib/lineup-bridge';
+import { capsFor, DEFAULT_SLOT_MINUTES, fromBoard, nextSlotStart, pickToPerformer, toBoard } from '../../lib/lineup-bridge';
 import { createPerformerSearch } from '../lib/performer-search';
 
 type SlotPatch = Partial<Pick<LineupSlot, 'title' | 'stage' | 'startsAt' | 'endsAt' | 'note'>>;
@@ -34,8 +34,6 @@ export interface LineupEditorProps {
   busy?: boolean;
   searchPerformers?: (query: string) => Promise<PerformerPick[]>;
 }
-
-const DEFAULT_SLOT_MINUTES = 60;
 
 export function LineupEditor(props: LineupEditorProps): React.JSX.Element {
   const { value, onChange, eventStart, zone, targets, readOnly = false, busy = false, searchPerformers } = props;

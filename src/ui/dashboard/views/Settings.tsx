@@ -49,6 +49,7 @@ export default function Settings(): React.JSX.Element {
   const { addNotification } = useNotification();
   const [settings, setLocal] = useState<SettingsShape | null>(null);
   const [prefix, setPrefix] = useState('');
+  const [duration, setDuration] = useState('');
   const [appInput, setAppInput] = useState('');
   const [apiInput, setApiInput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +66,7 @@ export default function Settings(): React.JSX.Element {
     void getSettings().then((s) => {
       setLocal(s);
       setPrefix(s.testPrefix);
+      setDuration(String(s.editor.defaultDurationMin));
       setAppInput(s.ravepage.appOrigin);
       setApiInput(s.ravepage.apiOrigin);
       if (s.experimental.ravepage) void refreshConn();
@@ -86,6 +88,16 @@ export default function Settings(): React.JSX.Element {
   };
   const onPrefixBlur = (): void => {
     if (settings && prefix !== settings.testPrefix) void patch({ testPrefix: prefix });
+  };
+  // Whole positive minutes only; revert the field to the stored value otherwise.
+  const onDurationBlur = (): void => {
+    if (!settings) return;
+    const n = Math.round(Number(duration));
+    if (Number.isFinite(n) && n >= 1 && n !== settings.editor.defaultDurationMin) {
+      void patch({ editor: { defaultDurationMin: n } });
+    } else {
+      setDuration(String(settings.editor.defaultDurationMin));
+    }
   };
 
   // ---- Experimental toggle ----
@@ -214,6 +226,29 @@ export default function Settings(): React.JSX.Element {
                 onBlur={onPrefixBlur}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Editor</CardTitle>
+            <CardDescription>Defaults for creating events.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-1">
+            <Label htmlFor="settings-editor-duration">Default event length (minutes)</Label>
+            <p className="text-2xs text-muted-foreground">
+              Used for the event end when the lineup doesn&apos;t set one. Only the start time is required in the editor.
+            </p>
+            <Input
+              id="settings-editor-duration"
+              data-testid="settings-editor-duration"
+              type="number"
+              min={1}
+              className="sm:max-w-32"
+              value={duration}
+              onChange={(e) => setDuration(e.currentTarget.value)}
+              onBlur={onDurationBlur}
+            />
           </CardContent>
         </Card>
 

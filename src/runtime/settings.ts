@@ -11,13 +11,23 @@ export interface RavepageInstance {
   apiOrigin: string; // API origin (OpenAPI base + token exchange)
 }
 
+// Editor defaults. `defaultDurationMin` sets the event end (start + N minutes)
+// when no lineup slot determines it; the editor derives the end, the user only
+// enters the start.
+export interface EditorSettings {
+  defaultDurationMin: number;
+}
+
 export interface Settings {
   closeOpenedTabs: boolean;
   testPrefix: string;
   experimental: { ravepage: boolean }; // rave.page integration off by default
   ravepage: RavepageInstance;
   sync: SyncSettings; // defaults new links inherit (off by default)
+  editor: EditorSettings;
 }
+
+export const DEFAULT_EDITOR: EditorSettings = { defaultDurationMin: 120 };
 
 // Default sync settings a new link inherits: off, source = last-edited, publish
 // state NOT synced by default (a publish flip is deliberate, never automatic).
@@ -39,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
   experimental: { ravepage: false },
   ravepage: { ...RAVEPAGE_DEFAULT_INSTANCE },
   sync: { ...DEFAULT_SYNC, fields: { ...DEFAULT_SYNC.fields } },
+  editor: { ...DEFAULT_EDITOR },
 };
 
 const KEY = 'settings';
@@ -50,12 +61,14 @@ function merge(stored: unknown): Settings {
   const rp = (typeof s.ravepage === 'object' && s.ravepage !== null ? s.ravepage : {}) as Partial<RavepageInstance>;
   const sy = (typeof s.sync === 'object' && s.sync !== null ? s.sync : {}) as Partial<SyncSettings>;
   const syFields = (typeof sy.fields === 'object' && sy.fields !== null ? sy.fields : {}) as Partial<SyncSettings['fields']>;
+  const ed = (typeof s.editor === 'object' && s.editor !== null ? s.editor : {}) as Partial<EditorSettings>;
   return {
     ...DEFAULT_SETTINGS,
     ...s,
     experimental: { ...DEFAULT_SETTINGS.experimental, ...exp },
     ravepage: { ...DEFAULT_SETTINGS.ravepage, ...rp },
     sync: { ...DEFAULT_SYNC, ...sy, fields: { ...DEFAULT_SYNC.fields, ...syFields } },
+    editor: { ...DEFAULT_EDITOR, ...ed },
   };
 }
 

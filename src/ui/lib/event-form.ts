@@ -18,8 +18,9 @@ import type {
   Slot,
 } from '../../core/schema';
 import type { PlatformId } from '../../core/schema';
-import { asIanaZone, isValidZone, toDatetimeLocal, zonedLocalToUtc } from '../../core/time';
+import { addMinutes, asIanaZone, isValidZone, toDatetimeLocal, zonedLocalToUtc } from '../../core/time';
 import { validateEvent, type ValidationIssue } from '../../core/validate';
+import { DEFAULT_SLOT_MINUTES } from './lineup-bridge';
 
 export interface FormOrganizer {
   organizerType: string;
@@ -173,15 +174,54 @@ function localAfter(a: string, b: string): boolean {
   return !!a && !!b && a > b;
 }
 
-// validateEvent(toCore(form)) plus form-level checks that don't need a valid core:
-// invalid zone, end before start, doors after start. Never throws.
-export function formIssues(form: EventForm): ValidationIssue[] {
+// Instant comparison via epoch ms — precision-agnostic (mixed '…:00Z' / '…:00.000Z'
+// never mis-order the way a lexical compare would).
+function isoAfter(a: IsoUtc, b: IsoUtc): boolean {
+  return Date.parse(a) > Date.parse(b);
+}
+
+export interface DeriveEndOpts {
+  defaultDurationMin: number;
+  // Edit mode: the source event's end. Kept unless the derived end is LATER, so a
+  // grown lineup extends the event but a shrunk one never truncates it silently.
+  sourceEnd?: IsoUtc;
+}
+
+// The event end the user no longer types. With a lineup: the latest slot end (a
+// timed slot lacking an end is assumed DEFAULT_SLOT_MINUTES long). Without one:
+// start + defaultDurationMin. Instant math (addMinutes) is DST-safe. Returns
+// undefined when there is no start to anchor to (a blank required start).
+export function deriveEnd(core: EventCore, opts: DeriveEndOpts): IsoUtc | undefined {
+  let derived: IsoUtc | undefined;
+  if (core.start) {
+    if (core.lineup.length > 0) {
+      for (const slot of core.lineup) {
+        const slotEnd = slot.end ?? addMinutes(slot.start, DEFAULT_SLOT_MINUTES);
+        if (derived === undefined || isoAfter(slotEnd, derived)) derived = slotEnd;
+      }
+    } else {
+      derived = addMinutes(core.start, opts.defaultDurationMin);
+    }
+  }
+  if (opts.sourceEnd !== undefined) {
+    return derived !== undefined && isoAfter(derived, opts.sourceEnd) ? derived : opts.sourceEnd;
+  }
+  return derived;
+}
+
+// validateEvent(core) plus form-level checks that don't need a valid core:
+// invalid zone, doors after start. The end is no longer a user field, so there is
+// no form-field end check — validateEvent covers end-after-start on the derived
+// core. With `opts`, validation runs against the derived end (deriveEnd) so an
+// edit that moves the start never trips on a stale form end. Never throws.
+export function formIssues(form: EventForm, opts?: DeriveEndOpts): ValidationIssue[] {
   const out: ValidationIssue[] = [];
   if (!isValidZone(form.zone)) out.push({ path: 'zone', message: `invalid zone: ${form.zone}` });
-  if (localAfter(form.startLocal, form.endLocal)) out.push({ path: 'end', message: 'end must be after start' });
   if (localAfter(form.doorsLocal, form.startLocal)) out.push({ path: 'doorsOpen', message: 'doors must be at or before start' });
   if (isValidZone(form.zone)) {
-    for (const issue of validateEvent(toCore(form))) {
+    const core = toCore(form);
+    const validated = opts ? { ...core, end: deriveEnd(core, opts) } : core;
+    for (const issue of validateEvent(validated)) {
       if (out.some((o) => o.path === issue.path && o.message === issue.message)) continue;
       out.push(issue);
     }

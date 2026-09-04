@@ -168,6 +168,30 @@ describe('EventEditor vrc.tl NSFW gate', () => {
   });
 });
 
+describe('EventEditor derived end (P7.1)', () => {
+  it('has no End input on Basics and moves Doors under a "More times" disclosure', async () => {
+    await render();
+    expect(byId('editor-end')).toBeNull(); // the End field is gone
+    expect(byId('editor-start')).toBeTruthy();
+    expect(byId('editor-more-times')).toBeTruthy();
+    expect(byId('editor-doors')).toBeTruthy(); // still present, inside the disclosure
+  });
+
+  it('shows the derived end in Review (default duration when there is no lineup)', async () => {
+    await render();
+    await click(byId('editor-target-vrcpop'));
+    setInputValue(byId('editor-title') as HTMLInputElement, 'Duration Night');
+    await act(async () => {
+      setInputValue(byId('editor-start') as HTMLInputElement, '2027-01-01T22:00');
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    await selectTab('review');
+    const ends = byId('editor-end-vrcpop');
+    expect(ends?.textContent ?? '').toContain('Ends');
+    expect(ends?.textContent ?? '').toContain('default 2 h'); // no lineup -> settings default 120 min
+  });
+});
+
 describe('EventEditor vrcpop publish confirm', () => {
   it('toggling publish on for vrcpop opens the red confirm dialog', async () => {
     await render();

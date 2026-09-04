@@ -43,7 +43,8 @@ import { enabledPlatforms, getSettings, onSettingsChange, type Settings } from '
 import { upsertLinkForRefs, type EventRef } from '../../../runtime/link-store';
 import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
 import { invalidate, useResource } from '../../lib/resource';
-import { emptyForm, fromCore, formIssues, toCore, type EventForm } from '../../lib/event-form';
+import { deriveEnd, emptyForm, fromCore, formIssues, toCore, type EventForm } from '../../lib/event-form';
+import { formatLocalDateTime } from '../../lib/format';
 import { loadConnections, loadGenreVocab, loadPlatformData, readEventCore } from '../lib/event-data';
 import { runPlan, type StepEvent } from '../lib/run-plan';
 import { startJobRun, type JobHandle } from '../lib/job-recorder';
@@ -87,6 +88,11 @@ function goto(hash: string): void {
 function errMessage(e: unknown): string {
   if (isBridgeError(e)) return `${e.code}: ${e.message}`;
   return e instanceof Error ? e.message : String(e);
+}
+
+// Duration for the derived-end note: "2 h" when whole hours, else "90 min".
+function formatDuration(min: number): string {
+  return min % 60 === 0 ? `${min / 60} h` : `${min} min`;
 }
 
 // Human dot path (title, flags.nsfw, lineup.0.start -> readable) for changes/required.
@@ -140,15 +146,18 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
 
   const [enabled, setEnabled] = useState<Platform[]>(['vrctl', 'vrcpop']);
   const [testPrefix, setTestPrefix] = useState('[event-bridge test] ');
+  const [defaultDurationMin, setDefaultDurationMin] = useState(120);
   const syncDefault = useRef<Settings['sync'] | undefined>(undefined);
   useEffect(() => {
     void getSettings().then((s) => {
       setEnabled(enabledPlatforms(s));
       setTestPrefix(s.testPrefix);
+      setDefaultDurationMin(s.editor.defaultDurationMin);
       syncDefault.current = s.sync;
     });
     return onSettingsChange((s) => {
       setEnabled(enabledPlatforms(s));
+      setDefaultDurationMin(s.editor.defaultDurationMin);
       syncDefault.current = s.sync;
     });
   }, []);
@@ -231,18 +240,25 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   };
 
   // Effective core (test prefix applied); null when the zone is invalid.
+  // End is derived (never user-typed): from the lineup, else start +
+  // defaultDurationMin; edit keeps the source end unless the derived end is later.
+  // Applied here so previews / LossReport / validation all see the real end.
   const core = useMemo<EventCore | null>(() => {
     if (!formIsZoneValid(form)) return null;
     try {
       const c = toCore(form);
-      return testEvent ? { ...c, title: `${testPrefix}${c.title}` } : c;
+      const withEnd: EventCore = { ...c, end: deriveEnd(c, { defaultDurationMin, sourceEnd: sourceCore?.end }) };
+      return testEvent ? { ...withEnd, title: `${testPrefix}${withEnd.title}` } : withEnd;
     } catch {
       return null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, testEvent, testPrefix]);
+  }, [form, testEvent, testPrefix, defaultDurationMin, sourceCore]);
 
-  const issues = useMemo(() => formIssues(form), [form]);
+  const issues = useMemo(
+    () => formIssues(form, { defaultDurationMin, sourceEnd: sourceCore?.end }),
+    [form, defaultDurationMin, sourceCore],
+  );
 
   const clubFor = (p: Platform): OwnClub | undefined => clubsOf(p).find((c) => c.id === clubByTarget[p]);
 
@@ -592,10 +608,17 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
                   <div data-testid="editor-zone">
                     <SmartSelect label="Time zone" allowSearch options={zoneOpts} value={form.zone} placeholder="Time zone" onChange={(v) => patch({ zone: typeof v === 'string' ? v : form.zone })} />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <TimeField testId="editor-start" label="Start" value={form.startLocal} onChange={(v) => patch({ startLocal: v })} />
-                    <TimeField testId="editor-end" label="End" value={form.endLocal} onChange={(v) => patch({ endLocal: v })} />
-                    <TimeField testId="editor-doors" label="Doors open" value={form.doorsLocal} onChange={(v) => patch({ doorsLocal: v })} />
+                  <div className="flex flex-col gap-3">
+                    <div className="sm:max-w-xs">
+                      <TimeField testId="editor-start" label="Start" value={form.startLocal} onChange={(v) => patch({ startLocal: v })} />
+                    </div>
+                    <p className="text-2xs text-muted-foreground">The end follows the lineup (or a default length set in Settings) — only the start is required.</p>
+                    <details data-testid="editor-more-times">
+                      <summary className="cursor-pointer text-2xs text-muted-foreground">More times</summary>
+                      <div className="mt-2 sm:max-w-xs">
+                        <TimeField testId="editor-doors" label="Doors open" value={form.doorsLocal} onChange={(v) => patch({ doorsLocal: v })} />
+                      </div>
+                    </details>
                   </div>
                   <div data-testid="editor-audience">
                     <SmartSelect
@@ -753,6 +776,12 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
                           </div>
                         </CardHeader>
                         <CardContent className="flex flex-col gap-3">
+                          {core && core.end && (
+                            <p data-testid={`editor-end-${r.platform}`} className="text-2xs text-muted-foreground">
+                              Ends {formatLocalDateTime(core.end, core.zone)} ({core.lineup.length > 0 ? 'from lineup' : `default ${formatDuration(defaultDurationMin)}`})
+                              {r.platform === 'vrctl' && ' — vrc.tl uses slot times'}
+                            </p>
+                          )}
                           <LossReportView loss={r.loss} onJump={setTab} />
                           {r.issues.length > 0 && (
                             <ul className="flex flex-col gap-1" data-testid={`editor-issues-${r.platform}`}>
