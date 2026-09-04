@@ -71,10 +71,15 @@ function guardSession(res: HttpResult): void {
 
 // Throw VALIDATION before issuing any request if a platform-required field is
 // missing (vrc.tl: flags.nsfw / NSFW-SFW). Keeps a create from ever starting.
+// vrc.tl accepts free-text performer names (select2 data-tags), so a missing
+// performer id is a UI quality gate (LossReport.required + the editor's resolver
+// block Run), NOT a transport blocker — only the server-required fields (NSFW)
+// must abort a write before it starts.
 export function assertWritable(core: EventCore): void {
   const loss = computeLoss(core, VRCTL_CAPS);
-  if (loss.required.length) {
-    const paths = loss.required.map((r) => r.path).join(', ');
+  const hard = loss.required.filter((r) => !/^lineup\.\d+\.(performers\.\d+|vj)$/.test(r.path));
+  if (hard.length) {
+    const paths = hard.map((r) => r.path).join(', ');
     throw new BridgeError('VALIDATION', `vrc.tl requires: ${paths}`);
   }
 }

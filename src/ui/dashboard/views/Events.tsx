@@ -9,25 +9,29 @@ import { Button, Card, CardContent, EmptyState, LoadingSpinner } from '@rave-pag
 import type { Platform } from '../../../shared/agent-protocol';
 import { connect } from '../../../adapters/ravepage/auth';
 import { ensureAgent } from '../../../runtime/tabs';
-import { enabledPlatforms, getSettings, onSettingsChange } from '../../../runtime/settings';
-import { listLinks, makeLink, removeLink, saveLink, type EventRef } from '../../../runtime/link-store';
+import { enabledPlatforms, getSettings, onSettingsChange, type Settings } from '../../../runtime/settings';
+import { listLinks, makeLink, removeLink, saveLink, type EventLink, type EventRef } from '../../../runtime/link-store';
 import { listClubLinks } from '../../../runtime/club-links';
 import { dismissSuggestion, listDismissed } from '../../../runtime/dismissals';
 import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
 import { formatLocalDateTime } from '../../lib/format';
-import { useResource } from '../../lib/resource';
+import { invalidate, useResource } from '../../lib/resource';
 import {
   distinctStatuses,
   filtersToQuery,
+  inTimeScope,
   queryToFilters,
   type EventFilterState,
   type EventRow,
 } from '../../lib/event-filters';
+import type { SyncAssessment } from '../../lib/sync-plan';
 import { anchorLookup, buildClubAnchors, type AnchorClub } from '../../lib/club-anchors';
 import { filterLogical, groupLogicalEvents, type LogicalEvent, type Suggestion } from '../../lib/event-match';
 import { loadConnections, loadPlatformData } from '../lib/event-data';
+import { runSyncPass, type AssessedLink } from '../lib/sync';
 import { EventFilters } from '../components/EventFilters';
 import { LogicalEventsTable } from '../components/LogicalEventsTable';
+import { SyncSheet } from '../components/SyncSheet';
 import type { ClubRef } from '../components/ClubPicker';
 
 function goto(hash: string): void {
@@ -42,10 +46,18 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
   };
 
   const [enabled, setEnabled] = useState<Platform[]>(['vrctl', 'vrcpop']);
+  const [settings, setSettings] = useState<Settings | null>(null);
   useEffect(() => {
-    void getSettings().then((s) => setEnabled(enabledPlatforms(s)));
-    return onSettingsChange((s) => setEnabled(enabledPlatforms(s)));
+    void getSettings().then((s) => {
+      setEnabled(enabledPlatforms(s));
+      setSettings(s);
+    });
+    return onSettingsChange((s) => {
+      setEnabled(enabledPlatforms(s));
+      setSettings(s);
+    });
   }, []);
+  const [syncLe, setSyncLe] = useState<LogicalEvent | null>(null);
 
   const conns = useResource('connections', loadConnections);
   const c = conns.data;
@@ -64,6 +76,7 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
     links.refresh();
     clubLinks.refresh();
     dismissed.refresh();
+    invalidate('sync:pass'); // re-assess (+ apply-mode writes) on an explicit Refresh
   }, [conns, vt, vp, rp, links, clubLinks, dismissed]);
 
   const dataOf = (p: Platform) => (p === 'vrctl' ? vt : p === 'vrcpop' ? vp : rp);
@@ -80,14 +93,36 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
   for (const p of enabled) clubsByPlatform[p] = dataOf(p).data?.clubs ?? [];
   const anchors = buildClubAnchors(clubsByPlatform, clubLinks.data ?? []);
   const anchorOf = anchorLookup(anchors);
+  // Past events are out of scope by default: only rows in the current time filter
+  // feed the matcher (suggestions) and the sync pass. time=all/past opts back in.
+  const now = Date.now();
+  const scopedRows = rows.filter((r) => inTimeScope(r, filters.time, now));
   const { logical, suggestions } = groupLogicalEvents({
-    rows,
+    rows: scopedRows,
     links: links.data ?? [],
     anchorOf,
     dismissed: dismissed.data ?? [],
-    now: Date.now(),
+    now,
   });
   const visible = filterLogical(logical, filters, connectedPlatforms);
+
+  // Sync pass: assess (and, for apply-mode links, apply) the in-scope linked
+  // events. Runs only on Events load / Refresh (a resource) — never on a timer.
+  const passAnchorIds = logical.map((le) => le.linkId).filter((v): v is string => !!v);
+  const passReady = !!conns.data && !!links.data && !!settings && !anyLoading;
+  const pass = useResource<Record<string, AssessedLink>>(
+    passReady ? `sync:pass:${filters.time}` : null,
+    () => runSyncPass(passAnchorIds, connectedPlatforms),
+  );
+  const assessments: Record<string, SyncAssessment> = {};
+  for (const [anchorId, a] of Object.entries(pass.data ?? {})) assessments[anchorId] = a.assessment;
+
+  const onSyncChanged = useCallback(() => {
+    links.refresh();
+    invalidate('sync:pass');
+    invalidate('event:');
+  }, [links]);
+  const syncLink: EventLink | undefined = syncLe?.linkId ? (links.data ?? []).find((l) => l.anchorId === syncLe.linkId) : undefined;
 
   // Hint to link clubs when >=2 connected platforms each own a still-single-platform club.
   const unlinkedPlatforms = connectedPlatforms.filter((p) =>
@@ -111,7 +146,11 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
   };
   const onLinkSuggestion = (s: Suggestion): void => {
     const refs: EventRef[] = s.rows.map((r) => ({ platform: r.platform, id: r.id }));
-    void saveLink(makeLink(refs)).then(() => links.refresh());
+    // A new link inherits the settings sync defaults.
+    void saveLink({ ...makeLink(refs), sync: settings?.sync }).then(() => {
+      links.refresh();
+      invalidate('sync:pass');
+    });
   };
   const onDismissSuggestion = (s: Suggestion): void => {
     void dismissSuggestion(s.key).then(() => dismissed.refresh());
@@ -216,6 +255,8 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
                 onView={onView}
                 onEdit={onEdit}
                 onUnlink={onUnlink}
+                assessments={assessments}
+                onOpenSync={setSyncLe}
               />
             </>
           )}
@@ -226,6 +267,17 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
         <p data-testid="events-error" className="text-2xs text-brand-base mt-3">
           {errors.map((e) => e.message).join(' · ')}
         </p>
+      )}
+
+      {syncLe && syncLink && settings && (
+        <SyncSheet
+          link={syncLink}
+          settings={settings}
+          connected={connectedPlatforms}
+          initialAssessed={pass.data?.[syncLink.anchorId]}
+          onClose={() => setSyncLe(null)}
+          onChanged={onSyncChanged}
+        />
       )}
     </main>
   );

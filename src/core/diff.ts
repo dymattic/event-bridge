@@ -66,8 +66,14 @@ function deepEqual(a: JsonValue | undefined, b: JsonValue | undefined): boolean 
   return false;
 }
 
-export function diffEvents(a: EventCore, b: EventCore): ChangedPath[] {
+// Generic dot-path diff of two arbitrary values (objects/arrays/scalars). Same
+// engine as diffEvents; used for the sync planner's scoped projections.
+export function diffObjects(a: unknown, b: unknown): ChangedPath[] {
   const out: ChangedPath[] = [];
   walk(norm(a), norm(b), '', out);
   return out;
+}
+
+export function diffEvents(a: EventCore, b: EventCore): ChangedPath[] {
+  return diffObjects(a, b);
 }

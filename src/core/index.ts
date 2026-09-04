@@ -44,14 +44,14 @@ export { canonicalJson, sha256Hex, hashCanonical } from './hash';
 
 // diff
 export type { ChangedPath } from './diff';
-export { diffEvents } from './diff';
+export { diffEvents, diffObjects } from './diff';
 
 // validate
 export type { ValidationIssue } from './validate';
 export { validateEvent, isValidEvent } from './validate';
 
 // capabilities
-export type { PlatformCapabilities, FlagKey, FlagSupport, LossEntry, LossReport } from './capabilities';
+export type { PlatformCapabilities, PerformerIdPolicy, DraftSupport, FlagKey, FlagSupport, LossEntry, LossReport } from './capabilities';
 export { VRCPOP_CAPS, VRCTL_CAPS, RAVEPAGE_CAPS, CAPS, computeLoss } from './capabilities';
 
 // planner

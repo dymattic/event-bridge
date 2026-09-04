@@ -29,7 +29,7 @@ import {
   useNotification,
   type SmartSelectOption,
 } from '@rave-page/ui';
-import type { Audience, EventCore, Flags, IanaZone, Photosensitivity, PosterFile, PosterRef, Slot, VrPlatform } from '../../../core/schema';
+import type { Audience, EventCore, Flags, IanaZone, PerformerAlias, Photosensitivity, PosterFile, PosterRef, Slot, VrPlatform } from '../../../core/schema';
 import type { JsonValue } from '../../../core/hash';
 import { CAPS, computeLoss, type FlagKey, type LossReport } from '../../../core/capabilities';
 import { diffEvents, type ChangedPath } from '../../../core/diff';
@@ -39,14 +39,17 @@ import { isBridgeError } from '../../../core/errors';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import type { OwnClub, PlanResult } from '../../../adapters/types';
-import { enabledPlatforms, getSettings, onSettingsChange } from '../../../runtime/settings';
+import { enabledPlatforms, getSettings, onSettingsChange, type Settings } from '../../../runtime/settings';
 import { upsertLinkForRefs, type EventRef } from '../../../runtime/link-store';
 import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
 import { invalidate, useResource } from '../../lib/resource';
 import { emptyForm, fromCore, formIssues, toCore, type EventForm } from '../../lib/event-form';
 import { loadConnections, loadGenreVocab, loadPlatformData, readEventCore } from '../lib/event-data';
 import { runPlan, type StepEvent } from '../lib/run-plan';
+import { startJobRun, type JobHandle } from '../lib/job-recorder';
+import type { JobKind } from '../../../runtime/jobs';
 import { LineupEditor } from '../components/LineupEditor';
+import { PerformerResolver } from '../components/PerformerResolver';
 import { PosterPanel } from '../components/PosterPanel';
 
 type Tab = 'basics' | 'details' | 'lineup' | 'poster' | 'review';
@@ -137,12 +140,17 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
 
   const [enabled, setEnabled] = useState<Platform[]>(['vrctl', 'vrcpop']);
   const [testPrefix, setTestPrefix] = useState('[event-bridge test] ');
+  const syncDefault = useRef<Settings['sync'] | undefined>(undefined);
   useEffect(() => {
     void getSettings().then((s) => {
       setEnabled(enabledPlatforms(s));
       setTestPrefix(s.testPrefix);
+      syncDefault.current = s.sync;
     });
-    return onSettingsChange((s) => setEnabled(enabledPlatforms(s)));
+    return onSettingsChange((s) => {
+      setEnabled(enabledPlatforms(s));
+      syncDefault.current = s.sync;
+    });
   }, []);
 
   const conns = useResource('connections', loadConnections);
@@ -180,6 +188,17 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   }, [mode, sourceCore, platform]);
 
   const patch = (p: Partial<EventForm>): void => setForm((f) => ({ ...f, ...p }));
+  // Add a resolved performer alias to one lineup performer (functional update so
+  // concurrent auto-resolves compose). Used by the Lineup-tab PerformerResolver.
+  const onResolvePerformer = (slotIdx: number, perfIdx: number, alias: PerformerAlias): void =>
+    setForm((f) => ({
+      ...f,
+      lineup: f.lineup.map((s, i) =>
+        i !== slotIdx
+          ? s
+          : { ...s, performers: s.performers.map((p, m) => (m !== perfIdx ? p : { ...p, aliases: [...p.aliases.filter((a) => a.platform !== alias.platform), alias] })) },
+      ),
+    }));
   const targets = useMemo(() => PLATFORM_ORDER.filter((p) => checked.has(p)), [checked]);
 
   // Genre vocab per checked target (names + meta of platforms that know each).
@@ -282,13 +301,21 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   // Refs of targets that already succeeded — kept across doRun/doRetry so a link
   // survives a later target's failure + retry (P6.2 follow-up).
   const createdRefs = useRef<EventRef[]>([]);
-  const onStep = (evt: StepEvent): void => setLog((l) => [...l.filter((e) => e.stepId !== evt.stepId), evt]);
+  const jobRef = useRef<JobHandle | null>(null);
+  // Live log + persist each step to the current job (recorded per platform).
+  const recorderFor = (p: Platform) => (evt: StepEvent): void => {
+    setLog((l) => [...l.filter((e) => e.stepId !== evt.stepId), evt]);
+    jobRef.current?.stepRecorder(p)(evt);
+  };
+  const jobKind: JobKind = mode === 'create' ? 'create' : initialTargets.length > 0 ? 'transfer' : 'edit';
 
   function mergeCreatedRef(ref: EventRef): void {
     createdRefs.current = [...createdRefs.current.filter((r) => r.platform !== ref.platform), ref];
   }
   async function persistLink(): Promise<void> {
-    if (createdRefs.current.length) await upsertLinkForRefs(createdRefs.current);
+    // A NEW multi-ref link inherits the settings sync defaults; an existing link
+    // keeps its own settings.
+    if (createdRefs.current.length) await upsertLinkForRefs(createdRefs.current, syncDefault.current);
   }
   // Skip re-applying the poster on an edit whose source target didn't change it.
   function posterNeedsApply(p: Platform, perTargetCore: EventCore): boolean {
@@ -298,7 +325,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     return true;
   }
 
-  async function applyPoster(p: Platform, eventId: string, poster: PosterRef | null, file: PosterFile | null): Promise<void> {
+  async function applyPoster(p: Platform, eventId: string, poster: PosterRef | null, file: PosterFile | null, record: (evt: StepEvent) => void): Promise<void> {
     const adapter = getAdapter(p);
     if (file) {
       await adapter.setPoster(eventId, file);
@@ -306,7 +333,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     }
     if (poster && poster.kind === 'url') {
       const pp = adapter.planPoster(eventId, poster);
-      if (pp.steps.length) await runPlan(p, pp.steps, { onStep });
+      if (pp.steps.length) await runPlan(p, pp.steps, { onStep: record });
     }
   }
 
@@ -317,9 +344,10 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
 
   // Run one target from `startResults` (retry resumes with prior results).
   async function runTarget(p: Platform, startResults?: Record<string, JsonValue>): Promise<{ ok: boolean; ref?: EventRef }> {
+    const record = recorderFor(p);
     const perTargetCore: EventCore = { ...(core as EventCore), visibility: { ...(core as EventCore).visibility, publish: publishByTarget[p] ?? false } };
     const steps = planFor(p, perTargetCore).steps;
-    const out = await runPlan(p, steps, { onStep, results: startResults });
+    const out = await runPlan(p, steps, { onStep: record, results: startResults });
     if (!out.ok) {
       const createdId = extractEventId(p, out.results);
       setFailed({ platform: p, steps, results: out.results, createdId });
@@ -327,7 +355,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
       return { ok: false };
     }
     const eventId = extractEventId(p, out.results, mode === 'edit' && p === platform ? id : undefined);
-    if (eventId && posterNeedsApply(p, perTargetCore)) await applyPoster(p, eventId, form.poster, posterFile);
+    if (eventId && posterNeedsApply(p, perTargetCore)) await applyPoster(p, eventId, form.poster, posterFile, record);
     return { ok: true, ref: eventId ? { platform: p, id: eventId } : undefined };
   }
 
@@ -343,22 +371,28 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     setFailed(null);
     setLog([]);
     createdRefs.current = [];
+    jobRef.current = await startJobRun({ kind: jobKind, title: core.title, targets });
     try {
       for (const p of targets) {
         const res = await runTarget(p);
         if (res.ref) mergeCreatedRef(res.ref);
         if (!res.ok) {
           await persistLink(); // keep the targets that already succeeded
+          await jobRef.current?.finish('failed', createdRefs.current);
           return;
         }
       }
       await persistLink();
+      await jobRef.current?.finish('done', createdRefs.current);
       invalidate('platform:');
       invalidate('event:');
+      invalidate('links');
+      invalidate('sync:pass');
       addNotification(mode === 'edit' ? 'Event saved.' : 'Event created.', 'success');
       navAfterRun();
     } catch (e) {
       setRunError(errMessage(e));
+      await jobRef.current?.finish('failed', createdRefs.current);
     } finally {
       setRunning(false);
     }
@@ -368,9 +402,13 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     if (!failed || running) return;
     setRunning(true);
     setRunError(null);
+    jobRef.current = await startJobRun({ kind: jobKind, title: core?.title ?? form.title, targets });
     try {
       const res = await runTarget(failed.platform, failed.results);
-      if (!res.ok) return; // still failing; runTarget re-set failed + error
+      if (!res.ok) {
+        await jobRef.current?.finish('failed', createdRefs.current);
+        return; // still failing; runTarget re-set failed + error
+      }
       if (res.ref) mergeCreatedRef(res.ref);
       setFailed(null);
       // Continue any remaining targets after the recovered one.
@@ -379,16 +417,21 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
         if (r.ref) mergeCreatedRef(r.ref);
         if (!r.ok) {
           await persistLink();
+          await jobRef.current?.finish('failed', createdRefs.current);
           return;
         }
       }
       await persistLink();
+      await jobRef.current?.finish('done', createdRefs.current);
       invalidate('platform:');
       invalidate('event:');
+      invalidate('links');
+      invalidate('sync:pass');
       addNotification('Event saved.', 'success');
       navAfterRun();
     } catch (e) {
       setRunError(errMessage(e));
+      await jobRef.current?.finish('failed', createdRefs.current);
     } finally {
       setRunning(false);
     }
@@ -397,13 +440,19 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   async function doRollback(): Promise<void> {
     if (!failed?.createdId || running) return;
     setRunning(true);
+    const job = await startJobRun({ kind: 'delete', title: core?.title ?? form.title, targets: [failed.platform] });
     try {
       const del = getAdapter(failed.platform).planDelete(failed.createdId);
-      await runPlan(failed.platform, del.steps, { onStep });
+      await runPlan(failed.platform, del.steps, { onStep: job.stepRecorder(failed.platform) });
+      await job.finish('done');
+      invalidate('platform:');
+      invalidate('links');
+      invalidate('sync:pass');
       addNotification(`Deleted the created event on ${PLATFORM_NAME[failed.platform]}.`, 'info');
       setFailed(null);
     } catch (e) {
       setRunError(errMessage(e));
+      await job.finish('failed');
     } finally {
       setRunning(false);
     }
@@ -682,6 +731,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
                     zone={(formIsZoneValid(form) ? form.zone : browserZone()) as IanaZone}
                     targets={targets}
                   />
+                  <PerformerResolver lineup={form.lineup} targets={targets} onResolve={onResolvePerformer} />
                 </TabsContent>
 
                 {/* ---- Poster ---- */}

@@ -7,6 +7,7 @@ type Variant = BadgeProps['variant'];
 function variantFor(value: string): Variant {
   const s = value.toLowerCase();
   if (['published', 'public', 'live', 'active', 'promoted'].includes(s)) return 'success';
+  if (s === 'ended') return 'secondary'; // muted: past event whose raw status still reads active
   if (s === 'draft') return 'secondary';
   if (['unlisted', 'followers', 'private', 'hidden'].includes(s)) return 'info';
   return 'outline';

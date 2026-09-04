@@ -22,8 +22,11 @@ import Events from './views/Events';
 import Clubs from './views/Clubs';
 import EventDetail from './views/EventDetail';
 import EventEditor from './views/EventEditor';
+import Jobs from './views/Jobs';
 import KitShowcase from './views/KitShowcase';
 import Settings from './views/Settings';
+import { markInterrupted } from '../../runtime/jobs';
+import { invalidate } from '../lib/resource';
 import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
 import { VrctlDevPanel } from './dev/VrctlDevPanel';
 import { LineupDevPanel } from './dev/LineupDevPanel';
@@ -246,6 +249,7 @@ const TOP_NAV: { hash: string; label: string; match: (path: string) => boolean }
   { hash: '#/', label: 'Overview', match: (p) => p === '/' },
   { hash: '#/events', label: 'Events', match: (p) => p.startsWith('/events') },
   { hash: '#/clubs', label: 'Clubs', match: (p) => p.startsWith('/clubs') },
+  { hash: '#/jobs', label: 'Jobs', match: (p) => p === '/jobs' },
   { hash: '#/settings', label: 'Settings', match: (p) => p === '/settings' },
 ];
 
@@ -303,6 +307,12 @@ export function App() {
     return onSettingsChange((s) => setRpEnabled(s.experimental.ravepage));
   }, []);
 
+  // Dashboard boot: a job left 'running' from a prior session can't resume -> mark
+  // it interrupted (once).
+  useEffect(() => {
+    void markInterrupted().then(() => invalidate('jobs'));
+  }, []);
+
   const ravepageRoute =
     path === '/dev/ravepage' ||
     (detail !== null && detail[1] === 'ravepage') ||
@@ -333,6 +343,8 @@ export function App() {
         <EventEditor mode="edit" platform={editMatch[1] as Platform} id={editMatch[2] ?? ''} initialTargets={editTargets} />
       ) : detail && isPlatform(detail[1] ?? '') ? (
         <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
+      ) : path === '/jobs' ? (
+        <Jobs />
       ) : path === '/clubs' ? (
         <Clubs />
       ) : path === '/events' ? (

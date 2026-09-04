@@ -1,6 +1,8 @@
 // Typed storage.local settings. Page-side (dashboard/popup); DOM/chrome types.
 import { ext } from '../shared/webext';
 import type { Platform } from '../shared/agent-protocol';
+// Type-only (erased): sync default shape owned by the pure sync planner.
+import type { SyncSettings } from '../ui/lib/sync-plan';
 
 // rave.page instance the extension talks to. Configurable so a self-hosted /
 // federated rave.page can be used instead of the default dev instance.
@@ -14,7 +16,16 @@ export interface Settings {
   testPrefix: string;
   experimental: { ravepage: boolean }; // rave.page integration off by default
   ravepage: RavepageInstance;
+  sync: SyncSettings; // defaults new links inherit (off by default)
 }
+
+// Default sync settings a new link inherits: off, source = last-edited, publish
+// state NOT synced by default (a publish flip is deliberate, never automatic).
+export const DEFAULT_SYNC: SyncSettings = {
+  mode: 'off',
+  source: 'last-edited',
+  fields: { details: true, lineup: true, poster: true, publishState: false },
+};
 
 // Default (dev) rave.page instance. THE ONLY place these hosts are literal in src.
 export const RAVEPAGE_DEFAULT_INSTANCE: RavepageInstance = {
@@ -27,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   testPrefix: '[event-bridge test] ',
   experimental: { ravepage: false },
   ravepage: { ...RAVEPAGE_DEFAULT_INSTANCE },
+  sync: { ...DEFAULT_SYNC, fields: { ...DEFAULT_SYNC.fields } },
 };
 
 const KEY = 'settings';
@@ -36,11 +48,14 @@ function merge(stored: unknown): Settings {
   const s = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<Settings>;
   const exp = (typeof s.experimental === 'object' && s.experimental !== null ? s.experimental : {}) as Partial<Settings['experimental']>;
   const rp = (typeof s.ravepage === 'object' && s.ravepage !== null ? s.ravepage : {}) as Partial<RavepageInstance>;
+  const sy = (typeof s.sync === 'object' && s.sync !== null ? s.sync : {}) as Partial<SyncSettings>;
+  const syFields = (typeof sy.fields === 'object' && sy.fields !== null ? sy.fields : {}) as Partial<SyncSettings['fields']>;
   return {
     ...DEFAULT_SETTINGS,
     ...s,
     experimental: { ...DEFAULT_SETTINGS.experimental, ...exp },
     ravepage: { ...DEFAULT_SETTINGS.ravepage, ...rp },
+    sync: { ...DEFAULT_SYNC, ...sy, fields: { ...DEFAULT_SYNC.fields, ...syFields } },
   };
 }
 

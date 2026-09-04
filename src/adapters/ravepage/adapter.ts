@@ -41,6 +41,12 @@ const CREATE_STEP = 'create';
 
 // ---- read / discovery ----
 
+// Dedup key that treats a prefixed id (grp_/usr_/club_<uuid>) and its bare-uuid
+// form as the same organizer (the two rave.page endpoints disagree on format).
+function seenKey(type: string, id: string): string {
+  return `${type}:${id.replace(/^(grp|usr|club)_/i, '').toLowerCase()}`;
+}
+
 export async function listOwnClubs(): Promise<OwnClub[]> {
   try {
     await ensureConfigured();
@@ -50,15 +56,18 @@ export async function listOwnClubs(): Promise<OwnClub[]> {
     for (const g of groups) {
       if (!g.can_organize_events || !g.id) continue;
       out.push({ id: g.id, organizerType: 'group', name: g.name ?? '', vrchatGroupId: g.vrchat_group_id, canOrganize: true });
-      seen.add(`group:${g.id}`);
+      seen.add(seenKey('group', g.id));
     }
-    // Add user/club organizers the groups list doesn't already cover.
+    // Add user/club organizers the groups list doesn't already cover. /groups/mine
+    // returns a prefixed id (grp_<uuid>) while /events/organizers returns the same
+    // group as a bare uuid — normalize before the dedup so it isn't listed twice;
+    // keep the FIRST (prefixed) entry as canonical, ids as the API returns them.
     const organizers = await ROUTES.listOrganizers();
     for (const o of organizers) {
       const type = o.type ?? 'user';
-      if (!o.id || seen.has(`${type}:${o.id}`)) continue;
+      if (!o.id || seen.has(seenKey(type, o.id))) continue;
       out.push({ id: o.id, organizerType: type, name: o.name ?? '', canOrganize: true });
-      seen.add(`${type}:${o.id}`);
+      seen.add(seenKey(type, o.id));
     }
     return out;
   } catch (e) {

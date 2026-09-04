@@ -90,12 +90,27 @@ export function deletePreview(platform: Platform, id: string): string[] {
   return getAdapter(platform).planDelete(id).steps.map(renderPreview);
 }
 
-export async function executeDelete(platform: Platform, id: string): Promise<void> {
+export interface DeleteStepEvent {
+  stepId: string;
+  status: 'running' | 'done' | 'error';
+  request: JsonValue;
+  error?: { code?: string; message: string };
+}
+
+export async function executeDelete(platform: Platform, id: string, onStep?: (evt: DeleteStepEvent) => void): Promise<void> {
   const adapter = getAdapter(platform);
   const { steps } = adapter.planDelete(id);
   const results: Record<string, JsonValue> = {};
   for (const step of steps) {
+    const resolved = resolveRefs(step, results);
+    onStep?.({ stepId: step.id, status: 'running', request: resolved.request });
     await paceHost(platform);
-    results[step.id] = await adapter.execute(resolveRefs(step, results));
+    try {
+      results[step.id] = await adapter.execute(resolved);
+      onStep?.({ stepId: step.id, status: 'done', request: resolved.request });
+    } catch (e) {
+      onStep?.({ stepId: step.id, status: 'error', request: resolved.request, error: { message: e instanceof Error ? e.message : String(e) } });
+      throw e;
+    }
   }
 }

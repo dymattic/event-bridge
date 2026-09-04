@@ -25,6 +25,9 @@ and events by name, never raw ids.
 - **Search & filter.** Filter by platform, club, status, time
   (upcoming / past / all + date range) and "missing on a platform"; search title
   or club. Filters live in the URL, so a filtered view is a shareable link.
+  **Past events are out of scope by default** — the upcoming view hides them (and
+  a long-past event that a platform still marks "scheduled" reads as *ended*);
+  switch the time filter to *past* or *all* to work with them.
 - **Event detail.** A read-only view of one event with the resolved lineup
   (performer names, B2B, VJ/dancers/hosts), poster, flags, genres and links.
 - **Create and edit events.** Enter an event once — title, times, lineup (drag-and-
@@ -34,11 +37,23 @@ and events by name, never raw ids.
   approximated, what a platform requires (e.g. vrc.tl's NSFW/SFW), and the exact
   request; publishing stays off unless you turn it on (vrcpop asks first). Editing
   an event can also transfer it to more platforms at once. Runs stop at the first
-  error with a retry, and never publish on your behalf.
+  error with a retry, and never publish on your behalf. **Transfers resolve
+  performers** — a transfer to vrc.tl (which needs known performer ids) searches
+  and adopts each DJ's real id, so the copy carries ids, not just names.
+- **Auto-sync linked copies.** For a linked event you can keep its copies in step
+  while the dashboard is open — on **notify** it shows what drifted; on **apply**
+  it writes the non-conflicting changes for you. Sync runs only on the Events view
+  (load / Refresh / after a local edit), never on a timer or in the background.
+  You choose the source (last-edited or a fixed platform) and which fields sync
+  (details, lineup, poster, publish state). **Conflicts are never applied
+  automatically** — a field edited on both sides waits for your per-field pick —
+  and **publish state is off by default**, with a red confirm before anything goes
+  public. Set defaults under **Settings → Sync defaults**.
 - **Delete, safely.** Row and detail delete with a confirmation that shows the
   exact request first and names the platform for public events.
-
-In progress: sync (keeping linked copies up to date).
+- **Job log.** Every run — create, edit, transfer, delete, sync — is recorded
+  under **Jobs**: what, when, status, and the exact request per step (never your
+  tokens). Stored locally; clear it anytime.
 
 ## Privacy
 

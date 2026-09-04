@@ -13,6 +13,7 @@ export const CSRF = 'TEST_CSRF_TOKEN';
 export interface VrcpopRecorder {
   version: number; // current server optimistic-lock version
   forceStale: boolean; // when true, the next update answers 500 "Concurrent edit"
+  eventName?: string; // P7: readEvent title (mutate at runtime to simulate an edit)
   nextEventId: number;
   createBodies: Record<string, unknown>[];
   updateBodies: Record<string, unknown>[];
@@ -82,11 +83,11 @@ function eventsListHtml(): string {
   );
 }
 
-function dataEvent(version: number, eventId: number): Record<string, unknown> {
+function dataEvent(version: number, eventId: number, name = "what's poppin"): Record<string, unknown> {
   return {
     id: eventId,
     group_id: GROUP_ID,
-    event_name: "what's poppin",
+    event_name: name,
     event_description: '',
     flyer_url: '',
     owner_timezone: 'Europe/Berlin',
@@ -112,8 +113,8 @@ function dataEvent(version: number, eventId: number): Record<string, unknown> {
   };
 }
 
-function editPageHtml(version: number, eventId: number): string {
-  const enc = JSON.stringify(dataEvent(version, eventId))
+function editPageHtml(version: number, eventId: number, name?: string): string {
+  const enc = JSON.stringify(dataEvent(version, eventId, name))
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -181,7 +182,7 @@ export async function mockVrcpopSite(context: BrowserContext, recorder: VrcpopRe
     // reads
     if (method === 'GET' && p === '/dashboard') return htmlRes(route, dashboardHtml(loggedIn));
     if (method === 'GET' && /\/events$/.test(p)) return htmlRes(route, eventsListHtml());
-    if (method === 'GET' && /\/edit$/.test(p)) return htmlRes(route, editPageHtml(recorder.version, 100001));
+    if (method === 'GET' && /\/edit$/.test(p)) return htmlRes(route, editPageHtml(recorder.version, 100001, recorder.eventName));
     if (method === 'GET' && p === '/api/event-lineup.php') return json(route, lineupBody);
     if (method === 'GET' && p === '/api/dj/' && q.includes('action=genres')) return json(route, genresBody);
     if (method === 'GET' && p === '/api/dj/' && q.includes('action=energy')) return json(route, energyBody);

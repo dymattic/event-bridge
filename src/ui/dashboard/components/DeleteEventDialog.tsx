@@ -10,6 +10,7 @@ import { PLATFORM_NAME } from '../../lib/platform-meta';
 import { platformHost } from '../../lib/platform-urls';
 import { invalidate } from '../../lib/resource';
 import { deletePreview, executeDelete } from '../lib/event-data';
+import { startJob, recordStep, finishJob } from '../../../runtime/jobs';
 
 export interface DeleteTarget {
   platform: Platform;
@@ -70,18 +71,25 @@ export function DeleteEventDialog({
   const onConfirm = (): void => {
     if (busy) return;
     setBusy(true);
-    void executeDelete(target.platform, target.id)
-      .then(() => {
+    void (async () => {
+      const job = await startJob({ kind: 'delete', title: target.title, targets: [target.platform], refs: [{ platform: target.platform, id: target.id }] });
+      try {
+        await executeDelete(target.platform, target.id, (evt) => void recordStep(job.id, evt, target.platform));
+        await finishJob(job.id, 'done');
         invalidate(`platform:${target.platform}`);
         invalidate(`event:${target.platform}:${target.id}`);
+        invalidate('links');
+        invalidate('sync:pass');
         addNotification(`Deleted “${target.title}”`, 'success');
         onDeleted(target);
-      })
-      .catch((e: unknown) => addNotification(errMessage(e), 'error'))
-      .finally(() => {
+      } catch (e: unknown) {
+        await finishJob(job.id, 'failed');
+        addNotification(errMessage(e), 'error');
+      } finally {
         setBusy(false);
         onClose();
-      });
+      }
+    })();
   };
 
   return (

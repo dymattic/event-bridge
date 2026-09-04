@@ -27,8 +27,13 @@ function PlatformDetail({ platform, connected }: { platform: Platform; connected
   const clubs = data?.clubs ?? [];
   const events = data?.events ?? [];
   const upcoming = events.filter((e) => isUpcoming(e)).length; // same rule as #/events
-  const countByClub = new Map<string, number>();
-  for (const e of events) countByClub.set(e.clubId, (countByClub.get(e.clubId) ?? 0) + 1);
+  // Past events are out of scope by default: club rows count upcoming, not the total.
+  const upcomingByClub = new Map<string, number>();
+  const pastByClub = new Map<string, number>();
+  for (const e of events) {
+    const m = isUpcoming(e) ? upcomingByClub : pastByClub;
+    m.set(e.clubId, (m.get(e.clubId) ?? 0) + 1);
+  }
   const busy = loading && !data;
 
   return (
@@ -42,7 +47,12 @@ function PlatformDetail({ platform, connected }: { platform: Platform; connected
               <span className="text-sm text-foreground">{c.name}</span>
               <span className="flex items-center gap-2">
                 <Badge variant="outline">{c.organizerType}</Badge>
-                {data && <span className="text-2xs text-muted-foreground">{countByClub.get(c.id) ?? 0} events</span>}
+                {data && (
+                  <span className="text-2xs text-muted-foreground">
+                    {upcomingByClub.get(c.id) ?? 0} upcoming
+                    {(pastByClub.get(c.id) ?? 0) > 0 && <span> · {pastByClub.get(c.id)} past</span>}
+                  </span>
+                )}
               </span>
             </div>
           </DashboardListRow>

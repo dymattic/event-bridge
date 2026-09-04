@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Lo
 import { ext } from '../../../shared/webext';
 import type { Platform } from '../../../shared/agent-protocol';
 import type { EventCore, Flags, Performer, Slot } from '../../../core/schema';
+import { displayStatus } from '../../lib/event-filters';
 import { PLATFORM_NAME } from '../../lib/platform-meta';
 import { eventUrl } from '../../lib/platform-urls';
 import { formatLocalDateTime, formatLocalTime } from '../../lib/format';
@@ -98,7 +99,7 @@ function Detail({ platform, id, core }: { platform: Platform; id: string; core: 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <PlatformBadge platform={platform} />
-            <StatusBadge value={published ? 'published' : 'draft'} testId="event-detail-status" />
+            <StatusBadge value={displayStatus({ start: core.start, end: core.end, status: published ? 'published' : 'draft' })} testId="event-detail-status" />
             <StatusBadge value={core.visibility.audience} testId="event-detail-visibility" />
           </div>
           <h1 data-testid="event-detail-title" className="font-orbitron text-2xl text-foreground">{core.title}</h1>

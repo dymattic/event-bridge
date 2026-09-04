@@ -7,6 +7,8 @@
 // runtime/settings.
 import { ext } from '../shared/webext';
 import type { Platform } from '../shared/agent-protocol';
+// Type-only (erased): sync setting/baseline types owned by the pure sync planner.
+import type { LinkSync, SyncBaseline } from '../ui/lib/sync-plan';
 
 export interface EventRef {
   platform: Platform;
@@ -17,6 +19,9 @@ export interface EventLink {
   anchorId: string; // stable identity for the logical event across platforms
   refs: EventRef[];
   createdAt: string; // ISO 8601
+  // P7 sync (optional, no migration): per-link settings + per-platform baseline.
+  sync?: LinkSync;
+  lastSynced?: Partial<Record<Platform, SyncBaseline>>;
 }
 
 const KEY = 'links';
@@ -62,11 +67,13 @@ export async function findLinkByRef(platform: Platform, id: string): Promise<Eve
 // already contains ANY of the refs (replacing that link's same-platform refs),
 // else create a new one. Keeps one logical event's refs in a single link across
 // repeated runs/retries and transfers (P6.2 follow-up).
-export async function upsertLinkForRefs(refs: EventRef[]): Promise<EventLink> {
+export async function upsertLinkForRefs(refs: EventRef[], defaultSync?: LinkSync): Promise<EventLink> {
   if (refs.length === 0) return makeLink(refs);
   const all = await readAll();
   const existing = all.find((l) => l.refs.some((r) => refs.some((n) => n.platform === r.platform && n.id === r.id)));
   const base = existing ?? makeLink([]);
+  // New link inherits the settings sync defaults; an existing link keeps its own.
+  if (!existing && defaultSync && base.sync === undefined) base.sync = defaultSync;
   const byPlatform = new Map<Platform, EventRef>();
   for (const r of base.refs) byPlatform.set(r.platform, r);
   for (const r of refs) byPlatform.set(r.platform, r); // new refs replace same-platform

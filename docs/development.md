@@ -161,14 +161,15 @@ filter state (`#/events?platform=…&club=…&q=…`); the router splits path fr
 | `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete/edit |
 | `#/events/:platform/:id/edit` (optional `?targets=…`) | Event editor, edit (`views/EventEditor.tsx`) — source event ∪ extra create targets (Transfer) |
 | `#/clubs` | Clubs (`views/Clubs.tsx`) — link the same club across platforms (one row per anchor) |
-| `#/settings` | Settings (`views/Settings.tsx`) — General + Experimental (rave.page toggle + instance) |
+| `#/jobs` | Jobs (`views/Jobs.tsx`) — persisted job log (create/edit/transfer/delete/sync) with per-step request previews |
+| `#/settings` | Settings (`views/Settings.tsx`) — General + Sync defaults + Experimental (rave.page toggle + instance) |
 | `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
 | `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) — **gated** by the toggle |
 | `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
 | `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
 | `#/dev/lineup` | Lineup editor harness (`dev/LineupDevPanel.tsx`) — the reusable `LineupEditor` on a sample event, target checkboxes, live core `Slot[]` JSON |
 
-Top nav is "Overview · Events · Clubs · Settings". When the rave.page toggle is off, the
+Top nav is "Overview · Events · Clubs · Jobs · Settings". When the rave.page toggle is off, the
 rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`,
 `#/events/ravepage/:id/edit`) render an `EmptyState` (`ravepage-off`) linking to
 `#/settings` instead of the view. `#/events/new` is always reachable (targets are
@@ -301,13 +302,108 @@ node-tested; the runtime only supplies stored links.
   linked even if a later one fails), skips re-applying an unchanged poster on an
   edit, and (edit mode) unions the source with `?targets=` create targets.
 
-**Storage keys:** `settings`, `links` (EventLinks), `clubLinks` (ClubLinks),
-`dismissedSuggestions`, `ravepage.auth`. All extension-local; nothing leaves the browser.
+**Storage keys:** `settings` (now incl. `sync` defaults), `links` (EventLinks,
+now with optional per-link `sync` + `lastSynced` baselines), `clubLinks`
+(ClubLinks), `dismissedSuggestions`, `jobs` (P7 job log), `ravepage.auth`. All
+extension-local; nothing leaves the browser.
 
 e2e: `unified-events.spec.ts` (club linking via SmartSelect, suggestion Link,
 Transfer -> editor, missing filter, Unlink, rave.page third column, mobile
 overflow). The vrc.tl mock "what's poppin" (100002) start is aligned to the vrcpop
 2030 card so the two match.
+
+### Auto-sync, jobs, performer resolution (P7)
+
+**Past events are out of scope by default.** The default time filter is
+`upcoming`; a past event never appears in the upcoming view, forms no
+suggestion, and is skipped by the sync pass. Switch the time filter to `past` /
+`all` to opt in. `event-filters.ts` `inTimeScope(row, time)` is the single rule
+the Events matcher input and the sync pass share. Because a platform can leave a
+stale status on a past event (rave.page keeps `scheduled` months later),
+`displayStatus(row, now)` shows a muted **ended** badge instead of the raw
+status once the start/end has passed (purely cosmetic; `isUpcoming` is
+unchanged). Overview club rows count **upcoming** (with an optional `· n past`).
+
+**Jobs (`src/runtime/jobs.ts`, `#/jobs`).** Every plan run opens a `JobRecord`
+(`storage.local.jobs`, newest-first, cap 50): `kind`
+(create/edit/transfer/delete/poster/sync), `title`, `status`
+(running/done/failed/interrupted), `targets`, `steps`, `refs`. Each step stores
+the **exact resolved request** (`JSON.stringify`, never tokens — auth is added by
+the transport, never in a step request) + any error. API: `startJob`,
+`recordStep`, `finishJob`, `listJobs`, `clearFinishedJobs`, `markInterrupted`
+(called once on dashboard boot: a `running` job left over from a prior session
+can't resume → `interrupted`). Runs feed `runPlan`'s `onStep` into the store via
+the tiny `dashboard/lib/job-recorder.ts` adapter (`startJobRun` → per-platform
+`stepRecorder` + `finish`, writes serialized so overlapping running/done events
+don't lose an update), keeping `run-plan.ts` decoupled. The editor, delete
+dialog and sync engine each open a job. `views/Jobs.tsx` = a DataTable
+(when/kind/title/targets/status) with a row disclosure of the step previews +
+"Open event" + "Clear finished" (`jobs-clear`).
+
+**Sync model.** Pure planner `src/ui/lib/sync-plan.ts` (imports only core +
+platform-meta; node-tested):
+- `projectScoped(core, fields)` → a plain object of only the opted-in fields
+  (`details` = title/description/start/end/doorsOpen/zone/flags/music/links;
+  `lineup`; `poster` = url/platform ref only, never bytes; `publishState` =
+  visibility.publish). A change outside the scope is invisible.
+- `scopedHash(core, fields)` = `hashCanonical(projectScoped(...))` — stable;
+  drives "changed since baseline".
+- `planSync({link, cores, hashes})` → `SyncAssessment { state; source?;
+  changedSince; targets:[{platform, changes (diffObjects target→source),
+  conflict}] }`. States: `off` (mode off); `in-sync` (all match their baseline);
+  `pending` (one changed ref = source, propagate to the rest); `conflict` (>1
+  drifted from a baseline, or an explicit-source target that also drifted —
+  never auto-applied); `pick-source` (first run, no baseline, refs differ).
+  `changedSince` = refs whose current scoped hash ≠ `lastSynced` hash (no
+  baseline counts as changed).
+
+Engine `src/ui/dashboard/lib/sync.ts` (webext-bound; render tests mock it):
+- `assessLink(link, settings, connected)` reads each connected ref's core
+  (paced), hashes with the link's fields, runs `planSync`.
+- `applySync(link, assessed, {source, resolutions?, auto?})` writes each
+  actionable target: `mergeScoped` (source's **defined** fields win, gaps keep
+  the target's value so a field the source can't represent — e.g. vrcpop has no
+  per-event NSFW — never wipes a required target value) or, for a conflict, a
+  per-path merge from `resolutions`. A **required-id** target (vrc.tl)
+  auto-resolves exact performer matches; still-unresolved → that target is
+  skipped as *needs-resolution* (no write, a link to the editor). `planUpdate` →
+  `runPlan` under a `sync` job; poster in scope + url → `planPoster`, url→upload
+  target → fetch bytes + `setPoster`. After success it writes fresh `lastSynced`
+  for the source + written targets and returns the updated link. A public
+  publish flip needs `publishConfirmed` (red confirm); an automatic pass never
+  flips to public without it.
+- `setBaseline(link, …)` records current hashes with no platform write.
+- `runSyncPass(anchorIds, connected)` (reads links fresh) — notify: assess only;
+  apply: assess then apply non-conflicting targets. Triggers: the Events view
+  runs it as a `sync:pass` resource on load / Refresh / after a local write
+  (`invalidate('sync:pass')`). **Never timers/alarms/background.**
+
+UI: a **Sync** cell on linked rows (`LogicalEventsTable`) shows the state badge
+(In sync / n pending / Conflict / Pick source / —) and opens `SyncSheet`
+(`sync-sheet`) — per-link mode/source/fields (`sync-mode`/`sync-source`/
+`sync-field-<f>`), the per-target `path: from → to` rows, per-field conflict
+picks (`sync-pick-<path>-source`/`-target`), **Apply now** (`sync-apply`, disabled
+until every conflict field is picked), **Set as baseline** (`sync-baseline`), and
+the last run's result. Defaults live in Settings → **Sync defaults**
+(`settings-sync-*`); a new link inherits them (`upsertLinkForRefs` / the
+suggestion Link), existing links keep their own.
+
+**Performer resolution.** `PlatformCapabilities.performerIds` is `required`
+(vrc.tl) or `optional` (vrcpop/rave.page). `computeLoss` emits a `required`
+`lineup.N.performers.M` for each performer lacking that platform's alias id on a
+required target (vrc.tl accepts free-text, so `assertWritable` does NOT hard-fail
+on it — it's a UI gate). The editor Lineup tab's `PerformerResolver` (shown only
+when a checked required target has an unresolved performer) auto-adopts exact
+case-insensitive matches via `performer-search.ts` and offers a search picker
+(`resolve-<slotIdx>-<perfIdx>`) for the rest; a pick adds the alias to
+`form.lineup`, so a transfer to vrc.tl carries the id, not the name.
+
+e2e: `jobs.spec.ts` (a create run is logged done with a step preview),
+`transfer.spec.ts` (vrcpop→vrc.tl carries the resolved performer id), and
+`autosync.spec.ts` (notify: baseline → drift → 1 pending → Apply writes the new
+title → In sync; conflict blocks Apply until a per-field pick, no write before
+it; apply mode writes on Refresh + logs a sync job; off does nothing). The
+vrcpop mock's `recorder.eventName` simulates a "changed on re-read" edit.
 
 ## Settings & the experimental rave.page toggle
 
@@ -321,6 +417,11 @@ overflow). The vrc.tl mock "what's poppin" (100002) start is aligned to the vrcp
   "ravepage": {                                  // configurable instance (self-hosted / federated)
     "appOrigin": "https://development.rave.page",
     "apiOrigin": "https://development.api.rave.page"
+  },
+  "sync": {                                      // defaults a new link inherits (P7)
+    "mode": "off",                               // off | notify | apply
+    "source": "last-edited",                     // last-edited | a Platform
+    "fields": { "details": true, "lineup": true, "poster": true, "publishState": false }
   }
 }
 ```
@@ -486,3 +587,29 @@ Per platform (vrc.tl, then vrcpop.com), from `#/events/new`:
 flag was never probed (no test events allowed). If the create-draft test above
 produces a genuine draft (not a forced-public event), report back so
 `VRCPOP_CAPS.draft` can flip from `'expected-unverified'` to `true`.
+
+### Sync test (USER ONLY — writes land on rave.page only)
+
+Sync toward vrc.tl / vrcpop is the user's to test, source-only elsewhere. The
+extension writes **only** the platform you pick as a target; keep vrc.tl / vrcpop
+as the **source** so nothing is written there.
+
+1. **Set up.** Create ONE rave.page **development** draft (unlisted, publish OFF,
+   one slot). In extension storage add an `EventLink` with two refs — that draft
+   and your existing vrcpop event (e.g. 1727) — since their titles differ the
+   suggestion won't fire. Open the row's **Sync** cell → set mode **notify**,
+   source **vrcpop**, fields **details + lineup**.
+2. **Baseline + assess.** Click **Set as baseline**, then **Refresh** — with no
+   drift it reads *In sync*.
+3. **Drift → apply.** Edit the vrcpop event (title/description), **Refresh** → the
+   cell shows *n pending* and the Sheet lists the changed fields (vrcpop → rave.page).
+   **Apply now** → confirm on the rave.page detail view that ONLY the rave.page
+   draft changed; the cell returns to *In sync*; `#/jobs` shows a **sync** job with
+   rave.page steps only (no vrcpop step).
+4. **Transfer performers.** Transfer a vrcpop event to vrc.tl; on the Lineup tab
+   the resolver adopts exact performer matches — confirm the previewed vrc.tl
+   request carries performer **ids**, not names. (Do NOT Run the vrc.tl create
+   for a non-disposable event.)
+5. **Clean up.** Remove the `EventLink`, delete the rave.page draft via its detail
+   Delete flow, and confirm it's gone under `#/events?time=all&platform=ravepage`.
+   Never Apply toward, or Delete on, vrc.tl / vrcpop.

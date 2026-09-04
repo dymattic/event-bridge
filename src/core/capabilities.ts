@@ -1,5 +1,5 @@
 // Static per-platform capability tables + loss computation.
-import type { EventCore, Flags, PlatformId } from './schema';
+import type { EventCore, Flags, Performer, PlatformId } from './schema';
 
 export type FlagKey = keyof Flags;
 
@@ -9,9 +9,16 @@ export type FlagSupport = Partial<Record<FlagKey, boolean>>;
 // because the repo rule forbids probing it (no test events) — see vrcpop caps.
 export type DraftSupport = 'supported' | 'unsupported' | 'expected-unverified';
 
+// Performer id policy. `required` = the platform needs a known performer id
+// (vrc.tl: /admin/ajax/performer), so a lineup performer with only a free-text
+// name is a `required` loss item (resolve via search). `optional` platforms
+// accept plain names.
+export type PerformerIdPolicy = 'required' | 'optional';
+
 export interface PlatformCapabilities {
   platform: PlatformId;
   draft: boolean | DraftSupport; // real draft state (not forced publish)
+  performerIds: PerformerIdPolicy;
   vj: boolean;
   dancers: boolean;
   hosts: boolean;
@@ -32,6 +39,7 @@ export interface PlatformCapabilities {
 export const VRCPOP_CAPS: PlatformCapabilities = {
   platform: 'vrcpop',
   draft: true,
+  performerIds: 'optional',
   vj: true,
   dancers: true,
   hosts: true,
@@ -50,6 +58,7 @@ export const VRCPOP_CAPS: PlatformCapabilities = {
 export const VRCTL_CAPS: PlatformCapabilities = {
   platform: 'vrctl',
   draft: true, // "Publish to Timeline" unchecked = draft
+  performerIds: 'required',
   vj: false,
   dancers: false,
   hosts: false,
@@ -78,6 +87,7 @@ export const VRCTL_CAPS: PlatformCapabilities = {
 export const RAVEPAGE_CAPS: PlatformCapabilities = {
   platform: 'ravepage',
   draft: true,
+  performerIds: 'optional',
   vj: false,
   dancers: false,
   hosts: false,
@@ -189,6 +199,22 @@ export function computeLoss(core: EventCore, caps: PlatformCapabilities): LossRe
     }
   }
 
+  // Performer ids: a `required` platform (vrc.tl) needs a known performer id, so
+  // any lineup performer (or a supported VJ) carrying only a free-text name is a
+  // required item — resolve it via search before the write.
+  if (caps.performerIds === 'required') {
+    core.lineup.forEach((s, i) => {
+      s.performers.forEach((p, m) => {
+        if (!hasPlatformId(p, caps.platform)) {
+          required.push({ path: `lineup.${i}.performers.${m}`, reason: `${caps.platform} needs a known performer — search and pick` });
+        }
+      });
+      if (caps.vj && s.vj && !hasPlatformId(s.vj, caps.platform)) {
+        required.push({ path: `lineup.${i}.vj`, reason: `${caps.platform} needs a known performer — search and pick` });
+      }
+    });
+  }
+
   // Description length.
   if (caps.descriptionMaxLength !== undefined && core.description && core.description.length > caps.descriptionMaxLength) {
     approximated.push({ path: 'description', reason: `truncated to ${caps.descriptionMaxLength} chars` });
@@ -206,6 +232,11 @@ function hasGaps(core: EventCore): boolean {
     if (Date.parse(cur.start) > Date.parse(prev.end)) return true;
   }
   return false;
+}
+
+// A performer already carries a usable id for the platform (search-resolved).
+function hasPlatformId(performer: Performer, platform: PlatformId): boolean {
+  return performer.aliases.some((a) => a.platform === platform && !!a.id);
 }
 
 // Only the fields a platform can require today (extend as needed).

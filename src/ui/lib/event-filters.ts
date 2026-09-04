@@ -57,6 +57,36 @@ export function isUpcoming(row: EventRow, now: number = Date.now()): boolean {
   return matchesTime(row, 'upcoming', now) && row.status !== 'past';
 }
 
+// Statuses that mean "scheduled/active" — a platform keeps these on an event even
+// months after it happened (rave.page leaves `scheduled` on past events), so we
+// show "ended" once the instant has passed instead of a misleading live status.
+const ACTIVE_STATUSES = new Set(['scheduled', 'live', 'published', 'promoted', 'public', 'draft', 'active']);
+
+// Status to DISPLAY for a row/event: "ended" when its end (or start, when no end)
+// is before now and its raw status still reads as scheduled/active; otherwise the
+// raw status unchanged. Purely cosmetic — isUpcoming/filtering are unaffected.
+export function displayStatus(
+  row: { start?: string; end?: string; status?: string },
+  now: number = Date.now(),
+): string | undefined {
+  const status = row.status;
+  if (status && ACTIVE_STATUSES.has(status.toLowerCase())) {
+    const ref = row.end ?? row.start;
+    const ms = ref ? Date.parse(ref) : NaN;
+    if (Number.isFinite(ms) && ms < now) return 'ended';
+  }
+  return status;
+}
+
+// Whether a row is in scope for the current time filter. Past events are out of
+// scope by default (time=upcoming): the matcher's suggestions and the sync pass
+// use this so they ignore past rows until the user opts into past/all.
+export function inTimeScope(row: EventRow, time: TimeFilter, now: number = Date.now()): boolean {
+  if (time === 'all') return true;
+  if (time === 'upcoming') return isUpcoming(row, now);
+  return !isUpcoming(row, now); // past
+}
+
 function matchesRange(row: EventRow, from?: string, to?: string): boolean {
   const ms = startMs(row);
   if (from) {

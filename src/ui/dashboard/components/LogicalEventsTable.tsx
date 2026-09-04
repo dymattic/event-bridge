@@ -3,10 +3,11 @@
 // missing-but-connected cell offers Transfer (edit the source with an extra create
 // target); a missing-not-connected cell is a muted "—". Row actions: Edit (first
 // present cell) and Unlink (only for a linked row). No raw id is a cell's text.
-import { Button, DataTable, type Column } from '@rave-page/ui';
+import { Badge, Button, DataTable, type BadgeProps, type Column } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
-import type { EventRow } from '../../lib/event-filters';
+import { displayStatus, type EventRow } from '../../lib/event-filters';
 import type { LogicalEvent } from '../../lib/event-match';
+import type { SyncAssessment } from '../../lib/sync-plan';
 import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
 import { formatLocalDateTime, formatRelativeDay } from '../../lib/format';
 import { StatusBadge } from './StatusBadge';
@@ -18,6 +19,51 @@ export interface LogicalEventsTableProps {
   onView: (platform: Platform, id: string) => void;
   onEdit: (le: LogicalEvent) => void;
   onUnlink: (le: LogicalEvent) => void;
+  // P7 sync: per-link assessment (by linkId) + open-the-sheet handler. When
+  // omitted the Sync column is hidden (e.g. tests that don't exercise sync).
+  assessments?: Record<string, SyncAssessment>;
+  onOpenSync?: (le: LogicalEvent) => void;
+}
+
+function syncBadge(a: SyncAssessment): { label: string; variant: BadgeProps['variant'] } {
+  switch (a.state) {
+    case 'in-sync':
+      return { label: 'In sync', variant: 'success' };
+    case 'pending':
+      return { label: `${a.targets.length} pending`, variant: 'info' };
+    case 'conflict':
+      return { label: 'Conflict', variant: 'warning' };
+    case 'pick-source':
+      return { label: 'Pick source', variant: 'info' };
+    default:
+      return { label: '—', variant: 'outline' };
+  }
+}
+
+function SyncCell({
+  le,
+  assessments,
+  onOpenSync,
+}: {
+  le: LogicalEvent;
+  assessments: Record<string, SyncAssessment>;
+  onOpenSync: (le: LogicalEvent) => void;
+}): React.JSX.Element {
+  if (!le.linkId) return <span className="text-muted-foreground">—</span>;
+  const a = assessments[le.linkId];
+  if (!a || a.state === 'off') {
+    return (
+      <button type="button" data-testid={`sync-cell-${le.key}`} className="text-2xs text-muted-foreground underline-offset-2 hover:underline" onClick={(e) => { e.stopPropagation(); onOpenSync(le); }}>
+        —
+      </button>
+    );
+  }
+  const b = syncBadge(a);
+  return (
+    <button type="button" data-testid={`sync-cell-${le.key}`} onClick={(e) => { e.stopPropagation(); onOpenSync(le); }}>
+      <Badge variant={b.variant}>{b.label}</Badge>
+    </button>
+  );
 }
 
 function firstCell(le: LogicalEvent): EventRow | undefined {
@@ -62,7 +108,7 @@ function PlatformCell({
           onView(p, cell.id);
         }}
       >
-        <StatusBadge value={cell.status} />
+        <StatusBadge value={displayStatus(cell)} />
         {cell.visibility && cell.visibility !== cell.status && <StatusBadge value={cell.visibility} />}
         {!cell.status && !cell.visibility && <span className="text-2xs text-brand-mint">on {PLATFORM_NAME[p]}</span>}
       </button>
@@ -111,8 +157,9 @@ function RowActions({
   );
 }
 
-export function LogicalEventsTable({ rows, platforms, connected, onView, onEdit, onUnlink }: LogicalEventsTableProps): React.JSX.Element {
+export function LogicalEventsTable({ rows, platforms, connected, onView, onEdit, onUnlink, assessments, onOpenSync }: LogicalEventsTableProps): React.JSX.Element {
   const cols = PLATFORM_ORDER.filter((p) => platforms.includes(p));
+  const showSync = !!assessments && !!onOpenSync;
   const columns: Column<LogicalEvent>[] = [
     { header: 'Event', accessor: (le) => <span className="font-medium text-foreground">{le.title}</span> },
     { header: 'Start', accessor: (le) => <StartCell le={le} /> },
@@ -123,6 +170,9 @@ export function LogicalEventsTable({ rows, platforms, connected, onView, onEdit,
         accessor: (le) => <PlatformCell le={le} p={p} connected={connected.includes(p)} onView={onView} />,
       }),
     ),
+    ...(showSync
+      ? [{ header: 'Sync', accessor: (le: LogicalEvent) => <SyncCell le={le} assessments={assessments} onOpenSync={onOpenSync} /> } as Column<LogicalEvent>]
+      : []),
     { header: '', accessor: (le) => <RowActions le={le} onEdit={onEdit} onUnlink={onUnlink} />, className: 'text-right' },
   ];
 
@@ -152,6 +202,12 @@ export function LogicalEventsTable({ rows, platforms, connected, onView, onEdit,
                 </div>
               ))}
             </div>
+            {showSync && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-2xs text-muted-foreground">Sync</span>
+                <SyncCell le={le} assessments={assessments} onOpenSync={onOpenSync} />
+              </div>
+            )}
             <RowActions le={le} onEdit={onEdit} onUnlink={onUnlink} />
           </div>
         )}

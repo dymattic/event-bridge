@@ -17,18 +17,23 @@ import {
   ConfirmDialog,
   Input,
   Label,
+  SmartSelect,
   Switch,
   useNotification,
+  type SmartSelectOption,
 } from '@rave-page/ui';
 import { ext } from '../../../shared/webext';
 import { isBridgeError } from '../../../core/errors';
 import {
   RAVEPAGE_DEFAULT_INSTANCE,
+  enabledPlatforms,
   getSettings,
   normalizeOrigin,
   setSettings,
   type Settings as SettingsShape,
 } from '../../../runtime/settings';
+import type { SyncMode, SyncSource } from '../../lib/sync-plan';
+import { PLATFORM_NAME } from '../../lib/platform-meta';
 import { connect, disconnect, status } from '../../../adapters/ravepage/auth';
 import type { ConnectionStatus } from '../../../adapters/types';
 import { invalidate } from '../../lib/resource';
@@ -212,6 +217,8 @@ export default function Settings(): React.JSX.Element {
           </CardContent>
         </Card>
 
+        <SyncDefaultsCard settings={settings} onPatch={patch} />
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -317,5 +324,81 @@ export default function Settings(): React.JSX.Element {
         </label>
       </ConfirmDialog>
     </main>
+  );
+}
+
+const SYNC_MODES: { value: SyncMode; label: string }[] = [
+  { value: 'off', label: 'Off' },
+  { value: 'notify', label: 'Notify (assess only)' },
+  { value: 'apply', label: 'Apply automatically' },
+];
+const SYNC_FIELDS: { key: keyof SettingsShape['sync']['fields']; label: string }[] = [
+  { key: 'details', label: 'Details (title, times, flags, genres, links)' },
+  { key: 'lineup', label: 'Lineup' },
+  { key: 'poster', label: 'Poster' },
+  { key: 'publishState', label: 'Publish state' },
+];
+
+// Defaults a NEW link inherits. Conflicts are never auto-applied and a public
+// publish flip always asks first, whatever these say.
+function SyncDefaultsCard({
+  settings,
+  onPatch,
+}: {
+  settings: SettingsShape | null;
+  onPatch: (p: Partial<SettingsShape>) => Promise<SettingsShape>;
+}): React.JSX.Element {
+  const sync = settings?.sync;
+  const patchSync = (p: Partial<SettingsShape['sync']>): void => {
+    if (!sync) return;
+    void onPatch({ sync: { ...sync, ...p } });
+  };
+  const sourceOptions: SmartSelectOption[] = [
+    { value: 'last-edited', label: 'Last edited' },
+    ...(settings ? enabledPlatforms(settings) : []).map((p) => ({ value: p, label: PLATFORM_NAME[p] })),
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sync defaults</CardTitle>
+        <CardDescription>
+          Applied to new cross-platform links. Auto-sync runs only while this dashboard is open; conflicts are never
+          applied automatically.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div data-testid="settings-sync-mode">
+            <SmartSelect
+              label="Mode"
+              options={SYNC_MODES}
+              value={sync?.mode ?? 'off'}
+              onChange={(v) => patchSync({ mode: (typeof v === 'string' ? v : 'off') as SyncMode })}
+            />
+          </div>
+          <div data-testid="settings-sync-source">
+            <SmartSelect
+              label="Source"
+              options={sourceOptions}
+              value={sync?.source ?? 'last-edited'}
+              onChange={(v) => patchSync({ source: (typeof v === 'string' ? v : 'last-edited') as SyncSource })}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          {SYNC_FIELDS.map((f) => (
+            <label key={f.key} className="flex items-center justify-between gap-4">
+              <span className="text-sm text-foreground">{f.label}</span>
+              <Switch
+                data-testid={`settings-sync-${f.key}`}
+                checked={sync?.fields[f.key] ?? false}
+                onCheckedChange={(v) => patchSync({ fields: { ...(sync as SettingsShape['sync']).fields, [f.key]: v } })}
+              />
+            </label>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
