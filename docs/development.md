@@ -157,7 +157,9 @@ rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter stat
 | `#/` (default) | Overview (`views/Overview.tsx`) — equal platform cards (vrc.tl, vrcpop.com; rave.page only when the toggle is on) |
 | `#/events` | Events (`views/Events.tsx`) — own events across every connected platform, filterable/searchable table |
 | `#/events?platform=…&club=…&status=…&time=…&from=…&to=…&q=…` | Events with URL-synced filters (shareable) |
-| `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete |
+| `#/events/new` (optional `?targets=vrctl,vrcpop`) | Event editor, create (`views/EventEditor.tsx`) — multi-target |
+| `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete/edit |
+| `#/events/:platform/:id/edit` | Event editor, edit (`views/EventEditor.tsx`) — from the source event; may also transfer to other targets |
 | `#/settings` | Settings (`views/Settings.tsx`) — General + Experimental (rave.page toggle + instance) |
 | `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
 | `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) — **gated** by the toggle |
@@ -166,8 +168,10 @@ rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter stat
 | `#/dev/lineup` | Lineup editor harness (`dev/LineupDevPanel.tsx`) — the reusable `LineupEditor` on a sample event, target checkboxes, live core `Slot[]` JSON |
 
 Top nav is "Overview · Events · Settings". When the rave.page toggle is off, the
-rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`) render an
-`EmptyState` (`ravepage-off`) linking to `#/settings` instead of the view.
+rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`,
+`#/events/ravepage/:id/edit`) render an `EmptyState` (`ravepage-off`) linking to
+`#/settings` instead of the view. `#/events/new` is always reachable (targets are
+gated per-platform inside the editor).
 
 The Overview treats all three platforms identically (no primary platform): each
 card shows name + host, a session-status badge (`getSessionStatus` for
@@ -209,6 +213,47 @@ NaN and drop the row from the Overview upcoming count while `#/events` still
 listed it — the P6.1b bug). Overview and `#/events` share one rule,
 `event-filters.ts` `isUpcoming(row)` (`matchesTime('upcoming')` AND
 `status !== 'past'`), so the card count and the table never disagree.
+
+### Event editor (P6.2)
+
+`views/EventEditor.tsx` is the create + edit surface, reachable from the Events
+"New event" button and the detail "Edit" button. One `EventForm` drives a live,
+per-target loss report, validation, and payload preview; **Run** executes each
+checked target sequentially.
+
+- **Pure form model** `src/ui/lib/event-form.ts` — `EventForm` (the string/boolean
+  fields the inputs bind to + a passthrough of non-edited fields), `emptyForm(zone)`,
+  `fromCore`, `toCore` (local↔UTC via `time.ts` with the form zone; instants store
+  the event-zone wall string, and a `source` snapshot lets an untouched time
+  round-trip to the exact ISO — no millis/DST re-snapping), and `formIssues`
+  (= `validateEvent(toCore)` plus zone-invalid / end-before-start / doors-after-start).
+  `toCore(fromCore(x))` is lossless (round-trip tested against `lineup-sample.json`
+  and a `from-ravepage` core). PURE — node-testable, no runtime/adapters import.
+- **Shared plan runner** `src/ui/dashboard/lib/run-plan.ts` — `runPlan(platform,
+  steps, opts?)`: sequential, `resolveRefs` before each `execute`, `paceHost`
+  before each step, dispatches via `getAdapter(platform).execute(step)` (each
+  adapter self-binds its agent/CSRF context), **stops at the first failure** (no
+  silent retry), emits a `StepEvent` per transition for the live log, and takes
+  `opts.results` to resume a "Retry from failed step". Poster BYTES ride the
+  adapter's imperative `setPoster` after the JSON plan; URL posters ride
+  `planPoster` (vrc.tl) or the create body (rave.page `cover_image_url`).
+- **Link store** `src/runtime/link-store.ts` — `EventLink {anchorId, refs[], createdAt}`
+  in `storage.local.links`. A multi-target create saves one link with every created
+  ref; a single-target create saves a one-ref link. `listLinks`/`saveLink`/
+  `findLinkByRef`/`removeLink` (+ `makeLink`). P6b/P7 (sync, transfer, jobs) build on it.
+- **PosterPanel** `src/ui/dashboard/components/PosterPanel.tsx` — thumb (url or
+  object URL of picked bytes), "Use image URL", "Pick file" (`image/*`, > 8 MB
+  warns), "Remove", and the sha256 of picked bytes (`src/ui/lib/digest.ts`) in a
+  disclosure. Emits `(PosterRef | null, PosterFile | null)`.
+- **Targets** are `enabledPlatforms()`, checkable only when connected; each checked
+  target gets its own club picker (names) and, in the Review tab, its own
+  `LossReportView` (dropped/approximated/**required**, required items link to their
+  tab), validation issues, publish switch (turning it on for vrcpop opens a red
+  confirm), and a live `renderPreview` of `planCreate`/`planUpdate`. Edit mode also
+  shows "Changed fields" (`diffEvents(current, toCore(form))`). **Run** is disabled
+  while any target has validation issues or unmet `required`. On failure the runner
+  stops and offers "Retry from failed step" and, when a create already succeeded,
+  "Delete created event on <platform>" (never automatic).
 
 ## Settings & the experimental rave.page toggle
 
@@ -357,3 +402,33 @@ events only, cleaned up afterwards (repo rule: no test events on vrc.tl/vrcpop).
   `chromium.connectOverCDP('http://127.0.0.1:9222')`. Detach with
   `process.exit` - never `browser.close()`, which would kill the user's
   logged-in session.
+
+## Manual write-test checklist (vrc.tl / vrcpop — USER ONLY)
+
+Agents never create/edit/delete on vrc.tl or vrcpop.com (repo rule); automated
+coverage there is mocks-only. These real-session write tests are the **user's** to
+run, in their own logged-in browser. rave.page **development** drafts may be
+exercised by anyone and are deleted afterwards.
+
+Per platform (vrc.tl, then vrcpop.com), from `#/events/new`:
+
+1. **Create draft.** Tick the target, pick a club by name, fill Basics (title with
+   the test prefix via the "Prefix as test event" switch; start; zone), set NSFW/SFW
+   (required for vrc.tl), add one lineup slot with a searched performer. On Review,
+   open "Show exact request" and confirm the payload; keep Publish OFF. Run → the new
+   event opens; confirm it exists on the platform as a **draft/unpublished** event.
+2. **Edit.** Open the event's Edit, change the title + description, confirm "Changed
+   fields" lists them, Run, and verify the change landed (vrcpop: the update carried
+   the current `version` — no `VERSION_CONFLICT`).
+3. **Poster.** Edit → Poster: set a URL (vrc.tl) or pick a file (both), Run, confirm
+   the poster shows on the platform. Then Remove, Run, confirm it's cleared.
+4. **Delete.** Delete the event via the detail Delete flow (preview the exact request
+   first) and confirm it is gone from the platform.
+5. **Publish toggle.** For a **disposable** draft only, flip Publish ON in Review
+   (vrcpop shows the red "publishes PUBLICLY" confirm), Run, confirm it went public,
+   then delete it. Never publish a real/other club's event.
+
+**vrcpop draft support (`caps.draft` is `expected-unverified`).** vrcpop's draft
+flag was never probed (no test events allowed). If the create-draft test above
+produces a genuine draft (not a forced-public event), report back so
+`VRCPOP_CAPS.draft` can flip from `'expected-unverified'` to `true`.

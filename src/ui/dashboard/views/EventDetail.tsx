@@ -107,8 +107,8 @@ function Detail({ platform, id, core }: { platform: Platform; id: string; core: 
           <Button type="button" variant="explore" data-testid="event-detail-open" onClick={() => void eventUrl(platform, id, core.organizer.platformIds[platform] ?? core.organizer.vrchatGroupId).then((url) => ext.tabs.create({ url }))}>
             Open on {PLATFORM_NAME[platform]}
           </Button>
-          <Button type="button" variant="outline" data-testid="event-detail-edit" disabled tooltip="Editing comes in the next step (P6.2).">
-            Edit
+          <Button asChild type="button" variant="outline" data-testid="event-detail-edit">
+            <a href={`#/events/${platform}/${id}/edit`}>Edit</a>
           </Button>
           <Button type="button" variant="destructive" data-testid="event-detail-delete" onClick={() => setDeleting(target)}>
             Delete

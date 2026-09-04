@@ -91,13 +91,14 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
         </div>
         <div className="flex gap-2">
           <Button
+            asChild={anyConnected}
             type="button"
             variant="outline"
             data-testid="events-new"
-            disabled
-            tooltip="Creating events comes in the next step (P6.2)."
+            disabled={!anyConnected}
+            tooltip={anyConnected ? undefined : 'Connect a platform to create events.'}
           >
-            New event
+            {anyConnected ? <a href="#/events/new">New event</a> : <span>New event</span>}
           </Button>
           <Button type="button" variant="outline" data-testid="events-refresh" disabled={anyLoading} onClick={refresh}>
             {anyLoading ? 'Refreshing…' : 'Refresh'}
@@ -140,10 +141,10 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
               data-testid="events-empty"
               headingLevel="h2"
               title="No events yet"
-              description="Your connected clubs have no events. Creating one arrives in the next step."
+              description="Your connected clubs have no events yet. Create your first one."
               action={
-                <Button type="button" variant="outline" disabled tooltip="Creating events comes in the next step (P6.2).">
-                  New event
+                <Button asChild type="button" variant="outline" data-testid="events-empty-new">
+                  <a href="#/events/new">New event</a>
                 </Button>
               }
             />

@@ -22,10 +22,18 @@ and events by name, never raw ids.
   the URL, so a filtered view is a shareable link.
 - **Event detail.** A read-only view of one event with the resolved lineup
   (performer names, B2B, VJ/dancers/hosts), poster, flags, genres and links.
+- **Create and edit events.** Enter an event once — title, times, lineup (drag-and-
+  drop slots with searchable performers), flags, genres, links and poster — and
+  post it to the platforms you tick, each with its own club. Before anything is
+  sent, a per-platform review shows what maps cleanly, what's dropped or
+  approximated, what a platform requires (e.g. vrc.tl's NSFW/SFW), and the exact
+  request; publishing stays off unless you turn it on (vrcpop asks first). Editing
+  an event can also transfer it to more platforms at once. Runs stop at the first
+  error with a retry, and never publish on your behalf.
 - **Delete, safely.** Row and detail delete with a confirmation that shows the
   exact request first and names the platform for public events.
 
-In progress: create, edit, the lineup editor, cross-platform transfer, and sync.
+In progress: cross-platform transfer and sync.
 
 ## Experimental: rave.page integration
 

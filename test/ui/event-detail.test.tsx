@@ -105,8 +105,9 @@ describe('EventDetail view', () => {
     await render();
     expect(container.querySelector('[data-testid="event-detail-poster"]')).toBeTruthy();
     expect(container.querySelector('[data-testid="event-detail-open"]')).toBeTruthy();
-    const edit = container.querySelector('[data-testid="event-detail-edit"]') as HTMLButtonElement | null;
-    expect(edit?.disabled).toBe(true);
+    // P6.2: Edit links to the editor's edit route (no longer disabled).
+    const edit = container.querySelector('[data-testid="event-detail-edit"] a, a[data-testid="event-detail-edit"]') as HTMLAnchorElement | null;
+    expect(edit?.getAttribute('href')).toBe('#/events/vrcpop/100001/edit');
     expect(container.querySelector('[data-testid="event-detail-delete"]')).toBeTruthy();
   });
 

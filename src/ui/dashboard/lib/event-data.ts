@@ -9,7 +9,7 @@ import type { JsonValue } from '../../../core/hash';
 import { renderPreview, resolveRefs } from '../../../core/planner';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
-import type { OwnClub } from '../../../adapters/types';
+import type { OwnClub, VocabEntry } from '../../../adapters/types';
 import { getSessionStatus } from '../../../runtime/sessions';
 import { status as ravepageStatus } from '../../../adapters/ravepage/auth';
 import { isRavepageEnabled } from '../../../runtime/settings';
@@ -76,6 +76,13 @@ export async function loadPlatformData(platform: Platform): Promise<PlatformData
 export async function readEventCore(platform: Platform, id: string): Promise<EventCore> {
   await paceHost(platform);
   return getAdapter(platform).readEvent(id);
+}
+
+// Genre vocabulary for one platform (names + slug/id), for the editor's genre
+// picker + genreVocab map. Paced like any third-party read.
+export async function loadGenreVocab(platform: Platform): Promise<VocabEntry[]> {
+  await paceHost(platform);
+  return (await getAdapter(platform).loadVocab()).genres;
 }
 
 // Human-readable, exact preview of the delete request(s) — shown before confirm.

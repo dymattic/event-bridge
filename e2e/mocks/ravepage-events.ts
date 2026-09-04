@@ -10,11 +10,25 @@ export const RP_GROUP = 'grp_00000000-0000-4000-8000-000000009001';
 export const RP_EVENT_1 = 'evt_00000000-0000-4000-8000-0000000000e1';
 export const RP_EVENT_2 = 'evt_00000000-0000-4000-8000-0000000000e2';
 
+export const RP_NEW_EVENT = 'evt_00000000-0000-4000-8000-0000000000ff';
+
 export interface RavepageRecorder {
   deleted: string[];
+  created: Record<string, unknown>[];
+  slots: Record<string, unknown>[];
+  performers: Record<string, unknown>[];
+  updated: Record<string, unknown>[];
 }
 export function newRavepageRecorder(): RavepageRecorder {
-  return { deleted: [] };
+  return { deleted: [], created: [], slots: [], performers: [], updated: [] };
+}
+
+function parse(raw: string | null): Record<string, unknown> {
+  try {
+    return JSON.parse(raw ?? '{}') as Record<string, unknown>;
+  } catch {
+    return {};
+  }
 }
 
 const EVENTS = [
@@ -56,7 +70,34 @@ export async function mockRavepageEvents(context: BrowserContext, recorder: Rave
     if (method === 'GET' && path === '/auth/me') return json(200, { id: RP_USER, username: 'exampledj', display_name: 'Example DJ' });
     if (method === 'GET' && path === '/groups/mine') return json(200, [{ id: RP_GROUP, name: 'Neon Collective', can_organize_events: true }]);
     if (method === 'GET' && path === '/events/organizers') return json(200, []);
+    if (method === 'GET' && path === '/performers') return json(200, [{ id: 'prf_1', name: 'Example DJ', slug: 'example-dj' }]);
     if (method === 'GET' && path === '/events') return json(200, EVENTS);
+
+    // ---- writes (create flow) ----
+    if (method === 'POST' && path === '/events') {
+      const body = parse(req.postData());
+      recorder.created.push(body);
+      return json(201, { ...body, id: RP_NEW_EVENT, status: body.is_public ? 'published' : 'draft', slug: 'new-event' });
+    }
+    const slotM = /^\/events\/[^/]+\/slots$/.exec(path);
+    if (method === 'POST' && slotM) {
+      const body = parse(req.postData());
+      recorder.slots.push(body);
+      return json(201, { ...body, id: `slt_${recorder.slots.length}` });
+    }
+    const perfM = /^\/events\/[^/]+\/performers$/.exec(path);
+    if (method === 'POST' && perfM) {
+      const body = parse(req.postData());
+      recorder.performers.push(body);
+      return json(201, { ...body, id: `ep_${recorder.performers.length}` });
+    }
+    if ((method === 'PUT' || method === 'POST') && /\/genres$/.test(path)) return json(200, {});
+    const updM = /^\/events\/([^/]+)$/.exec(path);
+    if (method === 'PUT' && updM) {
+      const body = parse(req.postData());
+      recorder.updated.push(body);
+      return json(200, { ...EVENTS[0], ...body, id: updM[1] });
+    }
 
     const detail = /^\/events\/([^/]+)$/.exec(path);
     if (method === 'GET' && detail) return json(200, EVENTS.find((e) => e.id === detail[1]) ?? EVENTS[0]);

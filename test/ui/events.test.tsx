@@ -141,11 +141,10 @@ describe('Events view (rave.page toggle on)', () => {
     expect(text).not.toContain('just spinnin');
   });
 
-  it('renders the disabled "New event" affordance (P6.2)', async () => {
+  it('enables "New event" as a link to the editor when a platform is connected (P6.2)', async () => {
     await render();
-    const newBtn = container.querySelector('[data-testid="events-new"]') as HTMLButtonElement | null;
-    expect(newBtn).toBeTruthy();
-    expect(newBtn?.disabled).toBe(true);
+    const newLink = container.querySelector('a[data-testid="events-new"], [data-testid="events-new"] a') as HTMLAnchorElement | null;
+    expect(newLink?.getAttribute('href')).toBe('#/events/new');
   });
 });
 

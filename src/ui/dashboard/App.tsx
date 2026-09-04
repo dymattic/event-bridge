@@ -20,6 +20,7 @@ import type { ConnectionStatus, OwnClub } from '../../adapters/types';
 import Overview from './views/Overview';
 import Events from './views/Events';
 import EventDetail from './views/EventDetail';
+import EventEditor from './views/EventEditor';
 import KitShowcase from './views/KitShowcase';
 import Settings from './views/Settings';
 import { VrcpopDevPanel } from './dev/VrcpopDevPanel';
@@ -289,7 +290,9 @@ export function App() {
   const qIdx = raw.indexOf('?');
   const path = qIdx === -1 ? raw : raw.slice(0, qIdx);
   const query = qIdx === -1 ? '' : raw.slice(qIdx + 1);
-  const detail = /^\/events\/([^/]+)\/(.+)$/.exec(path);
+  const newRoute = path === '/events/new';
+  const editMatch = /^\/events\/([^/]+)\/(.+)\/edit$/.exec(path);
+  const detail = editMatch ? null : /^\/events\/([^/]+)\/(.+)$/.exec(path);
 
   // null = still loading; gate rave.page-only routes when the toggle is off.
   const [rpEnabled, setRpEnabled] = useState<boolean | null>(null);
@@ -298,7 +301,13 @@ export function App() {
     return onSettingsChange((s) => setRpEnabled(s.experimental.ravepage));
   }, []);
 
-  const ravepageRoute = path === '/dev/ravepage' || (detail !== null && detail[1] === 'ravepage');
+  const ravepageRoute =
+    path === '/dev/ravepage' ||
+    (detail !== null && detail[1] === 'ravepage') ||
+    (editMatch !== null && editMatch[1] === 'ravepage');
+  const editTargets = newRoute
+    ? new URLSearchParams(query).get('targets')?.split(',').filter(isPlatform) ?? []
+    : [];
 
   let view: React.JSX.Element;
   if (ravepageRoute && rpEnabled !== true) {
@@ -317,6 +326,10 @@ export function App() {
         <VrctlDevPanel />
       ) : path === '/dev/lineup' ? (
         <LineupDevPanel />
+      ) : newRoute ? (
+        <EventEditor mode="create" initialTargets={editTargets} />
+      ) : editMatch && isPlatform(editMatch[1] ?? '') ? (
+        <EventEditor mode="edit" platform={editMatch[1] as Platform} id={editMatch[2] ?? ''} />
       ) : detail && isPlatform(detail[1] ?? '') ? (
         <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
       ) : path === '/events' ? (
