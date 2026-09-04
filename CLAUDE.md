@@ -67,6 +67,23 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   its own brand tokens (pink base, Orbitron, mint/violet/amber intents) is used
   as-is - do NOT re-theme it. The product name stays plain "event-bridge" (never
   a rave.page-style wordmark).
+- **Rich UI, resolved ids.** (user rule 2026-09-04 10:37) User-facing views use
+  the kit's rich components (`DataTable`, `DashboardCard`/`StatCard`,
+  `EmptyState`, `SmartSelect` search pickers, `DateTimePicker`, `Dialog`/`Sheet`,
+  `Badge` intents) and show human-readable data: once a platform is connected
+  or signed in, list own clubs/groups (name, avatar, role), own events (title,
+  local date/time, status, poster thumb), performers via searchable pickers
+  backed by the platform's own search. Raw ids (`grp_…`, numeric vrcpop /
+  vrc.tl ids, "user 1022") appear only inside a collapsed details disclosure
+  or the `#/dev/*` panels - never as the primary label. e2e asserts names, not
+  ids. The extension is the full event-management surface (create, edit,
+  search/filter, transfer, sync) - not a transfer side-tool.
+- **Reuse rave.page's event-management components** (user 2026-09-04 10:49:
+  "date pickers, dj slot selector/mover", "smart selects"): the lineup board
+  (SlotBoard), event form fields, status/visibility controls, `SmartSelect`,
+  `DateTimePicker`, uploader UI come from rave.page through the kit -
+  decoupled upstream into `@rave-page/ui` (props + callbacks + `labels`, no
+  react-query/api-client/i18n/router), consumed here, never re-implemented.
 - **UI reuse over reinvention.** Dashboard/popup are built on `@rave-page/ui`,
   the shared design-system kit owned by the rave.page repo (`packages/ui`;
   user decision 2026-09-03), plus its `tokens.css`. No hand-rolled widgets or
