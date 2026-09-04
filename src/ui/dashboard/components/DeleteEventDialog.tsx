@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { ConfirmDialog, useNotification } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
 import { isBridgeError } from '../../../core/errors';
-import { PLATFORM_NAME, platformHost } from '../../lib/platform-meta';
+import { PLATFORM_NAME } from '../../lib/platform-meta';
+import { platformHost } from '../../lib/platform-urls';
 import { invalidate } from '../../lib/resource';
 import { deletePreview, executeDelete } from '../lib/event-data';
 

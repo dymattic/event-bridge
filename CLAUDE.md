@@ -104,6 +104,12 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   events (ids in git-ignored `CLAUDE.local.md`), restored afterwards, with the
   exact request previewed first. rave.page **development** may be exercised
   freely with draft/unlisted events, cleaned up afterwards.
+- **Pure `src/ui/lib`.** Modules there that node/happy-dom tests import
+  (`event-filters`, `format`, `platform-meta`, `lineup-bridge`, form models)
+  never import `runtime/*`, `adapters/registry` or `shared/webext` (the shim
+  throws outside the extension). Settings-bound helpers go to
+  `src/ui/lib/platform-urls.ts` or `src/ui/dashboard/lib/*`, which render
+  tests mock.
 - **Clean up scratch artefacts.** Repo root stays clean.
 - **Root `.md` hygiene.** Root keeps only `README.md`, `CLAUDE.md`,
   `SUPPLY_CHAIN.md`, `LICENSE` + README-linked refs. User docs → `docs/`.

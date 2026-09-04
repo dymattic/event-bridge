@@ -10,7 +10,8 @@ import type { Platform } from '../../../shared/agent-protocol';
 import { connect } from '../../../adapters/ravepage/auth';
 import { ensureAgent } from '../../../runtime/tabs';
 import { enabledPlatforms, getSettings, onSettingsChange } from '../../../runtime/settings';
-import { PLATFORM_NAME, eventUrl } from '../../lib/platform-meta';
+import { PLATFORM_NAME } from '../../lib/platform-meta';
+import { eventUrl } from '../../lib/platform-urls';
 import { useResource } from '../../lib/resource';
 import {
   DEFAULT_FILTERS,

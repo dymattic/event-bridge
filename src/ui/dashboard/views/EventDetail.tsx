@@ -7,7 +7,8 @@ import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Lo
 import { ext } from '../../../shared/webext';
 import type { Platform } from '../../../shared/agent-protocol';
 import type { EventCore, Flags, Performer, Slot } from '../../../core/schema';
-import { PLATFORM_NAME, eventUrl } from '../../lib/platform-meta';
+import { PLATFORM_NAME } from '../../lib/platform-meta';
+import { eventUrl } from '../../lib/platform-urls';
 import { formatLocalDateTime, formatLocalTime } from '../../lib/format';
 import { useResource } from '../../lib/resource';
 import { readEventCore } from '../lib/event-data';

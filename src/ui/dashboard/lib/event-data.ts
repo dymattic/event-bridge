@@ -30,7 +30,7 @@ export interface PlatformData {
 // Per-host min-gap between reads (user-agency, human scale). rave.page is our own
 // API -> not paced.
 const lastRead = new Map<Platform, number>();
-async function paceHost(platform: Platform): Promise<void> {
+export async function paceHost(platform: Platform): Promise<void> {
   if (!THIRD_PARTY[platform]) return;
   const wait = READ_GAP_MS - (Date.now() - (lastRead.get(platform) ?? 0));
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));

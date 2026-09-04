@@ -163,6 +163,7 @@ rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter stat
 | `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) — **gated** by the toggle |
 | `#/dev/vrcpop` | `dev/VrcpopDevPanel.tsx` |
 | `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
+| `#/dev/lineup` | Lineup editor harness (`dev/LineupDevPanel.tsx`) — the reusable `LineupEditor` on a sample event, target checkboxes, live core `Slot[]` JSON |
 
 Top nav is "Overview · Events · Settings". When the rave.page toggle is off, the
 rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`) render an
@@ -182,8 +183,9 @@ StatCard, and a "View events" link into `#/events`.
 Real listings, resolved ids. `src/ui/lib/` holds the reusable data layer:
 `resource.ts` (a zero-dep stale-while-revalidate cache + `useResource`,
 `invalidate(prefix)`, `refresh()`, 5-min TTL), `format.ts` (Intl date/time +
-relative-day), `platform-meta.ts` (names/hosts, "open on platform" URL builders,
-the 300 ms third-party read gap), and `event-filters.ts` (pure filter/sort +
+relative-day), `platform-meta.ts` (PURE names/hosts + the 300 ms third-party read
+gap - no webext/settings import, so node tests can load it), `platform-urls.ts`
+(settings-bound `platformHost`/`eventUrl`), and `event-filters.ts` (pure filter/sort +
 hash-query sync). `src/ui/dashboard/lib/event-data.ts` wraps the adapter registry:
 own clubs → own events per club, **paced ≥300 ms between reads to a third-party
 host** (rave.page, our own API, is not paced), with platforms loaded in parallel
@@ -239,7 +241,7 @@ flipping the toggle applies without a reload.
 settings — `client.ts` `ensureConfigured()` sets `OpenAPI.BASE` at each
 adapter/auth/upload entry point; `auth.ts` builds the bridge URL from `appOrigin`
 and exchanges against `apiOrigin`; `tabs.ts` `getPlatformMeta('ravepage')` and
-`ui/lib/platform-meta.ts` derive origin/host/`eventUrl` from settings; the agent
+`ui/lib/platform-urls.ts` derive origin/host/`eventUrl` from settings; the agent
 (`session.dom.ts`, `ravepage-grant.dom.ts`) never hardcodes the origin — the
 dashboard passes the expected origin in the op and the agent verifies
 `location.origin` matches. The stored token records its `apiBase`; a token whose
