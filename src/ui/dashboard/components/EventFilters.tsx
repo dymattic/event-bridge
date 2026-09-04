@@ -2,7 +2,7 @@
 // (platform/club/status, searchable), Tabs (time), DatePicker (range), Input
 // (debounced search over title + club).
 import { useEffect, useState } from 'react';
-import { DatePicker, Input, SmartSelect, Tabs, TabsList, TabsTrigger, type SmartSelectOption } from '@rave-page/ui';
+import { Checkbox, DatePicker, Input, SmartSelect, Tabs, TabsList, TabsTrigger, type SmartSelectOption } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
 import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
 import type { EventFilterState, TimeFilter } from '../../lib/event-filters';
@@ -105,6 +105,11 @@ export function EventFilters({
           <DatePicker value={filters.to ?? ''} onChange={(d) => set({ to: d || undefined })} placeholder="Any date" aria-label="To date" />
         </div>
       </div>
+
+      <label className="flex items-center gap-2">
+        <Checkbox data-testid="filter-missing" checked={filters.missing === true} onCheckedChange={(v) => set({ missing: v === true ? true : undefined })} />
+        <span className="text-sm text-foreground">Missing on a platform</span>
+      </label>
     </section>
   );
 }

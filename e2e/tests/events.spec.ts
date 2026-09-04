@@ -64,20 +64,24 @@ test('lists own events for all three platforms, no raw ids, filters + search nar
   await expect(table).toContainText("what's poppin", { timeout: T });
   await expect(table).not.toContainText('Neon Cathedral');
 
-  // mobile viewport renders cards, not the table rows
+  // mobile viewport renders cards, not the table rows (one logical row per event;
+  // unlinked, so the vrcpop copy is its own row keyed vrcpop:100001)
   await page.evaluate(() => {
     location.hash = '#/events?time=all';
   });
   await page.setViewportSize({ width: 360, height: 780 });
-  await expect(page.getByTestId('event-card-vrcpop-100001')).toBeVisible({ timeout: T });
+  await expect(page.getByTestId('event-card-vrcpop:100001')).toBeVisible({ timeout: T });
 });
 
-test('delete shows the exact planned request and sends it (recorded on the mock)', async ({ context }) => {
+test('delete (on the event detail view) shows the exact planned request and sends it', async ({ context }) => {
   const { page, vp } = await setupAll(context);
 
-  // DataTable renders both a desktop row and a mobile card (one hidden by CSS);
-  // click the first (desktop) instance.
-  await page.getByTestId('event-delete-vrcpop-100001').first().click();
+  // Per-cell delete lives on the platform's detail view (this unit's choice).
+  await page.evaluate(() => {
+    location.hash = '#/events/vrcpop/100001';
+  });
+  await expect(page.getByTestId('event-detail')).toBeVisible({ timeout: T });
+  await page.getByTestId('event-detail-delete').click();
   await expect(page.getByRole('dialog')).toBeVisible({ timeout: T });
 
   // destructive copy names the platform for a published event

@@ -148,18 +148,19 @@ ports). Codes are `BridgeError`/`BridgeErrorCode` from `src/core/errors.ts`.
 ## Dashboard routes
 
 `src/ui/dashboard/App.tsx` is a minimal hash router (no router dep) with a top
-nav ("Overview · Events") and a muted footer nav ("Overview · Developer:
-rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter state
-(`#/events?platform=…&club=…&q=…`); the router splits path from query:
+nav ("Overview · Events · Clubs · Settings") and a muted footer nav ("Overview ·
+Developer: rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for
+filter state (`#/events?platform=…&club=…&q=…`); the router splits path from query:
 
 | Hash | View |
 |---|---|
 | `#/` (default) | Overview (`views/Overview.tsx`) — equal platform cards (vrc.tl, vrcpop.com; rave.page only when the toggle is on) |
-| `#/events` | Events (`views/Events.tsx`) — own events across every connected platform, filterable/searchable table |
-| `#/events?platform=…&club=…&status=…&time=…&from=…&to=…&q=…` | Events with URL-synced filters (shareable) |
+| `#/events` | Events (`views/Events.tsx`) — ONE logical row per event across platforms; suggestions + Transfer |
+| `#/events?platform=…&club=…&status=…&time=…&from=…&to=…&missing=1&q=…` | Events with URL-synced filters (shareable; `missing=1` = rows missing a connected-platform cell) |
 | `#/events/new` (optional `?targets=vrctl,vrcpop`) | Event editor, create (`views/EventEditor.tsx`) — multi-target |
 | `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete/edit |
-| `#/events/:platform/:id/edit` | Event editor, edit (`views/EventEditor.tsx`) — from the source event; may also transfer to other targets |
+| `#/events/:platform/:id/edit` (optional `?targets=…`) | Event editor, edit (`views/EventEditor.tsx`) — source event ∪ extra create targets (Transfer) |
+| `#/clubs` | Clubs (`views/Clubs.tsx`) — link the same club across platforms (one row per anchor) |
 | `#/settings` | Settings (`views/Settings.tsx`) — General + Experimental (rave.page toggle + instance) |
 | `#/kit` | `@rave-page/ui` showcase (`views/KitShowcase.tsx`) |
 | `#/dev/ravepage` | rave.page dev panel (`RavepageDevPanel`, keeps `rp-*` testids) — **gated** by the toggle |
@@ -167,7 +168,7 @@ rave.page · vrcpop · vrc.tl · Kit"). The hash carries a query for filter stat
 | `#/dev/vrctl` | `dev/VrctlDevPanel.tsx` |
 | `#/dev/lineup` | Lineup editor harness (`dev/LineupDevPanel.tsx`) — the reusable `LineupEditor` on a sample event, target checkboxes, live core `Slot[]` JSON |
 
-Top nav is "Overview · Events · Settings". When the rave.page toggle is off, the
+Top nav is "Overview · Events · Clubs · Settings". When the rave.page toggle is off, the
 rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`,
 `#/events/ravepage/:id/edit`) render an `EmptyState` (`ravepage-off`) linking to
 `#/settings` instead of the view. `#/events/new` is always reachable (targets are
@@ -254,6 +255,59 @@ checked target sequentially.
   while any target has validation issues or unmet `required`. On failure the runner
   stops and offers "Retry from failed step" and, when a create already succeeded,
   "Delete created event on <platform>" (never automatic).
+
+### Unified events + clubs (P6b)
+
+`#/events` shows ONE logical row per event across platforms — a cell per enabled
+platform (`PLATFORM_ORDER`, restricted to `enabledPlatforms`). Grouping is pure +
+node-tested; the runtime only supplies stored links.
+
+- **Club anchors** `src/ui/lib/club-anchors.ts` (PURE) — `buildClubAnchors(clubsByPlatform,
+  links)`: clubs sharing a `vrchatGroupId` auto-group under that grp id
+  (`source:'vrchatGroup'`); a stored `ClubLink` adds/overrides members
+  (`source:'link'`); a club with neither is a singleton `solo:<platform>:<id>`
+  (`source:'solo'`). Anchor name = first member by `PLATFORM_ORDER`.
+  `anchorLookup(anchors)` maps `(platform, clubId) -> anchorId` (solo fallback).
+- **Club link store** `src/runtime/club-links.ts` — `storage.local.clubLinks`;
+  `ClubLink {anchorId, members:Partial<Record<Platform,{organizerId,name}>>}`
+  (canonical type in club-anchors); `listClubLinks/saveClubLink/removeClubMember`.
+- **Matcher** `src/ui/lib/event-match.ts` (PURE) — `normalizeTitle` (lowercase,
+  strip test prefix, drop punctuation/emoji, collapse ws), `titleSimilarity`
+  (token-set Dice 0..1), `groupLogicalEvents({rows, links, anchorOf, dismissed,
+  now})` -> `{logical, suggestions}`. Linked rows (`EventLink`) collapse into one
+  `LogicalEvent` (refs without a row are ignored but counted in `staleRefs`).
+  A `Suggestion` forms between unlinked rows on DIFFERENT platforms iff same club
+  anchor AND `titleSimilarity >= 0.6` AND (both starts parseable with `|Δ| <= 24h`,
+  `strong` when `<= 30min`; OR similarity `>= 0.9` with an unparseable start).
+  Greedy by score, one row per platform; `key` = sorted `platform:id` refs joined
+  by `|` (the dismissal key). `filterLogical` reuses `EventFilterState` (+ optional
+  `missing`, query `missing=1`): platform/club/status match any cell; time = earliest
+  start via `isUpcoming`; `missing` = fewer cells than the connected platforms.
+- **Views** — `views/Clubs.tsx` (`#/clubs`) links clubs across platforms via a
+  `SmartSelect` per empty cell (testid `club-link-<platform>`), Unlink on a linked
+  member (`club-unlink-<platform>`), "same VRChat group" hint on an auto-grouped
+  member. `views/Events.tsx` renders logical rows (`components/LogicalEventsTable.tsx`):
+  a present cell links to detail (`cell-<platform>-<rowKey>`); a missing+connected
+  cell offers Transfer -> `#/events/<src>/<id>/edit?targets=<platform>`
+  (`cell-transfer-<platform>`); missing+disconnected is a muted "—". Suggestions
+  render above the table ("Probably the same event", `suggest-link` /
+  `suggest-dismiss`). Row actions: Edit (first present cell) + Unlink (`row-unlink`,
+  linked rows only). Per-cell **Delete** stays on the detail view (`event-detail-delete`).
+- **Dismissals** `src/runtime/dismissals.ts` — `storage.local.dismissedSuggestions`
+  (string[] of suggestion keys); `listDismissed/dismissSuggestion`.
+- **Link store** `src/runtime/link-store.ts` gained `upsertLinkForRefs(refs)` —
+  merge into a link containing any ref (replacing same-platform refs) else create;
+  the editor uses it, keeps `createdRefs` across run/retry (successful targets are
+  linked even if a later one fails), skips re-applying an unchanged poster on an
+  edit, and (edit mode) unions the source with `?targets=` create targets.
+
+**Storage keys:** `settings`, `links` (EventLinks), `clubLinks` (ClubLinks),
+`dismissedSuggestions`, `ravepage.auth`. All extension-local; nothing leaves the browser.
+
+e2e: `unified-events.spec.ts` (club linking via SmartSelect, suggestion Link,
+Transfer -> editor, missing filter, Unlink, rave.page third column, mobile
+overflow). The vrc.tl mock "what's poppin" (100002) start is aligned to the vrcpop
+2030 card so the two match.
 
 ## Settings & the experimental rave.page toggle
 

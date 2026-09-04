@@ -19,6 +19,7 @@ import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
 import Overview from './views/Overview';
 import Events from './views/Events';
+import Clubs from './views/Clubs';
 import EventDetail from './views/EventDetail';
 import EventEditor from './views/EventEditor';
 import KitShowcase from './views/KitShowcase';
@@ -244,6 +245,7 @@ function useHashRoute(): string {
 const TOP_NAV: { hash: string; label: string; match: (path: string) => boolean }[] = [
   { hash: '#/', label: 'Overview', match: (p) => p === '/' },
   { hash: '#/events', label: 'Events', match: (p) => p.startsWith('/events') },
+  { hash: '#/clubs', label: 'Clubs', match: (p) => p.startsWith('/clubs') },
   { hash: '#/settings', label: 'Settings', match: (p) => p === '/settings' },
 ];
 
@@ -268,7 +270,7 @@ function RavepageOff(): React.JSX.Element {
 
 function TopNav({ path }: { path: string }): React.JSX.Element {
   return (
-    <nav data-testid="top-nav" className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card">
+    <nav data-testid="top-nav" className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-border bg-card">
       <span className="font-orbitron text-sm text-foreground mr-2">event-bridge</span>
       {TOP_NAV.map((n) => (
         <Button
@@ -305,9 +307,8 @@ export function App() {
     path === '/dev/ravepage' ||
     (detail !== null && detail[1] === 'ravepage') ||
     (editMatch !== null && editMatch[1] === 'ravepage');
-  const editTargets = newRoute
-    ? new URLSearchParams(query).get('targets')?.split(',').filter(isPlatform) ?? []
-    : [];
+  // ?targets= applies to both create and edit (transfer = edit + extra targets).
+  const editTargets = new URLSearchParams(query).get('targets')?.split(',').filter(isPlatform) ?? [];
 
   let view: React.JSX.Element;
   if (ravepageRoute && rpEnabled !== true) {
@@ -329,9 +330,11 @@ export function App() {
       ) : newRoute ? (
         <EventEditor mode="create" initialTargets={editTargets} />
       ) : editMatch && isPlatform(editMatch[1] ?? '') ? (
-        <EventEditor mode="edit" platform={editMatch[1] as Platform} id={editMatch[2] ?? ''} />
+        <EventEditor mode="edit" platform={editMatch[1] as Platform} id={editMatch[2] ?? ''} initialTargets={editTargets} />
       ) : detail && isPlatform(detail[1] ?? '') ? (
         <EventDetail platform={detail[1] as Platform} id={detail[2] ?? ''} />
+      ) : path === '/clubs' ? (
+        <Clubs />
       ) : path === '/events' ? (
         <Events query={query} />
       ) : (

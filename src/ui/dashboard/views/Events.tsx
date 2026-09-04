@@ -1,31 +1,33 @@
-// #/events — the own-events management surface across all connected platforms.
-// Loads own clubs -> own events per connected platform (platforms in parallel;
-// each platform's reads paced in event-data), renders a searchable/filterable kit
-// DataTable of resolved rows, and hosts the read-only detail links + delete flow.
-// Filters are URL-synced in the hash query so filtered views are shareable.
+// #/events — ONE ROW PER LOGICAL EVENT across platforms. Loads own clubs -> own
+// events per connected platform, groups them into logical events by cross-platform
+// EventLinks + club anchors, and renders a kit DataTable with a cell per platform
+// (present -> detail link; missing+connected -> Transfer; missing -> "—"). Unlinked
+// look-alikes surface as "probably the same event" suggestions above the table.
+// Filters (incl. "missing on a platform") stay URL-synced for shareable views.
 import { useCallback, useEffect, useState } from 'react';
-import { Button, EmptyState, LoadingSpinner } from '@rave-page/ui';
-import { ext } from '../../../shared/webext';
+import { Button, Card, CardContent, EmptyState, LoadingSpinner } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
 import { connect } from '../../../adapters/ravepage/auth';
 import { ensureAgent } from '../../../runtime/tabs';
 import { enabledPlatforms, getSettings, onSettingsChange } from '../../../runtime/settings';
-import { PLATFORM_NAME } from '../../lib/platform-meta';
-import { eventUrl } from '../../lib/platform-urls';
+import { listLinks, makeLink, removeLink, saveLink, type EventRef } from '../../../runtime/link-store';
+import { listClubLinks } from '../../../runtime/club-links';
+import { dismissSuggestion, listDismissed } from '../../../runtime/dismissals';
+import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
+import { formatLocalDateTime } from '../../lib/format';
 import { useResource } from '../../lib/resource';
 import {
-  DEFAULT_FILTERS,
   distinctStatuses,
-  filterAndSort,
   filtersToQuery,
   queryToFilters,
   type EventFilterState,
   type EventRow,
 } from '../../lib/event-filters';
+import { anchorLookup, buildClubAnchors, type AnchorClub } from '../../lib/club-anchors';
+import { filterLogical, groupLogicalEvents, type LogicalEvent, type Suggestion } from '../../lib/event-match';
 import { loadConnections, loadPlatformData } from '../lib/event-data';
 import { EventFilters } from '../components/EventFilters';
-import { EventsTable } from '../components/EventsTable';
-import { DeleteEventDialog, type DeleteTarget } from '../components/DeleteEventDialog';
+import { LogicalEventsTable } from '../components/LogicalEventsTable';
 import type { ClubRef } from '../components/ClubPicker';
 
 function goto(hash: string): void {
@@ -39,7 +41,6 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
     goto(q ? `#/events?${q}` : '#/events');
   };
 
-  // rave.page appears only when the experimental toggle is on.
   const [enabled, setEnabled] = useState<Platform[]>(['vrctl', 'vrcpop']);
   useEffect(() => {
     void getSettings().then((s) => setEnabled(enabledPlatforms(s)));
@@ -50,44 +51,80 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
   const c = conns.data;
   const vt = useResource(c?.vrctl.connected ? 'platform:vrctl' : null, () => loadPlatformData('vrctl'));
   const vp = useResource(c?.vrcpop.connected ? 'platform:vrcpop' : null, () => loadPlatformData('vrcpop'));
-  // rave.page data only when the toggle is on AND connected.
   const rp = useResource(enabled.includes('ravepage') && c?.ravepage.connected ? 'platform:ravepage' : null, () => loadPlatformData('ravepage'));
-
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const links = useResource('links', listLinks);
+  const clubLinks = useResource('clubLinks', listClubLinks);
+  const dismissed = useResource('dismissed', listDismissed);
 
   const refresh = useCallback(() => {
     conns.refresh();
     vt.refresh();
     vp.refresh();
     rp.refresh();
-  }, [conns, vt, vp, rp]);
+    links.refresh();
+    clubLinks.refresh();
+    dismissed.refresh();
+  }, [conns, vt, vp, rp, links, clubLinks, dismissed]);
 
+  const dataOf = (p: Platform) => (p === 'vrctl' ? vt : p === 'vrcpop' ? vp : rp);
   const rows: EventRow[] = [vt.data, vp.data, rp.data].flatMap((d) => d?.events ?? []);
-  const clubRefs: ClubRef[] = [
-    ...(vt.data?.clubs ?? []).map((cl) => ({ id: cl.id, name: cl.name, platform: 'vrctl' as const })),
-    ...(vp.data?.clubs ?? []).map((cl) => ({ id: cl.id, name: cl.name, platform: 'vrcpop' as const })),
-    ...(rp.data?.clubs ?? []).map((cl) => ({ id: cl.id, name: cl.name, platform: 'ravepage' as const })),
-  ];
+  const clubRefs: ClubRef[] = PLATFORM_ORDER.flatMap((p) =>
+    (dataOf(p).data?.clubs ?? []).map((cl) => ({ id: cl.id, name: cl.name, platform: p })),
+  );
+
   const connectedPlatforms: Platform[] = enabled.filter((p) => c?.[p].connected);
   const anyConnected = connectedPlatforms.length > 0;
   const anyLoading = vt.loading || vp.loading || rp.loading;
-  const visible = filterAndSort(rows, filters);
 
-  const onOpen = (row: EventRow): void => {
-    void eventUrl(row.platform, row.id, row.clubId).then((url) => ext.tabs.create({ url }));
+  const clubsByPlatform: Partial<Record<Platform, AnchorClub[]>> = {};
+  for (const p of enabled) clubsByPlatform[p] = dataOf(p).data?.clubs ?? [];
+  const anchors = buildClubAnchors(clubsByPlatform, clubLinks.data ?? []);
+  const anchorOf = anchorLookup(anchors);
+  const { logical, suggestions } = groupLogicalEvents({
+    rows,
+    links: links.data ?? [],
+    anchorOf,
+    dismissed: dismissed.data ?? [],
+    now: Date.now(),
+  });
+  const visible = filterLogical(logical, filters, connectedPlatforms);
+
+  // Hint to link clubs when >=2 connected platforms each own a still-single-platform club.
+  const unlinkedPlatforms = connectedPlatforms.filter((p) =>
+    anchors.some((a) => a.members[p] && Object.keys(a.members).length === 1),
+  );
+  const showClubsHint = unlinkedPlatforms.length >= 2;
+
+  const onView = (platform: Platform, id: string): void => goto(`#/events/${platform}/${id}`);
+  const onEdit = (le: LogicalEvent): void => {
+    for (const p of PLATFORM_ORDER) {
+      const cell = le.cells[p];
+      if (cell) {
+        goto(`#/events/${cell.platform}/${cell.id}/edit`);
+        return;
+      }
+    }
   };
-  const onView = (row: EventRow): void => goto(`#/events/${row.platform}/${row.id}`);
-  const onDelete = (row: EventRow): void =>
-    setDeleteTarget({ platform: row.platform, id: row.id, title: row.title, status: row.status, visibility: row.visibility });
+  const onUnlink = (le: LogicalEvent): void => {
+    if (!le.linkId) return;
+    void removeLink(le.linkId).then(() => links.refresh());
+  };
+  const onLinkSuggestion = (s: Suggestion): void => {
+    const refs: EventRef[] = s.rows.map((r) => ({ platform: r.platform, id: r.id }));
+    void saveLink(makeLink(refs)).then(() => links.refresh());
+  };
+  const onDismissSuggestion = (s: Suggestion): void => {
+    void dismissSuggestion(s.key).then(() => dismissed.refresh());
+  };
 
-  const errors = [conns.error, vt.error, vp.error, rp.error].filter((e): e is Error => !!e);
+  const errors = [conns.error, vt.error, vp.error, rp.error, links.error, clubLinks.error].filter((e): e is Error => !!e);
 
   return (
     <main className="p-4 bg-background min-h-screen">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-orbitron text-2xl text-foreground">Events</h1>
-          <p className="text-sm text-muted-foreground mt-1">Your own events across every connected platform.</p>
+          <p className="text-sm text-muted-foreground mt-1">Your events across every connected platform, one row each.</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -126,6 +163,20 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
         />
       ) : (
         <>
+          {showClubsHint && (
+            <p data-testid="clubs-hint" className="text-2xs text-muted-foreground mb-3">
+              Some clubs aren’t linked across platforms.{' '}
+              <a href="#/clubs" className="text-brand-mint underline-offset-2 hover:underline">
+                Link them in Clubs
+              </a>{' '}
+              so their events share a row.
+            </p>
+          )}
+
+          {suggestions.length > 0 && (
+            <SuggestionList suggestions={suggestions} onLink={onLinkSuggestion} onDismiss={onDismissSuggestion} />
+          )}
+
           <div className="mb-4">
             <EventFilters
               filters={filters}
@@ -136,7 +187,7 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
             />
           </div>
 
-          {rows.length === 0 && !anyLoading ? (
+          {logical.length === 0 && !anyLoading ? (
             <EmptyState
               data-testid="events-empty"
               headingLevel="h2"
@@ -158,7 +209,14 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
               <p data-testid="events-count" className="text-2xs text-muted-foreground mb-2">
                 {visible.length} event{visible.length === 1 ? '' : 's'}
               </p>
-              <EventsTable rows={visible} onOpen={onOpen} onView={onView} onDelete={onDelete} />
+              <LogicalEventsTable
+                rows={visible}
+                platforms={enabled}
+                connected={connectedPlatforms}
+                onView={onView}
+                onEdit={onEdit}
+                onUnlink={onUnlink}
+              />
             </>
           )}
         </>
@@ -169,9 +227,45 @@ export default function Events({ query }: { query: string }): React.JSX.Element 
           {errors.map((e) => e.message).join(' · ')}
         </p>
       )}
-
-      <DeleteEventDialog target={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={() => setDeleteTarget(null)} />
     </main>
+  );
+}
+
+function SuggestionList({
+  suggestions,
+  onLink,
+  onDismiss,
+}: {
+  suggestions: Suggestion[];
+  onLink: (s: Suggestion) => void;
+  onDismiss: (s: Suggestion) => void;
+}): React.JSX.Element {
+  return (
+    <section data-testid="suggestions" className="mb-4 flex flex-col gap-2">
+      <h2 className="text-sm font-medium text-foreground">Probably the same event</h2>
+      {suggestions.map((s) => (
+        <Card key={s.key} data-testid={`suggestion-${s.key}`} className="border-dashed">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+            <div className="flex flex-col gap-1">
+              {s.rows.map((r) => (
+                <div key={`${r.platform}:${r.id}`} className="text-2xs text-muted-foreground">
+                  <span className="text-foreground">{r.title}</span> · {PLATFORM_NAME[r.platform]}
+                  {r.start ? ` · ${formatLocalDateTime(r.start, r.zone)}` : ''}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" size="sm" data-testid="suggest-link" onClick={() => onLink(s)}>
+                Link
+              </Button>
+              <Button type="button" size="sm" variant="outline" data-testid="suggest-dismiss" onClick={() => onDismiss(s)}>
+                Not the same
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </section>
   );
 }
 

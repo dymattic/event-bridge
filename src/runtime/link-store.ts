@@ -58,6 +58,22 @@ export async function findLinkByRef(platform: Platform, id: string): Promise<Eve
   return (await readAll()).find((l) => l.refs.some((r) => r.platform === platform && r.id === id));
 }
 
+// Upsert a link for freshly created/edited refs: merge into an existing link that
+// already contains ANY of the refs (replacing that link's same-platform refs),
+// else create a new one. Keeps one logical event's refs in a single link across
+// repeated runs/retries and transfers (P6.2 follow-up).
+export async function upsertLinkForRefs(refs: EventRef[]): Promise<EventLink> {
+  if (refs.length === 0) return makeLink(refs);
+  const all = await readAll();
+  const existing = all.find((l) => l.refs.some((r) => refs.some((n) => n.platform === r.platform && n.id === r.id)));
+  const base = existing ?? makeLink([]);
+  const byPlatform = new Map<Platform, EventRef>();
+  for (const r of base.refs) byPlatform.set(r.platform, r);
+  for (const r of refs) byPlatform.set(r.platform, r); // new refs replace same-platform
+  const merged: EventLink = { ...base, refs: [...byPlatform.values()] };
+  return saveLink(merged);
+}
+
 export async function removeLink(anchorId: string): Promise<void> {
   await writeAll((await readAll()).filter((l) => l.anchorId !== anchorId));
 }

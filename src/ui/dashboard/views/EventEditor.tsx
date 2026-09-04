@@ -40,7 +40,7 @@ import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import type { OwnClub, PlanResult } from '../../../adapters/types';
 import { enabledPlatforms, getSettings, onSettingsChange } from '../../../runtime/settings';
-import { makeLink, saveLink, type EventRef } from '../../../runtime/link-store';
+import { upsertLinkForRefs, type EventRef } from '../../../runtime/link-store';
 import { PLATFORM_NAME, PLATFORM_ORDER } from '../../lib/platform-meta';
 import { invalidate, useResource } from '../../lib/resource';
 import { emptyForm, fromCore, formIssues, toCore, type EventForm } from '../../lib/event-form';
@@ -167,12 +167,13 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   const [pendingPublish, setPendingPublish] = useState<Platform | null>(null);
   const initedRef = useRef(false);
 
-  // Edit: seed the form + source target from the loaded event once.
+  // Edit: seed the form + source target from the loaded event once. A transfer
+  // opens edit with extra create targets (?targets=), unioned with the source.
   useEffect(() => {
     if (mode !== 'edit' || !sourceCore || !platform || initedRef.current) return;
     initedRef.current = true;
     setForm(fromCore(sourceCore));
-    setChecked(new Set([platform]));
+    setChecked(new Set([platform, ...initialTargets]));
     setPublishByTarget({ [platform]: sourceCore.visibility.publish });
     const orgId = sourceCore.organizer.platformIds[platform];
     if (orgId) setClubByTarget({ [platform]: orgId });
@@ -278,7 +279,24 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   const [log, setLog] = useState<StepEvent[]>([]);
   const [runError, setRunError] = useState<string | null>(null);
   const [failed, setFailed] = useState<FailedRun | null>(null);
+  // Refs of targets that already succeeded — kept across doRun/doRetry so a link
+  // survives a later target's failure + retry (P6.2 follow-up).
+  const createdRefs = useRef<EventRef[]>([]);
   const onStep = (evt: StepEvent): void => setLog((l) => [...l.filter((e) => e.stepId !== evt.stepId), evt]);
+
+  function mergeCreatedRef(ref: EventRef): void {
+    createdRefs.current = [...createdRefs.current.filter((r) => r.platform !== ref.platform), ref];
+  }
+  async function persistLink(): Promise<void> {
+    if (createdRefs.current.length) await upsertLinkForRefs(createdRefs.current);
+  }
+  // Skip re-applying the poster on an edit whose source target didn't change it.
+  function posterNeedsApply(p: Platform, perTargetCore: EventCore): boolean {
+    if (mode === 'edit' && p === platform && sourceCore) {
+      return diffEvents(sourceCore, perTargetCore).some((c) => c.path.startsWith('poster'));
+    }
+    return true;
+  }
 
   async function applyPoster(p: Platform, eventId: string, poster: PosterRef | null, file: PosterFile | null): Promise<void> {
     const adapter = getAdapter(p);
@@ -309,8 +327,13 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
       return { ok: false };
     }
     const eventId = extractEventId(p, out.results, mode === 'edit' && p === platform ? id : undefined);
-    if (eventId) await applyPoster(p, eventId, form.poster, posterFile);
+    if (eventId && posterNeedsApply(p, perTargetCore)) await applyPoster(p, eventId, form.poster, posterFile);
     return { ok: true, ref: eventId ? { platform: p, id: eventId } : undefined };
+  }
+
+  function navAfterRun(): void {
+    const first = createdRefs.current[0] ?? (mode === 'edit' && platform && id ? { platform, id } : undefined);
+    goto(first ? `#/events/${first.platform}/${first.id}` : '#/events');
   }
 
   async function doRun(): Promise<void> {
@@ -319,20 +342,21 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     setRunError(null);
     setFailed(null);
     setLog([]);
-    const refs: EventRef[] = [];
+    createdRefs.current = [];
     try {
       for (const p of targets) {
         const res = await runTarget(p);
-        if (!res.ok) return;
-        if (res.ref) refs.push(res.ref);
+        if (res.ref) mergeCreatedRef(res.ref);
+        if (!res.ok) {
+          await persistLink(); // keep the targets that already succeeded
+          return;
+        }
       }
-      if (refs.length) await saveLink(makeLink(refs));
+      await persistLink();
       invalidate('platform:');
       invalidate('event:');
       addNotification(mode === 'edit' ? 'Event saved.' : 'Event created.', 'success');
-      const first = refs[0] ?? (mode === 'edit' && platform && id ? { platform, id } : undefined);
-      if (first) goto(`#/events/${first.platform}/${first.id}`);
-      else goto('#/events');
+      navAfterRun();
     } catch (e) {
       setRunError(errMessage(e));
     } finally {
@@ -346,22 +370,23 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     setRunError(null);
     try {
       const res = await runTarget(failed.platform, failed.results);
-      if (res.ok) {
-        setFailed(null);
-        // Continue any remaining targets after the recovered one.
-        const rest = targets.slice(targets.indexOf(failed.platform) + 1);
-        const refs: EventRef[] = res.ref ? [res.ref] : [];
-        for (const p of rest) {
-          const r = await runTarget(p);
-          if (!r.ok) return;
-          if (r.ref) refs.push(r.ref);
+      if (!res.ok) return; // still failing; runTarget re-set failed + error
+      if (res.ref) mergeCreatedRef(res.ref);
+      setFailed(null);
+      // Continue any remaining targets after the recovered one.
+      for (const p of targets.slice(targets.indexOf(failed.platform) + 1)) {
+        const r = await runTarget(p);
+        if (r.ref) mergeCreatedRef(r.ref);
+        if (!r.ok) {
+          await persistLink();
+          return;
         }
-        if (refs.length) await saveLink(makeLink(refs));
-        invalidate('platform:');
-        invalidate('event:');
-        addNotification('Event saved.', 'success');
-        if (refs[0]) goto(`#/events/${refs[0].platform}/${refs[0].id}`);
       }
+      await persistLink();
+      invalidate('platform:');
+      invalidate('event:');
+      addNotification('Event saved.', 'success');
+      navAfterRun();
     } catch (e) {
       setRunError(errMessage(e));
     } finally {

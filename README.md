@@ -14,12 +14,17 @@ sync, migrate lineups between them.
 Once you're signed in on a platform, event-bridge shows your real data — clubs
 and events by name, never raw ids.
 
-- **Your clubs & events, resolved.** Each connected platform lists your own
-  clubs/groups by name and your events in a searchable, filterable table
-  (platform, title, local start, club, status, visibility).
-- **Search & filter.** Filter by platform, club, status and time
-  (upcoming / past / all + date range); search title or club. Filters live in
-  the URL, so a filtered view is a shareable link.
+- **One row per event, across platforms.** Your events show as a single table
+  with a cell per platform — the copy's status where it exists, a one-click
+  **Transfer** where it doesn't. Your clubs/groups are listed by name, never raw ids.
+- **Link clubs & events across platforms.** The **Clubs** view links the same
+  club on vrc.tl, vrcpop.com and rave.page (clubs sharing a VRChat group link
+  automatically). event-bridge then suggests "probably the same event" for
+  look-alike copies under a linked club — one click to join them into a row, or
+  dismiss it.
+- **Search & filter.** Filter by platform, club, status, time
+  (upcoming / past / all + date range) and "missing on a platform"; search title
+  or club. Filters live in the URL, so a filtered view is a shareable link.
 - **Event detail.** A read-only view of one event with the resolved lineup
   (performer names, B2B, VJ/dancers/hosts), poster, flags, genres and links.
 - **Create and edit events.** Enter an event once — title, times, lineup (drag-and-
@@ -33,7 +38,13 @@ and events by name, never raw ids.
 - **Delete, safely.** Row and detail delete with a confirmation that shows the
   exact request first and names the platform for public events.
 
-In progress: cross-platform transfer and sync.
+In progress: sync (keeping linked copies up to date).
+
+## Privacy
+
+event-bridge keeps everything in your browser's own extension storage — your
+cross-platform event links, club links and dismissed suggestions never leave your
+machine. See [docs/privacy.md](docs/privacy.md).
 
 ## Experimental: rave.page integration
 

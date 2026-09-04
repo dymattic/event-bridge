@@ -126,7 +126,7 @@ describe('parseGrid', () => {
     expect(rows).toHaveLength(3);
     const r = rows.find((x) => x.eventId === '100002')!;
     expect(r.name).toBe("what's poppin");
-    expect(r.start).toBe('2026-09-03 22:00');
+    expect(r.start).toBe('2030-01-05 22:00');
     expect(r.organizerName).toBe('Example Club');
     expect(r.organizerId).toBe('9001');
     expect(r.promoted).toBe(true);

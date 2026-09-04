@@ -26,6 +26,7 @@ export interface EventFilterState {
   from?: string; // ISO date (inclusive) — optional explicit range
   to?: string; // ISO date (inclusive)
   q: string; // search over title + club name
+  missing?: boolean; // logical view: rows missing a cell on a present platform
 }
 
 export const DEFAULT_FILTERS: EventFilterState = {
@@ -132,6 +133,7 @@ export function filtersToQuery(f: EventFilterState): string {
   if (f.time !== 'upcoming') p.set('time', f.time);
   if (f.from) p.set('from', f.from);
   if (f.to) p.set('to', f.to);
+  if (f.missing) p.set('missing', '1');
   const q = f.q.trim();
   if (q) p.set('q', q);
   return p.toString();
@@ -148,5 +150,6 @@ export function queryToFilters(query: string): EventFilterState {
     from: p.get('from') ?? undefined,
     to: p.get('to') ?? undefined,
     q: p.get('q') ?? '',
+    missing: p.get('missing') === '1' ? true : undefined,
   };
 }
