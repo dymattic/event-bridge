@@ -669,7 +669,7 @@ as the **source** so nothing is written there.
 
 1. **Set up.** Create ONE rave.page **development** draft (unlisted, publish OFF,
    one slot). In extension storage add an `EventLink` with two refs — that draft
-   and your existing vrcpop event (e.g. 1727) — since their titles differ the
+   and one of your existing vrcpop events — since their titles differ the
    suggestion won't fire. Open the row's **Sync** cell → set mode **notify**,
    source **vrcpop**, fields **details + lineup**.
 2. **Baseline + assess.** Click **Set as baseline**, then **Refresh** — with no

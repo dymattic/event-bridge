@@ -96,7 +96,7 @@ describe('Overview connected-state listings', () => {
     h.data = {
       vrcpop: {
         clubs: [{ id: 'grp_a', organizerType: 'group', name: 'Club Pop', vrchatGroupId: 'grp_a', canOrganize: true }],
-        events: [{ platform: 'vrcpop', id: '1727', title: "what's poppin", start: '2030-01-05T20:00:00.000Z', status: 'upcoming', clubId: 'grp_a', clubName: 'Club Pop' }],
+        events: [{ platform: 'vrcpop', id: '9001', title: 'Example Night', start: '2030-01-05T20:00:00.000Z', status: 'upcoming', clubId: 'grp_a', clubName: 'Club Pop' }],
       },
     };
     await render();
