@@ -59,7 +59,26 @@ function dashboardHtml(loggedIn: boolean): string {
   );
 }
 
-function eventsListHtml(): string {
+// Optional extra published cards a caller can inject (screenshot fixtures use this
+// to seed a second look-alike for a "probably the same event" suggestion). Empty
+// by default, so existing callers get the unchanged list.
+export interface VrcpopListEvent {
+  id: number;
+  title: string;
+  dateLabel: string; // owner-tz human label, e.g. "Mon, Feb 1, 2027 at 9:00 PM"
+  sets: number;
+}
+
+function extraCard(e: VrcpopListEvent): string {
+  return `  <div class="event-card"><div class="event-card-info"><h4>${e.title}</h4>
+    <div class="event-card-meta"><span><span class="icon95 icon95-calendar"></span> ${e.dateLabel}</span><span>${e.sets} sets</span></div>
+  </div><div class="event-card-actions">
+    <a href="/manage/club/${GROUP_ID}/events/${e.id}" class="btn btn-secondary">Edit</a>
+    <button class="btn btn-danger" onclick="deleteEvent(${e.id})">Delete</button>
+  </div></div>`;
+}
+
+function eventsListHtml(extra: VrcpopListEvent[] = []): string {
   return page(
     'Manage Events',
     `<div class="manage-container">
@@ -70,6 +89,7 @@ function eventsListHtml(): string {
     <a href="/manage/club/${GROUP_ID}/events/100001" class="btn btn-secondary">Edit</a>
     <button class="btn btn-danger" onclick="deleteEvent(100001)">Delete</button>
   </div></div>
+${extra.map(extraCard).join('\n')}
 </div></section>
 <section class="manage-section drafts-section" data-section="drafts"><div class="event-list">
   <div class="event-card event-card--draft" data-draft-id="100002"><input type="checkbox" class="draft-pick__box" value="100002">
@@ -170,8 +190,13 @@ function parseMultipart(raw: string): { hasFlyer: boolean; groupId?: string; eve
   return { hasFlyer, groupId: gid?.[1]?.trim(), eventId: eid?.[1]?.trim() };
 }
 
-export async function mockVrcpopSite(context: BrowserContext, recorder: VrcpopRecorder, opts: { loggedIn?: boolean } = {}): Promise<void> {
+export async function mockVrcpopSite(
+  context: BrowserContext,
+  recorder: VrcpopRecorder,
+  opts: { loggedIn?: boolean; extraEvents?: VrcpopListEvent[] } = {},
+): Promise<void> {
   const loggedIn = opts.loggedIn !== false;
+  const extraEvents = opts.extraEvents ?? [];
   await context.route('https://vrcpop.com/**', async (route) => {
     const req = route.request();
     const u = new URL(req.url());
@@ -181,7 +206,7 @@ export async function mockVrcpopSite(context: BrowserContext, recorder: VrcpopRe
 
     // reads
     if (method === 'GET' && p === '/dashboard') return htmlRes(route, dashboardHtml(loggedIn));
-    if (method === 'GET' && /\/events$/.test(p)) return htmlRes(route, eventsListHtml());
+    if (method === 'GET' && /\/events$/.test(p)) return htmlRes(route, eventsListHtml(extraEvents));
     if (method === 'GET' && /\/edit$/.test(p)) return htmlRes(route, editPageHtml(recorder.version, 100001, recorder.eventName));
     if (method === 'GET' && p === '/api/event-lineup.php') return json(route, lineupBody);
     if (method === 'GET' && p === '/api/dj/' && q.includes('action=genres')) return json(route, genresBody);

@@ -17,6 +17,7 @@
     "test": "vitest run",
     "e2e": "playwright test -c e2e/playwright.config.ts",
     "check:pins": "node tools/check-pins.mjs",
+    "screenshots": "node tools/screenshots.mjs",
     "generate-api": "node generate-api.mjs",
     "icons": "node tools/make-icons.mjs",
     "lint:firefox": "pnpm dlx web-ext@10.6.0 lint --source-dir dist/firefox",

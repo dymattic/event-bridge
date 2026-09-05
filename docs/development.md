@@ -111,6 +111,23 @@ pnpm lint:firefox # web-ext lint, 0 errors required
 
 E2E needs the browser once: `pnpm exec playwright install chromium`.
 
+## README screenshots
+
+The images under `docs/screenshots/` are generated, never hand-captured. Run:
+
+```sh
+pnpm screenshots   # builds, then runs e2e/tests/readme-screenshots.spec.ts with EB_SCREENSHOTS=1
+```
+
+`readme-screenshots.spec.ts` is `test.skip`ped unless `EB_SCREENSHOTS=1`, so the
+normal `pnpm e2e` run never writes images. It drives the extension through the
+same e2e fixtures + mocks the other specs use (all three platforms connected),
+so **every capture comes from the mocked test platforms — never a real
+account/session**, and each shot is asserted free of any real club/DJ/session
+string before it is written. `test/docs/screenshots-manifest.test.ts` guards that
+the directory holds exactly the files the README links. Regenerate and re-commit
+whenever the UI changes.
+
 ## Supply-chain soak
 
 Every direct dep is pinned exact and must be **>= 7 days old** at pin time
@@ -207,6 +224,13 @@ rave.page-only routes (`#/dev/ravepage`, `#/events/ravepage/:id`,
 `#/events/ravepage/:id/edit`) render an `EmptyState` (`ravepage-off`) linking to
 `#/settings` instead of the view. `#/events/new` is always reachable (targets are
 gated per-platform inside the editor).
+
+**Developer panels are hidden by default.** The footer dev links (`#/dev/*`,
+`#/kit`) render only when Settings → Experimental → **Developer panels**
+(`developer.panels`, off by default; testid `settings-developer-panels`) is on.
+The routes themselves stay reachable by URL regardless — this gates the footer
+nav, not the router — so e2e specs still navigate to them directly. Off, the
+footer shows only the repo link + build id.
 
 The Overview treats all three platforms identically (no primary platform): each
 card shows name + host, a session-status badge (`getSessionStatus` for

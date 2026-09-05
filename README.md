@@ -17,6 +17,26 @@ actions you'd take by hand, only entered once. It touches your own clubs and
 your own events, nothing else. There's no event-bridge server and no account to
 make: everything runs locally in your browser.
 
+## Screenshots
+
+![Overview with three connected platform cards showing clubs and upcoming event counts](docs/screenshots/01-overview.png)
+
+*Overview — one equal card per platform (vrc.tl, vrcpop.com, rave.page): connection status, your clubs, upcoming counts.*
+
+![Unified events table with a linked row, a sync badge, transfer cells and a "probably the same event" suggestion](docs/screenshots/02-events.png)
+
+*Events — one row per event across platforms, with cross-platform link suggestions, per-cell Transfer, and a live Sync badge.*
+
+![Event editor Review tab showing per-target request previews, the derived end time and a loss report](docs/screenshots/05-editor-review.png)
+
+*Editor · Review — the exact request per target, the derived "Ends …" time, and what each platform can't carry.*
+
+![Sync sheet open on a pending link showing changed field rows and the Apply button](docs/screenshots/06-sync-sheet.png)
+
+*Sync sheet — review the changed fields on a linked event and apply them to the other platform.*
+
+More: [docs/screenshots](docs/screenshots/) — all captures come from the mocked test platforms, not real accounts.
+
 ## Install
 
 There are **no store listings yet** — you install it unpacked (developer mode).

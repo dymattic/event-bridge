@@ -97,6 +97,10 @@ export default function Settings(): React.JSX.Element {
     }
   };
 
+  const onDevPanels = (v: boolean): void => {
+    void patch({ developer: { panels: v } });
+  };
+
   // ---- Experimental toggle ----
   const persistEnabled = async (next: boolean): Promise<void> => {
     await patch({ experimental: { ravepage: next } });
@@ -330,6 +334,21 @@ export default function Settings(): React.JSX.Element {
                 </CardContent>
               </Card>
             )}
+
+            <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+              <div>
+                <Label htmlFor="settings-developer-panels">Developer panels</Label>
+                <p className="text-2xs text-muted-foreground">
+                  Shows the developer panels in the footer. For contributors and debugging.
+                </p>
+              </div>
+              <Switch
+                id="settings-developer-panels"
+                data-testid="settings-developer-panels"
+                checked={settings?.developer.panels ?? false}
+                onCheckedChange={onDevPanels}
+              />
+            </div>
 
             {error && (
               <p data-testid="settings-error" className="text-2xs text-brand-base">

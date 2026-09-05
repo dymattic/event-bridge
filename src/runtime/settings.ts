@@ -18,6 +18,13 @@ export interface EditorSettings {
   defaultDurationMin: number;
 }
 
+// Contributor/debug affordances. `panels` reveals the footer dev-panel links
+// (#/dev/*, #/kit); off by default so the release UI has a clean footer. The dev
+// routes stay reachable by URL regardless (only the footer nav is gated).
+export interface DeveloperSettings {
+  panels: boolean;
+}
+
 export interface Settings {
   closeOpenedTabs: boolean;
   testPrefix: string;
@@ -25,9 +32,12 @@ export interface Settings {
   ravepage: RavepageInstance;
   sync: SyncSettings; // defaults new links inherit (off by default)
   editor: EditorSettings;
+  developer: DeveloperSettings; // footer dev panels off by default
 }
 
 export const DEFAULT_EDITOR: EditorSettings = { defaultDurationMin: 120 };
+
+export const DEFAULT_DEVELOPER: DeveloperSettings = { panels: false };
 
 // Default sync settings a new link inherits: off, source = last-edited, publish
 // state NOT synced by default (a publish flip is deliberate, never automatic).
@@ -50,6 +60,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ravepage: { ...RAVEPAGE_DEFAULT_INSTANCE },
   sync: { ...DEFAULT_SYNC, fields: { ...DEFAULT_SYNC.fields } },
   editor: { ...DEFAULT_EDITOR },
+  developer: { ...DEFAULT_DEVELOPER },
 };
 
 const KEY = 'settings';
@@ -62,6 +73,7 @@ function merge(stored: unknown): Settings {
   const sy = (typeof s.sync === 'object' && s.sync !== null ? s.sync : {}) as Partial<SyncSettings>;
   const syFields = (typeof sy.fields === 'object' && sy.fields !== null ? sy.fields : {}) as Partial<SyncSettings['fields']>;
   const ed = (typeof s.editor === 'object' && s.editor !== null ? s.editor : {}) as Partial<EditorSettings>;
+  const dv = (typeof s.developer === 'object' && s.developer !== null ? s.developer : {}) as Partial<DeveloperSettings>;
   return {
     ...DEFAULT_SETTINGS,
     ...s,
@@ -69,6 +81,7 @@ function merge(stored: unknown): Settings {
     ravepage: { ...DEFAULT_SETTINGS.ravepage, ...rp },
     sync: { ...DEFAULT_SYNC, ...sy, fields: { ...DEFAULT_SYNC.fields, ...syFields } },
     editor: { ...DEFAULT_EDITOR, ...ed },
+    developer: { ...DEFAULT_DEVELOPER, ...dv },
   };
 }
 

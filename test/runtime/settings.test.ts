@@ -49,6 +49,15 @@ describe('settings defaults + merge', () => {
     expect((await getSettings()).editor.defaultDurationMin).toBe(90);
   });
 
+  it('defaults developer.panels off and deep-merges a stored developer block', async () => {
+    expect((await getSettings()).developer.panels).toBe(false);
+    // Legacy settings predate `developer` — it must load with the default.
+    h.ext = createFake({ storage: { settings: { testPrefix: 'OLD ' } } }).ext;
+    expect((await getSettings()).developer).toEqual({ panels: false });
+    h.ext = createFake({ storage: { settings: { developer: { panels: true } } } }).ext;
+    expect((await getSettings()).developer.panels).toBe(true);
+  });
+
   it('deep-merges a partial nested object (keeps the other default fields)', async () => {
     h.ext = createFake({ storage: { settings: { ravepage: { apiOrigin: 'https://api.custom.example' } } } }).ext;
     const s = await getSettings();

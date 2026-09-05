@@ -13,7 +13,7 @@ import { errorDebug } from '../lib/error-copy';
 import { asIanaZone, asIsoUtc } from '../../core/time';
 import type { EventCore } from '../../core/schema';
 import type { Platform } from '../../shared/agent-protocol';
-import { getSettings, isRavepageEnabled, onSettingsChange } from '../../runtime/settings';
+import { getSettings, onSettingsChange } from '../../runtime/settings';
 import { ravepageAdapter, runPlan } from '../../adapters/ravepage/adapter';
 import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
@@ -195,9 +195,9 @@ function RavepageDevPanel() {
   );
 }
 
-// Footer nav: "Overview · Developer: rave.page · vrcpop · vrc.tl · Kit".
-const NAV: { hash: string; label: string }[] = [
-  { hash: '#/', label: 'Overview' },
+// Developer panels, shown in the footer only when `developer.panels` is on. The
+// routes stay reachable by URL regardless — this gates the nav, not the router.
+const DEV_NAV: { hash: string; label: string }[] = [
   { hash: '#/dev/ravepage', label: 'rave.page' },
   { hash: '#/dev/vrcpop', label: 'vrcpop' },
   { hash: '#/dev/vrctl', label: 'vrc.tl' },
@@ -205,25 +205,45 @@ const NAV: { hash: string; label: string }[] = [
   { hash: '#/kit', label: 'Kit' },
 ];
 
-function FooterNav({ route }: { route: string }) {
+const REPO_URL = 'https://github.com/dymattic/event-bridge';
+
+// Footer: always the repo link + build id; the developer panel links appear only
+// when the Settings "Developer panels" toggle is on.
+function FooterNav({ route, showDev }: { route: string; showDev: boolean }) {
   return (
     <nav data-testid="footer-nav" className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 px-4 py-3 border-t border-border bg-card text-2xs text-muted-foreground">
-      {NAV.map((n, i) => {
-        const active = `#${route}` === n.hash;
-        return (
-          <span key={n.hash} className="flex items-center gap-2">
-            {i === 1 && <span>Developer:</span>}
-            <a
-              href={n.hash}
-              data-testid={`nav-${n.label}`}
-              className={`underline-offset-2 hover:underline ${active ? 'text-foreground' : 'hover:text-foreground'}`}
-            >
-              {n.label}
-            </a>
-            {i < NAV.length - 1 && <span aria-hidden="true">·</span>}
-          </span>
-        );
-      })}
+      <a
+        href={REPO_URL}
+        target="_blank"
+        rel="noreferrer"
+        data-testid="footer-repo"
+        className="underline-offset-2 hover:underline hover:text-foreground"
+      >
+        event-bridge on GitHub
+      </a>
+      <span aria-hidden="true">·</span>
+      <span data-testid="footer-version">build {BUILD_ID}</span>
+      {showDev && (
+        <span data-testid="footer-dev" className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span aria-hidden="true">·</span>
+          <span>Developer:</span>
+          {DEV_NAV.map((n, i) => {
+            const active = `#${route}` === n.hash;
+            return (
+              <span key={n.hash} className="flex items-center gap-2">
+                <a
+                  href={n.hash}
+                  data-testid={`nav-${n.label}`}
+                  className={`underline-offset-2 hover:underline ${active ? 'text-foreground' : 'hover:text-foreground'}`}
+                >
+                  {n.label}
+                </a>
+                {i < DEV_NAV.length - 1 && <span aria-hidden="true">·</span>}
+              </span>
+            );
+          })}
+        </span>
+      )}
     </nav>
   );
 }
@@ -297,9 +317,14 @@ export function App() {
 
   // null = still loading; gate rave.page-only routes when the toggle is off.
   const [rpEnabled, setRpEnabled] = useState<boolean | null>(null);
+  const [devPanels, setDevPanels] = useState(false);
   useEffect(() => {
-    void isRavepageEnabled().then(setRpEnabled);
-    return onSettingsChange((s) => setRpEnabled(s.experimental.ravepage));
+    const apply = (s: { experimental: { ravepage: boolean }; developer: { panels: boolean } }): void => {
+      setRpEnabled(s.experimental.ravepage);
+      setDevPanels(s.developer.panels);
+    };
+    void getSettings().then(apply);
+    return onSettingsChange(apply);
   }, []);
 
   // Dashboard boot: a job left 'running' from a prior session can't resume -> mark
@@ -352,7 +377,7 @@ export function App() {
     <div className="min-h-screen bg-background flex flex-col">
       <TopNav path={path} />
       <div className="flex-1">{view}</div>
-      <FooterNav route={path} />
+      <FooterNav route={path} showDev={devPanels} />
     </div>
   );
 }
