@@ -1,7 +1,6 @@
 {
   "manifest_version": 3,
   "name": "event-bridge",
-  "version": "0.1.0",
   "description": "Create, manage and transfer VRChat scene events across vrc.tl, vrcpop.com and rave.page as the logged-in user.",
   "icons": {
     "16": "icon-16.png",

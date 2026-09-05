@@ -32,13 +32,16 @@ if (missing.length) {
 }
 
 const base = readJson(join(manifestDir, 'base.json'));
+// package.json is the single source of the extension version; stamp it into each
+// generated manifest so manifest/*.json never carries (and drifts) a version.
+const { version } = readJson(join(root, 'package.json'));
 
 for (const target of ['chrome', 'firefox']) {
   const outDir = join(root, 'dist', target);
   rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
 
-  const manifest = deepMerge(base, readJson(join(manifestDir, `${target}.json`)));
+  const manifest = { ...deepMerge(base, readJson(join(manifestDir, `${target}.json`))), version };
   writeFileSync(join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   for (const f of readdirSync(buildDir)) {

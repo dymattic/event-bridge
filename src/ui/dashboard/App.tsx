@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, EmptyState, LoadingSpinner } from '@rave-page/ui';
 import { BUILD_ID } from '../../shared/build-id';
-import { isBridgeError } from '../../core/errors';
+import { errorDebug } from '../lib/error-copy';
 import { asIanaZone, asIsoUtc } from '../../core/time';
 import type { EventCore } from '../../core/schema';
 import type { Platform } from '../../shared/agent-protocol';
@@ -34,11 +34,6 @@ import { LineupDevPanel } from './dev/LineupDevPanel';
 const PLATFORMS: readonly Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
 function isPlatform(v: string): v is Platform {
   return (PLATFORMS as readonly string[]).includes(v);
-}
-
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
 }
 
 function testDraftCore(prefix: string, club: OwnClub): EventCore {
@@ -84,7 +79,7 @@ function RavepageDevPanel() {
     setBusy(true);
     setError(null);
     void fn()
-      .catch((e) => setError(errMessage(e)))
+      .catch((e) => setError(errorDebug(e)))
       .finally(() => setBusy(false));
   };
 

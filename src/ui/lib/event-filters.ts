@@ -60,7 +60,9 @@ export function isUpcoming(row: EventRow, now: number = Date.now()): boolean {
 // Statuses that mean "scheduled/active" — a platform keeps these on an event even
 // months after it happened (rave.page leaves `scheduled` on past events), so we
 // show "ended" once the instant has passed instead of a misleading live status.
-const ACTIVE_STATUSES = new Set(['scheduled', 'live', 'published', 'promoted', 'public', 'draft', 'active']);
+// A 'draft' is deliberately excluded: a past draft never happened, so it stays
+// "draft" rather than reading as "ended".
+const ACTIVE_STATUSES = new Set(['scheduled', 'live', 'published', 'promoted', 'public', 'active']);
 
 // Status to DISPLAY for a row/event: "ended" when its end (or start, when no end)
 // is before now and its raw status still reads as scheduled/active; otherwise the

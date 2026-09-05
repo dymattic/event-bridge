@@ -23,7 +23,7 @@ import {
   type SmartSelectOption,
 } from '@rave-page/ui';
 import { ext } from '../../../shared/webext';
-import { isBridgeError } from '../../../core/errors';
+import { errorText } from '../../lib/error-copy';
 import {
   RAVEPAGE_DEFAULT_INSTANCE,
   enabledPlatforms,
@@ -38,10 +38,7 @@ import { connect, disconnect, status } from '../../../adapters/ravepage/auth';
 import type { ConnectionStatus } from '../../../adapters/types';
 import { invalidate } from '../../lib/resource';
 
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
-}
+const errMessage = (e: unknown): string => errorText(e, 'ravepage');
 
 const INSTANCE_CHANGED = 'rave.page instance changed — reconnect to continue';
 

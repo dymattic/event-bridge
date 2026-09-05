@@ -9,7 +9,7 @@
 // mock it.
 import type { EventCore, PlatformId, PosterFile, PosterRef } from '../../../core/schema';
 import { CAPS, computeLoss } from '../../../core/capabilities';
-import { isBridgeError } from '../../../core/errors';
+import { errorText } from '../../lib/error-copy';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import type { VocabEntry } from '../../../adapters/types';
@@ -52,10 +52,6 @@ export interface ApplyOutcome {
   link: EventLink; // the link after apply (fresh sync + baselines)
 }
 
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
-}
 
 // link.sync when set, else the settings default (a pre-P7 link inherits it).
 export function effectiveSync(link: EventLink, settings: Settings): LinkSync {
@@ -305,7 +301,7 @@ export async function applySync(link: EventLink, assessed: AssessedLink, opts: A
       const plan = getAdapter(t.platform).planUpdate(merged, { id: targetRef.id, current: targetCore, publish, genreVocab });
       const out = await runPlan(t.platform, plan.steps, { onStep });
       if (!out.ok) {
-        results.push({ platform: t.platform, ok: false, error: out.error ? errMessage(out.error) : 'step failed' });
+        results.push({ platform: t.platform, ok: false, error: out.error ? errorText(out.error, t.platform) : 'step failed' });
         continue;
       }
       if (fields.poster) await applyPosterSync(t.platform, targetRef.id, sourceCore.poster, onStep).catch(() => undefined);
@@ -316,7 +312,7 @@ export async function applySync(link: EventLink, assessed: AssessedLink, opts: A
       if (fresh) freshHashes[t.platform] = fresh;
       results.push({ platform: t.platform, ok: true });
     } catch (e) {
-      results.push({ platform: t.platform, ok: false, error: errMessage(e) });
+      results.push({ platform: t.platform, ok: false, error: errorText(e, t.platform) });
     }
   }
 

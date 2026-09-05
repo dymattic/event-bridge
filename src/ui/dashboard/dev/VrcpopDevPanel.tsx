@@ -6,16 +6,13 @@
 // read-only by the lead against the real session.
 import { useCallback, useRef, useState } from 'react';
 import { withAgent } from '../lib/runtime-client';
-import { isBridgeError } from '../../../core/errors';
+import { errorDebug } from '../../lib/error-copy';
 import { asIanaZone, asIsoUtc } from '../../../core/time';
 import type { EventCore } from '../../../core/schema';
 import { vrcpopAdapter } from '../../../adapters/vrcpop/adapter';
 import type { OwnEventRef, VrcpopClub, VrcpopEventRef } from '../../../adapters/vrcpop/types';
 
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
-}
+const errMessage = (e: unknown): string => errorDebug(e);
 
 // A safe draft to create against the mock (own club). Title carries the
 // test prefix so a real object would be obvious; publish stays false (draft).

@@ -35,7 +35,7 @@ import { CAPS, computeLoss, type FlagKey, type LossReport } from '../../../core/
 import { diffEvents, type ChangedPath } from '../../../core/diff';
 import { renderPreview, type PlannedStep } from '../../../core/planner';
 import type { ValidationIssue } from '../../../core/validate';
-import { isBridgeError } from '../../../core/errors';
+import { errorText } from '../../lib/error-copy';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import type { OwnClub, PlanResult } from '../../../adapters/types';
@@ -47,6 +47,8 @@ import { deriveEnd, emptyForm, fromCore, formIssues, toCore, type EventForm } fr
 import { formatLocalDateTime } from '../../lib/format';
 import { loadConnections, loadGenreVocab, loadPlatformData, readEventCore } from '../lib/event-data';
 import { runPlan, type StepEvent } from '../lib/run-plan';
+import { withRunGuard } from '../lib/unload-guard';
+import { BridgeError } from '../../../core/errors';
 import { startJobRun, type JobHandle } from '../lib/job-recorder';
 import type { JobKind } from '../../../runtime/jobs';
 import { LineupEditor } from '../components/LineupEditor';
@@ -85,10 +87,6 @@ function goto(hash: string): void {
   if (typeof window !== 'undefined') window.location.hash = hash;
 }
 
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
-}
 
 // Duration for the derived-end note: "2 h" when whole hours, else "90 min".
 function formatDuration(min: number): string {
@@ -298,7 +296,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
       try {
         preview = planFor(p, perTargetCore).steps.map(renderPreview).join('\n\n');
       } catch (e) {
-        planError = errMessage(e);
+        planError = errorText(e, p);
       }
       const changes = mode === 'edit' && p === platform && sourceCore ? diffEvents(sourceCore, perTargetCore) : [];
       return { platform: p, loss, issues, preview, planError, needsClub, changes };
@@ -344,7 +342,20 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
   async function applyPoster(p: Platform, eventId: string, poster: PosterRef | null, file: PosterFile | null, record: (evt: StepEvent) => void): Promise<void> {
     const adapter = getAdapter(p);
     if (file) {
-      await adapter.setPoster(eventId, file);
+      // Byte upload runs imperatively (chunked, bounded status poll) OUTSIDE the
+      // JSON plan — surface it as a run-log/job step so a long upload shows a
+      // "running" state and lands in the job log; the unload guard covers the
+      // whole upload window so a mid-upload navigation warns.
+      const stepId = `${p}:poster-upload`;
+      const request = { poster: 'upload', bytes: file.bytes.length, mimeType: file.mimeType };
+      record({ stepId, status: 'running', request });
+      try {
+        await withRunGuard(() => adapter.setPoster(eventId, file));
+        record({ stepId, status: 'done', request });
+      } catch (e) {
+        record({ stepId, status: 'error', request, error: e instanceof BridgeError ? e : new BridgeError('UNKNOWN', e instanceof Error ? e.message : String(e)) });
+        throw e;
+      }
       return;
     }
     if (poster && poster.kind === 'url') {
@@ -367,7 +378,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
     if (!out.ok) {
       const createdId = extractEventId(p, out.results);
       setFailed({ platform: p, steps, results: out.results, createdId });
-      setRunError(`${PLATFORM_NAME[p]}: ${out.error ? errMessage(out.error) : 'step failed'}`);
+      setRunError(out.error ? errorText(out.error, p) : `${PLATFORM_NAME[p]}: step failed`);
       return { ok: false };
     }
     const eventId = extractEventId(p, out.results, mode === 'edit' && p === platform ? id : undefined);
@@ -407,7 +418,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
       addNotification(mode === 'edit' ? 'Event saved.' : 'Event created.', 'success');
       navAfterRun();
     } catch (e) {
-      setRunError(errMessage(e));
+      setRunError(errorText(e));
       await jobRef.current?.finish('failed', createdRefs.current);
     } finally {
       setRunning(false);
@@ -446,7 +457,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
       addNotification('Event saved.', 'success');
       navAfterRun();
     } catch (e) {
-      setRunError(errMessage(e));
+      setRunError(errorText(e));
       await jobRef.current?.finish('failed', createdRefs.current);
     } finally {
       setRunning(false);
@@ -467,7 +478,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
       addNotification(`Deleted the created event on ${PLATFORM_NAME[failed.platform]}.`, 'info');
       setFailed(null);
     } catch (e) {
-      setRunError(errMessage(e));
+      setRunError(errorText(e, failed.platform));
       await job.finish('failed');
     } finally {
       setRunning(false);
@@ -843,7 +854,7 @@ export default function EventEditor({ mode, platform, id, initialTargets = [] }:
                                 <Badge variant={e.status === 'done' ? 'success' : e.status === 'error' ? 'error' : 'info'}>{e.status}</Badge>
                                 <span className="text-2xs text-foreground">{e.stepId}</span>
                               </div>
-                              {e.error && <span className="text-2xs text-brand-base pl-1">{errMessage(e.error)}</span>}
+                              {e.error && <span className="text-2xs text-brand-base pl-1">{errorText(e.error)}</span>}
                             </li>
                           ))}
                         </ul>

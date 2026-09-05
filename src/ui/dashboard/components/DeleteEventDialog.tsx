@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 import { ConfirmDialog, useNotification } from '@rave-page/ui';
 import type { Platform } from '../../../shared/agent-protocol';
-import { isBridgeError } from '../../../core/errors';
+import { errorText } from '../../lib/error-copy';
 import { PLATFORM_NAME } from '../../lib/platform-meta';
 import { platformHost } from '../../lib/platform-urls';
 import { invalidate } from '../../lib/resource';
@@ -23,11 +23,6 @@ export interface DeleteTarget {
 function isPublic(t: DeleteTarget): boolean {
   const s = `${t.status ?? ''} ${t.visibility ?? ''}`.toLowerCase();
   return /\b(published|public|promoted|live)\b/.test(s);
-}
-
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
 }
 
 export function DeleteEventDialog({
@@ -65,7 +60,7 @@ export function DeleteEventDialog({
   try {
     preview = deletePreview(target.platform, target.id);
   } catch (e) {
-    preview = [errMessage(e)];
+    preview = [errorText(e, target.platform)];
   }
 
   const onConfirm = (): void => {
@@ -84,7 +79,7 @@ export function DeleteEventDialog({
         onDeleted(target);
       } catch (e: unknown) {
         await finishJob(job.id, 'failed');
-        addNotification(errMessage(e), 'error');
+        addNotification(errorText(e, target.platform), 'error');
       } finally {
         setBusy(false);
         onClose();

@@ -118,6 +118,39 @@ Every direct dep is pinned exact and must be **>= 7 days old** at pin time
 registry; `pnpm-workspace.yaml` `minimumReleaseAge: 10080` also gates transitives
 at resolve time. Never `@latest`, never a range.
 
+## Packaging & release
+
+The version is single-sourced from `package.json`; `tools/assemble.mjs` stamps
+it into each generated `dist/*/manifest.json` at build (never edit
+`manifest/*.json` version). Bump `package.json` `version` before packaging.
+
+```sh
+pnpm package   # build + zip dist/chrome and dist/firefox into web-ext-artifacts/
+```
+
+`tools/package.mjs` writes two store-ready zips (git-ignored):
+
+- `web-ext-artifacts/event-bridge-chrome-<version>.zip` — a zero-dep Node ZIP of
+  `dist/chrome` (stored, no compression), the folder a user unzips and
+  **Load unpacked**s.
+- `web-ext-artifacts/event-bridge-firefox-<version>.zip` — built by
+  `pnpm dlx web-ext@10.6.0 build` (pinned, run on demand — not a dep), so it's
+  the exact artefact AMO would sign.
+
+**No store listings exist yet.** Distribution today is the zips + "Load unpacked"
+(Chrome) / "Load Temporary Add-on" (Firefox). A Firefox temporary add-on is
+**gone on browser restart** until a signed build exists; signing (AMO or a
+self-distributed signed xpi) is a pre-publish decision for the maintainer.
+
+Release steps:
+
+1. `pnpm check:pins && pnpm typecheck && pnpm test && pnpm build && pnpm e2e && pnpm lint:firefox` — all green.
+2. Bump `package.json` `version`; commit.
+3. `pnpm package`; verify both zips exist and open.
+4. (Once the repo is on GitHub) attach the zips to a GitHub Release. CI
+   (`.github/workflows/ci.yml`) runs the gates on every push/PR; it is inert
+   until a remote exists.
+
 ## Runtime model (P2)
 
 Three cooperating contexts (both browsers):
@@ -653,3 +686,20 @@ as the **source** so nothing is written there.
 5. **Clean up.** Remove the `EventLink`, delete the rave.page draft via its detail
    Delete flow, and confirm it's gone under `#/events?time=all&platform=ravepage`.
    Never Apply toward, or Delete on, vrc.tl / vrcpop.
+
+## Backlog
+
+Deferred, not-yet-implemented ideas (deliberately out of scope for now):
+
+- **Retry a failed create/edit from `#/jobs`.** The editor already retries an
+  in-session failure ("Retry from failed step") and `#/jobs` links **Open event**
+  when a run produced refs. Re-opening the editor *prefilled* from a failed job
+  needs reconstructing the form from the stored step requests (a failed create
+  has no event to open) — non-trivial, deferred.
+- **Live poster-upload progress.** The chunked rave.page upload has a bounded
+  status poll and surfaces a coarse `poster-upload` run-log step (running →
+  done/error); per-chunk / percentage progress is not shown.
+- **Sync-noise reductions (from P7).** Name-normalized lineup projection,
+  club-level sync defaults, a kit async-search primitive, and a proven
+  poster cross-origin fetch for URL→upload sync targets — all deferred; the
+  current sync pass is deterministic and conflict-safe without them.

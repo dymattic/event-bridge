@@ -26,6 +26,10 @@ describe('displayStatus', () => {
     expect(displayStatus({ start: PAST, status: 'past' }, NOW)).toBe('past');
     expect(displayStatus({ status: 'draft' }, NOW)).toBe('draft'); // no date -> unchanged
   });
+  it('keeps "draft" for a PAST draft (it never happened -> not "ended")', () => {
+    expect(displayStatus({ start: PAST, status: 'draft' }, NOW)).toBe('draft');
+    expect(displayStatus({ start: PAST, end: PAST, status: 'draft' }, NOW)).toBe('draft');
+  });
 });
 
 describe('inTimeScope', () => {

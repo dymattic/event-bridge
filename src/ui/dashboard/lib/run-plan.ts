@@ -15,6 +15,7 @@ import { BridgeError } from '../../../core/errors';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import { paceHost } from './event-data';
+import { withRunGuard } from './unload-guard';
 
 export type StepStatus = 'running' | 'done' | 'error';
 
@@ -44,6 +45,10 @@ function toBridgeError(e: unknown): BridgeError {
 }
 
 export async function runPlan(platform: Platform, steps: PlannedStep[], opts: RunPlanOpts = {}): Promise<RunPlanResult> {
+  return withRunGuard(() => runPlanInner(platform, steps, opts));
+}
+
+async function runPlanInner(platform: Platform, steps: PlannedStep[], opts: RunPlanOpts): Promise<RunPlanResult> {
   const results: Record<string, JsonValue> = { ...(opts.results ?? {}) };
   const adapter = getAdapter(platform);
 

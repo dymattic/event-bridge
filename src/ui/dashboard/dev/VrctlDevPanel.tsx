@@ -5,7 +5,7 @@
 // vrc.tl. Plain Tailwind token classes; self-contained. Wired into the dashboard
 // hash router at #/dev/vrctl (App.tsx). Exposes nothing on window.
 import { useCallback, useState } from 'react';
-import { isBridgeError } from '../../../core/errors';
+import { errorDebug } from '../../lib/error-copy';
 import { asIanaZone, asIsoUtc } from '../../../core/time';
 import type { EventCore } from '../../../core/schema';
 import type { OwnClub, OwnEvent } from '../../../adapters/types';
@@ -15,10 +15,7 @@ import { readEventForm } from '../../../adapters/vrctl/adapter';
 import { vrctlAdapter, runPlan } from '../../../adapters/vrctl/platform';
 import { withAgent } from '../lib/runtime-client';
 
-function errMessage(e: unknown): string {
-  if (isBridgeError(e)) return `${e.code}: ${e.message}`;
-  return e instanceof Error ? e.message : String(e);
-}
+const errMessage = (e: unknown): string => errorDebug(e);
 
 // Minimal NSFW-tagged demo core so planCreate has the required flag.
 function demoCore(club: OwnClub | undefined): EventCore {
