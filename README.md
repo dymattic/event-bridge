@@ -90,7 +90,8 @@ The rave.page integration is **off by default**. vrc.tl and vrcpop.com work
 fully without it. Turn it on under **Settings → Experimental** and rave.page
 joins as a third, equal integration.
 
-Because rave.page is open-source and federated, the **instance is configurable**:
+rave.page is on its way to an open-source, federated release, so the **instance is
+configurable**:
 point event-bridge at any self-hosted or federated rave.page by setting the app
 origin and API origin in Settings (your browser prompts once for access to the
 new host). The development instance is the default for contributors — it is
@@ -177,8 +178,9 @@ A rough checklist for a new adapter:
 event-bridge is an independent, open-source tool (WTFPL). It is **not affiliated
 with, endorsed by, or a product of** vrc.tl, vrcpop.com or rave.page — the three
 are equal integrations, and no platform account is a prerequisite: connect only
-the platforms you use. It's built with rave.page's open design-system kit
-[`@rave-page/ui`](https://rave.page) (MIT) and shares that look by design.
+the platforms you use. It's built with rave.page's design-system kit
+`@rave-page/ui` (MIT, vendored until it is published) and shares that look by
+design.
 
 Status: pre-alpha, under construction.
 
