@@ -115,6 +115,8 @@ async function listOwnEvents(organizer: OrganizerFilter): Promise<OwnEvent[]> {
 }
 
 async function listGigs(names: readonly string[], opts?: ListGigsOpts): Promise<Gig[]> {
+  // One 300 ms pacer shared by both sources — timeline pages AND detail reads —
+  // so the whole pass stays at human scale regardless of how it splits.
   return withVrctl((ctx) => nativeListGigs(ctx.send, names, { now: opts?.now ?? Date.now(), pace: pacer(300) }));
 }
 

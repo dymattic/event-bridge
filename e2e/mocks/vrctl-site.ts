@@ -54,6 +54,13 @@ export async function mockVrctlSite(context: BrowserContext, recorder: RecordedR
     if (!loggedIn && p.startsWith('/admin/')) return html(mock('vrctl-signin.html'));
     if (p.startsWith('/sign/')) return html(mock('vrctl-signin.html'));
 
+    // Public timeline (owner-approved read for "My gigs"). Serves the sanitized
+    // fixture for the bare page and any ?after= paging; its days are in 2030 so
+    // the adapter's horizon is covered after one page.
+    if (p === '/api/v1/events') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: fix('timeline-page.json') });
+    }
+
     // Performer autocomplete (select2 JSON).
     if (p === '/admin/ajax/performer') {
       const raw = JSON.parse(fix('performer-search.json')) as { exact: { status: number; body: string } };

@@ -1,9 +1,13 @@
 // vrc.tl route allowlist + the single request entry point. Every outbound
 // vrc.tl call goes through `buildRequest` (pure, validated) so nothing but the
-// allowlisted own-surface routes can ever be issued. There is deliberately NO
-// route for public listings (/event/*, /api/v1/*) or the timetable /
-// vrChatEventCreate grid actions. Write ids are branded (see ids.ts) — they can
-// only originate from a parsed own-surface listing, never raw user input.
+// allowlisted routes can ever be issued. The only public-surface read is
+// `timeline` (GET /api/v1/events[?after=YYYY-MM-DD]), the paged listing the
+// vrc.tl web app itself calls, allowed for the user-triggered "My gigs" lookup
+// (owner decision 2026-09-07). Everything else on /api/v1 stays refused (no
+// ?before, no /events/<id>, no /organizers) and there is still NO route for
+// /event/* HTML or the timetable / vrChatEventCreate grid actions. Write ids are
+// branded (see ids.ts) — they can only originate from a parsed own-surface
+// listing, never raw user input.
 import type { HttpBody, HttpRequest } from '../../shared/agent-protocol';
 import { BridgeError } from '../../core/errors';
 import type { HttpResult } from '../../shared/agent-protocol';
@@ -24,9 +28,15 @@ export type VrctlRouteId =
   | 'detail'
   | 'performerSearch'
   | 'organizerSearch'
+  | 'timeline'
   | 'create'
   | 'detailSubmit'
   | 'delete';
+
+// The ONLY public path shape allowed on /api/v1: the events listing, bare or
+// `?after=YYYY-MM-DD`. /events/<id>, ?before=, and any other query are refused.
+export const TIMELINE_PATH_PATTERN = /^\/api\/v1\/events(\?after=\d{4}-\d{2}-\d{2})?$/;
+const TIMELINE_AFTER = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface VrctlRoute {
   id: VrctlRouteId;
@@ -42,6 +52,7 @@ export const VRCTL_ROUTES: Record<VrctlRouteId, VrctlRoute> = {
   detail: { id: 'detail', method: 'GET', kind: 'read', pathPattern: '/admin/event/detail/<id>' },
   performerSearch: { id: 'performerSearch', method: 'GET', kind: 'read', pathPattern: '/admin/ajax/performer?term=&_type=query&q=' },
   organizerSearch: { id: 'organizerSearch', method: 'GET', kind: 'read', pathPattern: '/admin/ajax/organizer?term=&_type=query&q=' },
+  timeline: { id: 'timeline', method: 'GET', kind: 'read', pathPattern: '/api/v1/events[?after=YYYY-MM-DD]' },
   create: { id: 'create', method: 'POST', kind: 'write', pathPattern: '/admin/event/create?categoryId=<id>&organizerId=<id>[&promoted=0]' },
   detailSubmit: { id: 'detailSubmit', method: 'POST', kind: 'write', pathPattern: '/admin/event/detail/<id>' },
   delete: { id: 'delete', method: 'GET', kind: 'write', pathPattern: '/admin/event?grid-grid-__id=<id>&grid-grid-__key=delete&do=grid-grid-actionCallback' },
@@ -54,6 +65,7 @@ export interface RouteParams {
   detail: { eventId: VrctlEventId };
   performerSearch: { term: string };
   organizerSearch: { term: string };
+  timeline: { after?: string };
   create: { organizerId: VrctlOrganizerId; categoryId: VrctlCategoryId; promoted: boolean; body: HttpBody };
   detailSubmit: { eventId: VrctlEventId; body: HttpBody };
   delete: { action: VrctlDeleteAction };
@@ -104,6 +116,17 @@ export function buildRequest<K extends VrctlRouteId>(routeId: K, params: RoutePa
         redirect: 'follow',
         responseType: 'text',
       };
+    }
+    case 'timeline': {
+      // Public read (owner-approved): the same paged listing the vrc.tl app
+      // calls. Only a well-formed `after` date is accepted; a unix value or any
+      // other query (?before, /events/<id>) can never be built here.
+      const { after } = params as RouteParams['timeline'];
+      if (after !== undefined && !TIMELINE_AFTER.test(after)) {
+        throw new BridgeError('VALIDATION', `invalid timeline after date: ${after}`);
+      }
+      const path = after !== undefined ? `/api/v1/events?after=${after}` : '/api/v1/events';
+      return { method: 'GET', path, redirect: 'follow', responseType: 'json' };
     }
     case 'create': {
       const { organizerId, categoryId, promoted, body } = params as RouteParams['create'];

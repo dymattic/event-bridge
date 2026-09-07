@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { HttpResult } from '../../../src/shared/agent-protocol';
 import { asCategoryId, asDeleteAction, asEventId, asOrganizerId } from '../../../src/adapters/vrctl/ids';
-import { buildRequest, request, VRCTL_ROUTES, type VrctlRouteId } from '../../../src/adapters/vrctl/routes';
+import { buildRequest, request, TIMELINE_PATH_PATTERN, VRCTL_ROUTES, type VrctlRouteId } from '../../../src/adapters/vrctl/routes';
 import { encodeUrlencoded } from '../../../src/adapters/vrctl/forms';
 
 describe('buildRequest (allowlist)', () => {
@@ -57,13 +57,38 @@ describe('own-events-only refusals', () => {
     expect(() => asDeleteAction('https://evil.example/admin/event?grid-grid-__key=delete&do=grid-grid-actionCallback&grid-grid-__id=1')).toThrow();
   });
 
-  it('has no route for public listings or arbitrary admin paths', () => {
+  it('routes are own-admin surfaces, except the owner-approved public timeline read', () => {
     const ids = Object.keys(VRCTL_ROUTES);
     expect(ids).not.toContain('publicEvents');
     for (const r of Object.values(VRCTL_ROUTES)) {
-      expect(r.pathPattern.startsWith('/admin/')).toBe(true);
+      if (r.id === 'timeline') {
+        expect(r.kind).toBe('read');
+        expect(r.pathPattern.startsWith('/api/v1/events')).toBe(true);
+      } else {
+        expect(r.pathPattern.startsWith('/admin/')).toBe(true);
+      }
     }
     expect(() => buildRequest('bogus' as VrctlRouteId, {} as never)).toThrow();
+  });
+});
+
+describe('timeline (owner-approved public read)', () => {
+  it('builds the bare and after-paged listing requests (json)', () => {
+    expect(buildRequest('timeline', {})).toMatchObject({ method: 'GET', path: '/api/v1/events', responseType: 'json' });
+    expect(buildRequest('timeline', { after: '2030-01-02' }).path).toBe('/api/v1/events?after=2030-01-02');
+  });
+
+  it('refuses a non-date after (e.g. a unix timestamp)', () => {
+    expect(() => buildRequest('timeline', { after: '1788825600' })).toThrow();
+    expect(() => buildRequest('timeline', { after: '2030-1-2' })).toThrow();
+  });
+
+  it('the path pattern admits only the listing, not /events/<id> or ?before=', () => {
+    expect(TIMELINE_PATH_PATTERN.test('/api/v1/events')).toBe(true);
+    expect(TIMELINE_PATH_PATTERN.test('/api/v1/events?after=2030-01-02')).toBe(true);
+    expect(TIMELINE_PATH_PATTERN.test('/api/v1/events/1')).toBe(false);
+    expect(TIMELINE_PATH_PATTERN.test('/api/v1/events?before=2030-01-02')).toBe(false);
+    expect(TIMELINE_PATH_PATTERN.test('/api/v1/organizers')).toBe(false);
   });
 });
 

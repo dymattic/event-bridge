@@ -5,12 +5,16 @@ All HTTP runs through the agent `http` op **inside the user's vrc.tl tab**
 (same-site `_nss` cookie requires in-tab requests); parsing runs in the dashboard
 with `DOMParser`. No `fetch(` in `src/adapters/vrctl/**`.
 
-## Own surfaces only
+## Surfaces
 
-Reads only what the user manages; there is deliberately **no route** for public
-listings (`/event/*`, `/api/v1/*`) or the `timetable` / `vrChatEventCreate` grid
-actions. Write ids are branded (`ids.ts`) — they can only come from a parsed
-own-surface listing, never raw input.
+Reads/writes only what the user manages, **plus** one public read: the timeline
+listing `GET /api/v1/events[?after=YYYY-MM-DD]` — the same paged endpoint the
+vrc.tl web app calls — allowed for the user-triggered "My gigs" lookup (owner
+decision 2026-09-07). Everything else on `/api/v1` stays refused (no `?before`,
+no `/events/<id>`, no `/organizers`), and there is still **no route** for
+`/event/*` HTML or the `timetable` / `vrChatEventCreate` grid actions. Write ids
+are branded (`ids.ts`) — they can only come from a parsed own-surface listing,
+never raw input.
 
 | Route id | Method | Path | Kind |
 |---|---|---|---|
@@ -20,12 +24,15 @@ own-surface listing, never raw input.
 | `detail` | GET | `/admin/event/detail/<id>` | read |
 | `performerSearch` | GET | `/admin/ajax/performer?term=&_type=query&q=` | read |
 | `organizerSearch` | GET | `/admin/ajax/organizer?term=&_type=query&q=` | read |
+| `timeline` | GET | `/api/v1/events[?after=YYYY-MM-DD]` (json) | read (public) |
 | `create` | POST | `/admin/event/create?categoryId=<id>&organizerId=<id>[&promoted=0]` | write |
 | `detailSubmit` | POST | `/admin/event/detail/<id>` (multipart) | write |
 | `delete` | GET | `/admin/event?grid-grid-__id=<id>&grid-grid-__key=delete&do=grid-grid-actionCallback` | write |
 
 `request(send, routeId, params)` is the only entry; `buildRequest` validates every
-id (`^\d+$`) and refuses any grid action key other than `delete`.
+id (`^\d+$`), the `timeline` `after` param (`^\d{4}-\d{2}-\d{2}$`; a unix value is
+refused), and any grid action key other than `delete`. `TIMELINE_PATH_PATTERN`
+admits only the bare or `?after=` listing.
 
 ## Flows
 
@@ -63,13 +70,29 @@ id (`^\d+$`) and refuses any grid action key other than `delete`.
 
 ## My gigs
 
-`listGigs(names)` covers **only clubs the user manages**: it scans the admin grid
-(`listOwnEvents`), keeps rows whose start (`parseGridDate`, the same approximate
-parse feeding `OwnEvent.start`) is ≥ now or unparseable, reads each upcoming
-event's detail form (capped at `MAX_EVENT_READS` = 25, paced ≥300 ms apart), and
-emits a `Gig` when the lineup names a matching performer (`matchLineupNames`).
-The public timeline is deliberately not read (policy), so gigs at clubs the user
-doesn't manage are not listed. Public event link: `https://vrc.tl/event/<id>`.
+`listGigs(names)` reads **two sources** on each manual refresh, both paced by one
+shared ≥300 ms spacer:
+
+1. **Public timeline** (owner-approved) — `scanTimeline` pages `GET /api/v1/events`
+   the way the web app does: bare page = today ±1, then `?after=<last day of the
+   previous page>`, until the newest day covers `now + timelineDays` (default 30),
+   the page cap (`MAX_TIMELINE_PAGES` = 12, ≈36 days) is hit, or a page returns no
+   days. `parseTimeline` resolves `performerId`→name and organizer name from the
+   response's own tables; a `Gig` (`source:'profile'`) is emitted for each event
+   with `end ≥ now` whose slot names a matching performer — so gigs at **any**
+   club are found. Events that hide their lineup publicly (`showSlots:false`) carry
+   no slots here and fall to source 2.
+2. **Own-club scan** — `scanOwnClubs` scans the admin grid (`listOwnEvents`), keeps
+   rows whose start (`parseGridDate`) is ≥ now or unparseable, reads each upcoming
+   detail form (capped at `MAX_EVENT_READS` = 25), and emits a `Gig`
+   (`source:'own-event'`) when the lineup names a matching performer
+   (`matchLineupNames`). Also catches hidden-slot / host-only events the timeline
+   can't surface.
+
+`dedupeGigs` collapses an event seen in both — the timeline entry
+(`source:'profile'`) outranks `own-event` — then the upcoming filter applies.
+One bounded, user-triggered pass; no background polling, nothing stored beyond the
+session cache. Public event link: `https://vrc.tl/event/<id>`.
 
 ## Redirect handling (important)
 

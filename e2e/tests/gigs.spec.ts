@@ -6,9 +6,12 @@
 import { enableRavepage, expect, openDashboard, openPlatformTab, test } from '../fixtures/extension';
 import { mockVrcpopSite, newRecorder, type VrcpopRecorder } from '../mocks/vrcpop-api';
 import { mockRavepageEvents, newRavepageRecorder, seedRavepageToken } from '../mocks/ravepage-events';
+import { mockVrctlSite, type RecordedRequest } from '../mocks/vrctl-site';
+import { MAX_TIMELINE_PAGES } from '../../src/adapters/vrctl/adapter';
 import type { BrowserContext, Page } from '@playwright/test';
 
 const T = 30_000;
+const tlCount = (rec: RecordedRequest[]): number => rec.filter((r) => r.path === '/api/v1/events').length;
 
 async function setupVrcpop(context: BrowserContext): Promise<{ page: Page; rec: VrcpopRecorder }> {
   const rec = newRecorder();
@@ -47,6 +50,34 @@ test('adds a DJ name and lists gigs from the performer profile, loading once', a
   // Explicit Refresh re-reads once more.
   await page.getByTestId('gigs-refresh').click();
   await expect.poll(() => rec.profileGets, { timeout: T }).toBe(2);
+});
+
+test('vrc.tl: lists a gig from the public timeline at a club the user does not manage', async ({ context }) => {
+  const rec: RecordedRequest[] = [];
+  await mockVrctlSite(context, rec);
+  await openPlatformTab(context, 'vrctl');
+  const page = await openDashboard(context);
+  await page.evaluate(() => {
+    location.hash = '#/gigs';
+  });
+  await page.reload();
+  await expect(page.getByTestId('gigs')).toBeVisible({ timeout: T });
+
+  await addName(page, 'Example DJ');
+
+  const table = page.getByTestId('gigs-table');
+  await expect(table).toContainText('Timeline Night', { timeout: T });
+  await expect(page.locator('a[data-testid="gigs-link-vrctl"][href="https://vrc.tl/event/300001"]').first()).toBeVisible({ timeout: T });
+
+  // Bounded, load-once: one paged pass (≤ cap) and no more until Refresh.
+  await expect.poll(() => tlCount(rec), { timeout: T }).toBeGreaterThan(0);
+  const afterLoad = tlCount(rec);
+  expect(afterLoad).toBeLessThanOrEqual(MAX_TIMELINE_PAGES);
+  await page.waitForTimeout(2000);
+  expect(tlCount(rec)).toBe(afterLoad); // no background polling
+
+  await page.getByTestId('gigs-refresh').click();
+  await expect.poll(() => tlCount(rec), { timeout: T }).toBe(afterLoad + 1); // exactly one more pass
 });
 
 test('exports an ICS file', async ({ context }) => {

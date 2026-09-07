@@ -1,0 +1,141 @@
+{
+  "lastUpdates": [
+    {
+      "day": "2030-06-17",
+      "instant": 1907884800
+    },
+    {
+      "day": "2030-06-18",
+      "instant": 1907971200
+    },
+    {
+      "day": "2030-06-19",
+      "instant": 1908057600
+    }
+  ],
+  "eventData": {
+    "events": [
+      {
+        "id": 300004,
+        "name": "Underground",
+        "description": null,
+        "category": 1,
+        "tags": [],
+        "organizers": [
+          9001
+        ],
+        "hostOrganizer": 9001,
+        "start": 1908054000,
+        "end": 1908068400,
+        "duration": 14400,
+        "urls": {},
+        "poster": null,
+        "isHighlighted": false,
+        "extensions": {
+          "performerSlots": true
+        },
+        "promoted": false,
+        "showSlots": true,
+        "eventSlots": [
+          {
+            "id": 70004,
+            "start": 1908054000,
+            "duration": 5400,
+            "performers": [
+              {
+                "id": 700040,
+                "order": 0,
+                "performerId": 5002
+              }
+            ],
+            "order": 0,
+            "flag": "performers",
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": 300005,
+        "name": "No Match Fest",
+        "description": null,
+        "category": 1,
+        "tags": [],
+        "organizers": [
+          9002
+        ],
+        "hostOrganizer": 9002,
+        "start": 1908133200,
+        "end": 1908144000,
+        "duration": 10800,
+        "urls": {},
+        "poster": null,
+        "isHighlighted": false,
+        "extensions": {
+          "performerSlots": true
+        },
+        "promoted": false,
+        "showSlots": true,
+        "eventSlots": [
+          {
+            "id": 70005,
+            "start": 1908133200,
+            "duration": 3600,
+            "performers": [
+              {
+                "id": 700050,
+                "order": 0,
+                "performerId": 5999
+              },
+              {
+                "id": 700051,
+                "order": 1,
+                "performerId": 5003
+              }
+            ],
+            "order": 1,
+            "flag": "performers",
+            "note": null
+          }
+        ]
+      }
+    ],
+    "organizers": [
+      {
+        "id": 9001,
+        "name": "Example Club",
+        "nameHistory": [],
+        "shortCode": "EXC",
+        "bio": null,
+        "banner": null,
+        "twitter": null,
+        "blueSky": null,
+        "instagram": null,
+        "vrcGroup": null
+      },
+      {
+        "id": 9002,
+        "name": "Other Club",
+        "nameHistory": [],
+        "shortCode": "OTC",
+        "bio": null,
+        "banner": null,
+        "twitter": null,
+        "blueSky": null,
+        "instagram": null,
+        "vrcGroup": null
+      }
+    ],
+    "performers": [
+      {
+        "id": 5002,
+        "hidden": true,
+        "name": "Other DJ"
+      },
+      {
+        "id": 5003,
+        "hidden": false,
+        "name": "Someone Else"
+      }
+    ]
+  }
+}

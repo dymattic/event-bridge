@@ -10,6 +10,7 @@ import {
   parseDetailForm,
   parseGrid,
   parsePerformerSearch,
+  parseTimeline,
 } from '../../../src/adapters/vrctl/parse';
 
 const FIX = join(process.cwd(), 'test', 'fixtures', 'vrctl');
@@ -149,6 +150,45 @@ describe('parsePerformerSearch', () => {
   });
   it('throws PARSE on non-JSON', () => {
     expect(() => parsePerformerSearch('<html>403</html>')).toThrow();
+  });
+});
+
+describe('parseTimeline', () => {
+  const page1 = parseTimeline(html('timeline-page.json'));
+  const page2 = parseTimeline(html('timeline-page-2.json'));
+
+  it('days come from lastUpdates', () => {
+    expect(page1.days).toEqual(['2030-06-14', '2030-06-15', '2030-06-16']);
+  });
+
+  it('resolves performer + organizer names, ISO-Z times, slot end from duration', () => {
+    const e = page1.events.find((x) => x.id === '300001')!;
+    expect(e.name).toBe('Timeline Night');
+    expect(e.organizerName).toBe('Other Club'); // hostOrganizer 9002
+    expect(e.promoted).toBe(true);
+    expect(e.start).toBe('2030-06-15T22:00:00Z');
+    expect(e.end).toBe('2030-06-16T02:00:00Z');
+    expect(e.slots).toEqual([{ start: '2030-06-15T22:00:00Z', end: '2030-06-15T23:00:00Z', performerNames: ['Example DJ'] }]);
+  });
+
+  it('drops slots for a showSlots:false event (lineup hidden publicly)', () => {
+    const e = page1.events.find((x) => x.id === '300002')!;
+    expect(e.slots).toEqual([]);
+  });
+
+  it('keeps a hidden performer (the user may be one)', () => {
+    const e = page2.events.find((x) => x.id === '300004')!;
+    expect(e.slots[0]?.performerNames).toEqual(['Other DJ']); // performer 5002 hidden:true
+  });
+
+  it('skips unknown performer ids without failing', () => {
+    const e = page2.events.find((x) => x.id === '300005')!;
+    expect(e.slots[0]?.performerNames).toEqual(['Someone Else']); // 5999 unknown -> skipped
+  });
+
+  it('PARSE on non-JSON or a payload missing lastUpdates/eventData', () => {
+    expect(() => parseTimeline('<html>500</html>')).toThrow();
+    expect(() => parseTimeline('{"nope":true}')).toThrow();
   });
 });
 

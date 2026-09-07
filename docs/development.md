@@ -513,9 +513,12 @@ and never hides the others. What each platform reads:
 - **vrcpop.com** — the user's own **performer profile** (`/u/<slug>`, public
   page, own/self-asserted slug only) plus the lineups of clubs they manage. See
   [docs/platforms/vrcpop.md](platforms/vrcpop.md).
-- **vrc.tl** — lineups of the user's **own clubs only** (vrc.tl exposes no public
-  performer index, so a gig on someone else's vrc.tl event is not discoverable).
-  See [docs/platforms/vrctl.md](platforms/vrctl.md).
+- **vrc.tl** — the **public timeline** (`GET /api/v1/events`, the same paged
+  listing the web app calls; owner-approved 2026-09-07) matched by slot performer
+  name — so gigs at **any** club are found — **plus** the lineups of the user's
+  own clubs (which also catch hidden-slot / host-only events). One bounded paged
+  pass per refresh (≤12 pages, ~36-day horizon), paced ≥300 ms. See
+  [docs/platforms/vrctl.md](platforms/vrctl.md).
 - **rave.page** — the user's **bookings received** (accepted → confirmed,
   unaccepted → a "pending" badge) plus own-event lineups. See
   [docs/platforms/ravepage.md](platforms/ravepage.md).

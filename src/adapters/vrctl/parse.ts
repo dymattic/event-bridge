@@ -388,6 +388,121 @@ export function parsePerformerSearch(jsonText: string): VrctlPerformer[] {
     .map((r) => ({ id: String((r as { id: unknown }).id), text: String((r as { text: unknown }).text) }));
 }
 
+// ---- public timeline (GET /api/v1/events) ----
+
+// One public event from the timeline, reduced to what "My gigs" needs. Times are
+// ISO-Z strings (the adapter brands them). `slots` is empty when the event hides
+// its lineup publicly (showSlots:false) — the own-club scan covers those.
+export interface VrctlTimelineEvent {
+  id: string;
+  name: string;
+  start: string; // ISO Z
+  end?: string; // ISO Z
+  organizerName?: string;
+  promoted: boolean;
+  slots: { start: string; end: string; performerNames: string[] }[];
+}
+
+export interface VrctlTimelinePage {
+  days: string[]; // lastUpdates[].day, 'YYYY-MM-DD'
+  events: VrctlTimelineEvent[];
+}
+
+// unix seconds -> ISO-Z with the '.000' millis dropped.
+function isoZ(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+function numberMap(rows: unknown, valueKey: string): Map<number, string> {
+  const m = new Map<number, string>();
+  if (!Array.isArray(rows)) return m;
+  for (const r of rows) {
+    if (r && typeof r === 'object') {
+      const id = (r as Record<string, unknown>).id;
+      const v = (r as Record<string, unknown>)[valueKey];
+      if (typeof id === 'number' && typeof v === 'string') m.set(id, v);
+    }
+  }
+  return m;
+}
+
+// Parse the vrc.tl timeline JSON (same payload the web app pages through).
+// Resolves performerId/organizer ids to names via the response's own tables;
+// unknown performer ids are skipped, hidden performers are kept (the user may be
+// one). Malformed payload/event -> PARSE.
+export function parseTimeline(jsonText: string): VrctlTimelinePage {
+  let data: unknown;
+  try {
+    data = JSON.parse(jsonText);
+  } catch {
+    throw new BridgeError('PARSE', 'timeline: invalid JSON');
+  }
+  if (typeof data !== 'object' || data === null) throw new BridgeError('PARSE', 'timeline: not an object');
+  const root = data as Record<string, unknown>;
+  const eventData = root.eventData;
+  if (!Array.isArray(root.lastUpdates) || typeof eventData !== 'object' || eventData === null) {
+    throw new BridgeError('PARSE', 'timeline: missing lastUpdates/eventData');
+  }
+  const days: string[] = [];
+  for (const u of root.lastUpdates) {
+    if (u && typeof u === 'object' && typeof (u as Record<string, unknown>).day === 'string') {
+      days.push((u as { day: string }).day);
+    }
+  }
+  const ed = eventData as Record<string, unknown>;
+  const performerName = numberMap(ed.performers, 'name');
+  const organizerName = numberMap(ed.organizers, 'name');
+
+  const events: VrctlTimelineEvent[] = [];
+  for (const e of Array.isArray(ed.events) ? ed.events : []) {
+    if (!e || typeof e !== 'object') continue;
+    const ev = e as Record<string, unknown>;
+    if (typeof ev.id !== 'number' || typeof ev.name !== 'string' || typeof ev.start !== 'number') {
+      throw new BridgeError('PARSE', 'timeline: malformed event');
+    }
+    const out: VrctlTimelineEvent = { id: String(ev.id), name: ev.name, start: isoZ(ev.start), promoted: ev.promoted === true, slots: [] };
+    if (typeof ev.end === 'number' && ev.end > 0) out.end = isoZ(ev.end);
+
+    let org: string | undefined;
+    if (typeof ev.hostOrganizer === 'number') org = organizerName.get(ev.hostOrganizer);
+    if (org === undefined && Array.isArray(ev.organizers)) {
+      for (const oid of ev.organizers) {
+        if (typeof oid === 'number') {
+          const n = organizerName.get(oid);
+          if (n !== undefined) {
+            org = n;
+            break;
+          }
+        }
+      }
+    }
+    if (org !== undefined) out.organizerName = org;
+
+    // showSlots:false hides the lineup from the public listing; skip its slots.
+    if (ev.showSlots !== false && Array.isArray(ev.eventSlots)) {
+      for (const s of ev.eventSlots) {
+        if (!s || typeof s !== 'object') continue;
+        const sl = s as Record<string, unknown>;
+        if (typeof sl.start !== 'number') continue;
+        const names: string[] = [];
+        for (const p of Array.isArray(sl.performers) ? sl.performers : []) {
+          if (p && typeof p === 'object') {
+            const pid = (p as Record<string, unknown>).performerId;
+            if (typeof pid === 'number') {
+              const n = performerName.get(pid);
+              if (n !== undefined) names.push(n);
+            }
+          }
+        }
+        const end = typeof sl.duration === 'number' ? sl.start + sl.duration : sl.start;
+        out.slots.push({ start: isoZ(sl.start), end: isoZ(end), performerNames: names });
+      }
+    }
+    events.push(out);
+  }
+  return { days, events };
+}
+
 // ---- error / auth detection ----
 
 // Nette + Bootstrap validation markers relied on. `.text-danger` is deliberately

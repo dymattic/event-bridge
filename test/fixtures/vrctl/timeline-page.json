@@ -1,0 +1,170 @@
+{
+  "lastUpdates": [
+    {
+      "day": "2030-06-14",
+      "instant": 1907625600
+    },
+    {
+      "day": "2030-06-15",
+      "instant": 1907712000
+    },
+    {
+      "day": "2030-06-16",
+      "instant": 1907798400
+    }
+  ],
+  "eventData": {
+    "events": [
+      {
+        "id": 300001,
+        "name": "Timeline Night",
+        "description": null,
+        "category": 1,
+        "tags": [],
+        "organizers": [
+          9002
+        ],
+        "hostOrganizer": 9002,
+        "start": 1907791200,
+        "end": 1907805600,
+        "duration": 14400,
+        "urls": {},
+        "poster": null,
+        "isHighlighted": false,
+        "extensions": {
+          "performerSlots": true
+        },
+        "promoted": true,
+        "showSlots": true,
+        "eventSlots": [
+          {
+            "id": 70001,
+            "start": 1907791200,
+            "duration": 3600,
+            "performers": [
+              {
+                "id": 700010,
+                "order": 0,
+                "performerId": 5001
+              }
+            ],
+            "order": 0,
+            "flag": "performers",
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": 300002,
+        "name": "Hidden Lineup Party",
+        "description": null,
+        "category": 1,
+        "tags": [],
+        "organizers": [
+          9001
+        ],
+        "hostOrganizer": 9001,
+        "start": 1907870400,
+        "end": 1907881200,
+        "duration": 10800,
+        "urls": {},
+        "poster": null,
+        "isHighlighted": false,
+        "extensions": {
+          "performerSlots": true
+        },
+        "promoted": false,
+        "showSlots": false,
+        "eventSlots": [
+          {
+            "id": 70002,
+            "start": 1907870400,
+            "duration": 3600,
+            "performers": [
+              {
+                "id": 700020,
+                "order": 0,
+                "performerId": 5001
+              }
+            ],
+            "order": 0,
+            "flag": "performers",
+            "note": null
+          }
+        ]
+      },
+      {
+        "id": 300003,
+        "name": "Past Rave",
+        "description": null,
+        "category": 1,
+        "tags": [],
+        "organizers": [
+          9002
+        ],
+        "hostOrganizer": 9002,
+        "start": 1893528000,
+        "end": 1893538800,
+        "duration": 10800,
+        "urls": {},
+        "poster": null,
+        "isHighlighted": false,
+        "extensions": {
+          "performerSlots": true
+        },
+        "promoted": false,
+        "showSlots": true,
+        "eventSlots": [
+          {
+            "id": 70003,
+            "start": 1893528000,
+            "duration": 3600,
+            "performers": [
+              {
+                "id": 700030,
+                "order": 0,
+                "performerId": 5001
+              }
+            ],
+            "order": 0,
+            "flag": "performers",
+            "note": null
+          }
+        ]
+      }
+    ],
+    "organizers": [
+      {
+        "id": 9001,
+        "name": "Example Club",
+        "nameHistory": [],
+        "shortCode": "EXC",
+        "bio": null,
+        "banner": null,
+        "twitter": null,
+        "blueSky": null,
+        "instagram": null,
+        "vrcGroup": null
+      },
+      {
+        "id": 9002,
+        "name": "Other Club",
+        "nameHistory": [],
+        "shortCode": "OTC",
+        "bio": null,
+        "banner": null,
+        "twitter": null,
+        "blueSky": null,
+        "instagram": null,
+        "vrcGroup": null
+      }
+    ],
+    "performers": [
+      {
+        "id": 5001,
+        "hidden": false,
+        "name": "Example DJ"
+      }
+    ]
+  }
+}
