@@ -5,16 +5,27 @@
 // the CURRENT version), lineup/vocab/performer JSON, and the write handlers
 // (create/update/delete/upload-flyer), enforcing the X-CSRF-Token header and the
 // optimistic-lock version. All ids/names/tokens are placeholders.
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { BrowserContext, Route } from '@playwright/test';
 
 export const GROUP_ID = 'grp_00000000-0000-4000-8000-000000000001';
 export const CSRF = 'TEST_CSRF_TOKEN';
+
+// The performer profile page ("My gigs" reads it once per slug). Reuse the U2
+// unit fixture verbatim so the mock and the parser share one source of truth.
+const PROFILE_HTML = readFileSync(
+  resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'test', 'fixtures', 'vrcpop', 'performer-profile.html'),
+  'utf8',
+);
 
 export interface VrcpopRecorder {
   version: number; // current server optimistic-lock version
   forceStale: boolean; // when true, the next update answers 500 "Concurrent edit"
   eventName?: string; // P7: readEvent title (mutate at runtime to simulate an edit)
   nextEventId: number;
+  profileGets: number; // U3: public performer-profile GETs (My gigs load-once check)
   createBodies: Record<string, unknown>[];
   updateBodies: Record<string, unknown>[];
   deleteBodies: Record<string, unknown>[];
@@ -28,6 +39,7 @@ export function newRecorder(): VrcpopRecorder {
     version: 2,
     forceStale: false,
     nextEventId: 100010,
+    profileGets: 0,
     createBodies: [],
     updateBodies: [],
     deleteBodies: [],
@@ -44,7 +56,7 @@ function page(title: string, body: string): string {
 function dashboardHtml(loggedIn: boolean): string {
   return page(
     'Clubs I Manage',
-    `<nav class="nav-sec--account"><div class="sidebar-user-status"><span class="sidebar-user-name">Example User</span><a href="/api/club/?action=logout" class="sidebar-logout-link">Logout</a></div></nav>
+    `<nav class="nav-sec--account"><div class="sidebar-user-status"><span class="sidebar-user-name">Example User</span><a href="/api/club/?action=logout" class="sidebar-logout-link">Logout</a></div><a href="/manage/performer/example-dj" class="sidebar-performer-link">Performer profile</a></nav>
 <div class="manage-container dashboard-page"><h1>Clubs I Manage</h1>
 <section class="manage-section"><div class="club-grid">
   <div class="club-card"><div class="club-card-main"><div class="club-card-info"><div class="club-card-header">
@@ -206,6 +218,11 @@ export async function mockVrcpopSite(
 
     // reads
     if (method === 'GET' && p === '/dashboard') return htmlRes(route, dashboardHtml(loggedIn));
+    // Public performer profile ("My gigs"). Count GETs to prove load-once + Refresh.
+    if (method === 'GET' && /^\/u\/[a-z0-9-]+$/.test(p)) {
+      recorder.profileGets += 1;
+      return htmlRes(route, PROFILE_HTML);
+    }
     if (method === 'GET' && /\/events$/.test(p)) return htmlRes(route, eventsListHtml(extraEvents));
     if (method === 'GET' && /\/edit$/.test(p)) return htmlRes(route, editPageHtml(recorder.version, 100001, recorder.eventName));
     if (method === 'GET' && p === '/api/event-lineup.php') return json(route, lineupBody);

@@ -25,6 +25,12 @@ export interface DeveloperSettings {
   panels: boolean;
 }
 
+// "My gigs" DJ names the user looks up across platforms. Stored normalized
+// (see ui/lib/gig-names normalizeGigNames); empty by default.
+export interface GigsSettings {
+  names: string[];
+}
+
 export interface Settings {
   closeOpenedTabs: boolean;
   testPrefix: string;
@@ -33,11 +39,14 @@ export interface Settings {
   sync: SyncSettings; // defaults new links inherit (off by default)
   editor: EditorSettings;
   developer: DeveloperSettings; // footer dev panels off by default
+  gigs: GigsSettings; // My gigs DJ names (empty by default)
 }
 
 export const DEFAULT_EDITOR: EditorSettings = { defaultDurationMin: 120 };
 
 export const DEFAULT_DEVELOPER: DeveloperSettings = { panels: false };
+
+export const DEFAULT_GIGS: GigsSettings = { names: [] };
 
 // Default sync settings a new link inherits: off, source = last-edited, publish
 // state NOT synced by default (a publish flip is deliberate, never automatic).
@@ -61,6 +70,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sync: { ...DEFAULT_SYNC, fields: { ...DEFAULT_SYNC.fields } },
   editor: { ...DEFAULT_EDITOR },
   developer: { ...DEFAULT_DEVELOPER },
+  gigs: { ...DEFAULT_GIGS },
 };
 
 const KEY = 'settings';
@@ -74,6 +84,7 @@ function merge(stored: unknown): Settings {
   const syFields = (typeof sy.fields === 'object' && sy.fields !== null ? sy.fields : {}) as Partial<SyncSettings['fields']>;
   const ed = (typeof s.editor === 'object' && s.editor !== null ? s.editor : {}) as Partial<EditorSettings>;
   const dv = (typeof s.developer === 'object' && s.developer !== null ? s.developer : {}) as Partial<DeveloperSettings>;
+  const gg = (typeof s.gigs === 'object' && s.gigs !== null ? s.gigs : {}) as Partial<GigsSettings>;
   return {
     ...DEFAULT_SETTINGS,
     ...s,
@@ -82,6 +93,7 @@ function merge(stored: unknown): Settings {
     sync: { ...DEFAULT_SYNC, ...sy, fields: { ...DEFAULT_SYNC.fields, ...syFields } },
     editor: { ...DEFAULT_EDITOR, ...ed },
     developer: { ...DEFAULT_DEVELOPER, ...dv },
+    gigs: { names: Array.isArray(gg.names) ? gg.names : DEFAULT_GIGS.names },
   };
 }
 

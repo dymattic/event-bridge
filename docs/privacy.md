@@ -16,6 +16,7 @@ machine. Nothing is uploaded to event-bridge; there is no event-bridge server.
 | `clubLinks` | Cross-platform **club** links — which per-platform clubs are the same club. |
 | `dismissedSuggestions` | "Not the same event" dismissals (suggestion keys). |
 | `jobs` | A local log of the last runs (create/edit/transfer/delete/sync). |
+| `settings.gigs` | Your saved DJ name(s) for the **My gigs** lookup. |
 | `ravepage.auth` | The rave.page access token (only if you connect rave.page). |
 
 Event/club links, dismissals, the job log and settings are computed and kept
@@ -25,6 +26,10 @@ Uninstalling the extension (or clearing its storage) removes them.
 Per-link **sync settings** and the last-synced baseline hashes live inside `links`;
 they too stay on your machine. Sync runs only while the dashboard is open — never
 in the background — and never publishes without a confirmation.
+
+Your **My gigs** DJ names are stored locally (`storage.local`); the lookup reads
+your own performer profile, your clubs' events and your bookings only when you
+open the page or press **Refresh** — never on a timer or in the background.
 
 The **job log** keeps, per step, the *exact request event-bridge sent* (so you can
 audit what it did) — but only the request body, **never** session tokens, cookies

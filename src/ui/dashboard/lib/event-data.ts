@@ -7,6 +7,8 @@
 import type { EventCore } from '../../../core/schema';
 import type { JsonValue } from '../../../core/hash';
 import { renderPreview, resolveRefs } from '../../../core/planner';
+import type { Gig } from '../../../core/gigs';
+import { dedupeGigs, isUpcomingGig, sortGigs } from '../../../core/gigs';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import type { OwnClub, VocabEntry } from '../../../adapters/types';
@@ -14,6 +16,7 @@ import { getSessionStatus } from '../../../runtime/sessions';
 import { status as ravepageStatus } from '../../../adapters/ravepage/auth';
 import { isRavepageEnabled } from '../../../runtime/settings';
 import { READ_GAP_MS, THIRD_PARTY } from '../../lib/platform-meta';
+import { errorText } from '../../lib/error-copy';
 import type { EventRow } from '../../lib/event-filters';
 
 export interface PlatformConn {
@@ -46,6 +49,35 @@ export async function loadConnections(): Promise<Record<Platform, PlatformConn>>
     vrcpop: { connected: vp.state === 'logged-in', label: vp.info?.label },
     ravepage: { connected: rp.connected, label: rp.label, expiresAt: rp.expiresAt },
   };
+}
+
+// "My gigs" across platforms. Each adapter is queried in PARALLEL (it paces its
+// own reads); one platform failing lands in `errors[p]` (human copy) and never
+// hides the others. Result = upcoming-only, deduped, sorted. Empty names -> no
+// adapter call. Loads once per key + on explicit Refresh (the view's useResource
+// with an infinite TTL) — NEVER on a timer.
+export interface GigsLoad {
+  gigs: Gig[];
+  errors: Partial<Record<Platform, string>>;
+  queried: Platform[];
+}
+
+export async function loadGigs(platforms: Platform[], names: string[], now = Date.now()): Promise<GigsLoad> {
+  if (names.length === 0) return { gigs: [], errors: {}, queried: [] };
+  const errors: Partial<Record<Platform, string>> = {};
+  const results = await Promise.all(
+    platforms.map(async (p) => {
+      try {
+        await paceHost(p);
+        return await getAdapter(p).listGigs(names, { now });
+      } catch (e) {
+        errors[p] = errorText(e, p);
+        return [] as Gig[];
+      }
+    }),
+  );
+  const gigs = sortGigs(dedupeGigs(results.flat().filter((g) => isUpcomingGig(g, now))));
+  return { gigs, errors, queried: platforms };
 }
 
 // Own clubs -> own events per club (sequential + paced for third-party hosts).

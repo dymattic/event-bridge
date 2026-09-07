@@ -10,6 +10,13 @@ export const RP_GROUP = 'grp_00000000-0000-4000-8000-000000009001';
 export const RP_EVENT_1 = 'evt_00000000-0000-4000-8000-0000000000e1';
 export const RP_EVENT_2 = 'evt_00000000-0000-4000-8000-0000000000e2';
 
+// "My gigs" bookings (U3). Own performer id is distinct from the lineup fixture's
+// `prf_1` so the own-event complement scan doesn't also match the seeded events —
+// only the two bookings below become gigs.
+export const RP_PERFORMER = 'prf_00000000-0000-4000-8000-0000000000a1';
+export const RP_EVENT_7 = 'evt_00000000-0000-4000-8000-0000000000e7';
+export const RP_EVENT_8 = 'evt_00000000-0000-4000-8000-0000000000e8';
+
 export const RP_NEW_EVENT = 'evt_00000000-0000-4000-8000-0000000000ff';
 
 export interface RavepageRecorder {
@@ -57,6 +64,20 @@ const EVENTS = [
   },
 ];
 
+// Two bookings for the user's performer: one accepted (confirmed), one pending.
+const BOOKINGS = [
+  {
+    id: 'bkg_1', status: 'accepted', performer_id: RP_PERFORMER,
+    event_id: RP_EVENT_7, event_name: 'Booked Night', event_date: '2030-05-01T20:00:00Z',
+    slot_starts_at: '2030-05-01T21:00:00Z', slot_ends_at: '2030-05-01T22:00:00Z', venue_name: 'Booked Venue',
+  },
+  {
+    id: 'bkg_2', status: 'pending', performer_id: RP_PERFORMER,
+    event_id: RP_EVENT_8, event_name: 'Pending Night', event_date: '2030-06-01T20:00:00Z',
+    slot_starts_at: '2030-06-01T21:00:00Z', slot_ends_at: '2030-06-01T22:00:00Z', venue_name: 'Pending Venue',
+  },
+];
+
 export async function mockRavepageEvents(context: BrowserContext, recorder: RavepageRecorder): Promise<void> {
   await context.route(/https:\/\/development\.rave\.page\//, (route) =>
     route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>rp</title>' }),
@@ -71,6 +92,9 @@ export async function mockRavepageEvents(context: BrowserContext, recorder: Rave
     if (method === 'GET' && path === '/groups/mine') return json(200, [{ id: RP_GROUP, name: 'Neon Collective', can_organize_events: true }]);
     if (method === 'GET' && path === '/events/organizers') return json(200, []);
     if (method === 'GET' && path === '/performers') return json(200, [{ id: 'prf_1', name: 'Example DJ', slug: 'example-dj' }]);
+    // My gigs: own performer profiles + bookings received.
+    if (method === 'GET' && path === '/users/me/performers') return json(200, [{ id: RP_PERFORMER, name: 'Example DJ' }]);
+    if (method === 'GET' && path === '/bookings/received') return json(200, BOOKINGS);
     if (method === 'GET' && path === '/events') return json(200, EVENTS);
 
     // ---- writes (create flow) ----

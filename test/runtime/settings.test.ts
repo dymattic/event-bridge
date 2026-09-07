@@ -49,6 +49,15 @@ describe('settings defaults + merge', () => {
     expect((await getSettings()).editor.defaultDurationMin).toBe(90);
   });
 
+  it('defaults gigs.names to [] and deep-merges a stored gigs block', async () => {
+    expect((await getSettings()).gigs).toEqual({ names: [] });
+    // Legacy settings predate `gigs` — it must load with the default.
+    h.ext = createFake({ storage: { settings: { testPrefix: 'OLD ' } } }).ext;
+    expect((await getSettings()).gigs).toEqual({ names: [] });
+    h.ext = createFake({ storage: { settings: { gigs: { names: ['DJ Example'] } } } }).ext;
+    expect((await getSettings()).gigs).toEqual({ names: ['DJ Example'] });
+  });
+
   it('defaults developer.panels off and deep-merges a stored developer block', async () => {
     expect((await getSettings()).developer.panels).toBe(false);
     // Legacy settings predate `developer` — it must load with the default.

@@ -183,7 +183,10 @@ export default function Overview(): React.JSX.Element {
       <header className="mb-4">
         <h1 className="font-orbitron text-2xl text-foreground">event-bridge</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Move your events and lineups between vrc.tl, vrcpop.com and rave.page — in your own browser sessions.
+          Move your events and lineups between vrc.tl, vrcpop.com and rave.page — in your own browser sessions.{' '}
+          <a href="#/gigs" data-testid="overview-gigs-link" className="text-brand-mint underline-offset-2 hover:underline">
+            My gigs →
+          </a>
         </p>
       </header>
 

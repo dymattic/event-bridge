@@ -82,6 +82,8 @@ What you'll find:
   one-click **Transfer** creates it there. **Edit** opens the event; event-bridge
   also suggests "probably the same event" for look-alike copies so you can link
   them into one row.
+- **My gigs** — see your upcoming gigs across platforms by entering your DJ name;
+  export them as an `.ics` calendar.
 - **Announce** — copy Discord-ready announcements with live `<t:…>` timestamps,
   your lineup and links to every platform, from presets you design.
 - **Creating an event** — enter it once: title, start time, lineup, flags,

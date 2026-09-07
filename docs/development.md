@@ -210,6 +210,7 @@ filter state (`#/events?platform=…&club=…&q=…`); the router splits path fr
 | `#/events/new` (optional `?targets=vrctl,vrcpop`) | Event editor, create (`views/EventEditor.tsx`) — multi-target |
 | `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete/edit |
 | `#/events/:platform/:id/edit` (optional `?targets=…`) | Event editor, edit (`views/EventEditor.tsx`) — source event ∪ extra create targets (Transfer) |
+| `#/gigs` | Gigs (`views/Gigs.tsx`) — My gigs: DJ-name lookup across connected platforms, grouped list with public links, ICS export. Loads once per open + Refresh (no timers) |
 | `#/announce` (optional `?platform=…&id=…&preset=…`) | Announce (`views/Announce.tsx`) — Discord announcement presets: template editor, live `<t:>` preview, lineup + public platform links, copy |
 | `#/clubs` | Clubs (`views/Clubs.tsx`) — link the same club across platforms (one row per anchor) |
 | `#/jobs` | Jobs (`views/Jobs.tsx`) — persisted job log (create/edit/transfer/delete/sync) with per-step request previews |
@@ -498,6 +499,44 @@ Sync cell) on any linked row (`le.linkId`), in both the table and the mobile car
 A link whose refs match no loaded row produces no row (`groupLogicalEvents` drops
 a zero-`found` link) — that fully-orphaned case only arises when every ref's event
 is deleted/unlisted; a link with any listed ref is always removable.
+
+### My gigs (DJ-name lookup, ICS)
+
+`#/gigs` (`views/Gigs.tsx`) answers "where am I playing next?" The user enters
+their DJ name(s) (`settings.gigs.names`, normalized by `ui/lib/gig-names.ts` —
+trimmed, non-empty, deduped case-insensitively, ≤10 names, ≤64 chars each). For
+each **enabled + connected** platform, `dashboard/lib/event-data.ts` `loadGigs`
+runs every adapter's `listGigs(names)` in **parallel** (each adapter paces its own
+reads); one platform failing lands in `errors[p]` (human copy via `error-copy`)
+and never hides the others. What each platform reads:
+
+- **vrcpop.com** — the user's own **performer profile** (`/u/<slug>`, public
+  page, own/self-asserted slug only) plus the lineups of clubs they manage. See
+  [docs/platforms/vrcpop.md](platforms/vrcpop.md).
+- **vrc.tl** — lineups of the user's **own clubs only** (vrc.tl exposes no public
+  performer index, so a gig on someone else's vrc.tl event is not discoverable).
+  See [docs/platforms/vrctl.md](platforms/vrctl.md).
+- **rave.page** — the user's **bookings received** (accepted → confirmed,
+  unaccepted → a "pending" badge) plus own-event lineups. See
+  [docs/platforms/ravepage.md](platforms/ravepage.md).
+
+**Load-once discipline (user + repo rule).** The view keys a `useResource` with an
+**infinite TTL** on `gigs:<platforms>:<names>`, so it fetches exactly once when the
+page opens (or the key changes) and again only on an explicit **Refresh** —
+**never** on a timer or in the background. e2e asserts `recorder.profileGets`
+stays `1` until Refresh.
+
+**Grouping + display.** `core/gigs.ts` `groupGigs` merges the same logical event
+across platforms into one row (single-linkage on normalized title + start within a
+6h window, or a shared club within 1h with a high title similarity; at most one
+gig per platform per group). Each row shows the local when/set-time, the event
+title (public link), the club, one link chip per platform, and the matched name —
+resolved names only, never raw ids as a primary label.
+
+**ICS export.** `core/ics.ts` `buildIcs(groups, { mode })` builds an RFC-5545
+calendar; the `SmartSelect` picks the mode — **My set times** (`set`: DTSTART/END =
+the user's slot, event fallback) or **Whole event** (`event`). `dashboard/lib/
+download.ts` `downloadText` does the Blob/anchor mechanics.
 
 ## Settings & the experimental rave.page toggle
 
