@@ -111,6 +111,9 @@ function Detail({ platform, id, core }: { platform: Platform; id: string; core: 
           <Button asChild type="button" variant="outline" data-testid="event-detail-edit">
             <a href={`#/events/${platform}/${id}/edit`}>Edit</a>
           </Button>
+          <Button asChild type="button" variant="outline" data-testid="event-detail-announce">
+            <a href={`#/announce?platform=${platform}&id=${id}`}>Announce</a>
+          </Button>
           <Button type="button" variant="destructive" data-testid="event-detail-delete" onClick={() => setDeleting(target)}>
             Delete
           </Button>

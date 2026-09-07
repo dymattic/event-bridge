@@ -210,6 +210,7 @@ filter state (`#/events?platform=…&club=…&q=…`); the router splits path fr
 | `#/events/new` (optional `?targets=vrctl,vrcpop`) | Event editor, create (`views/EventEditor.tsx`) — multi-target |
 | `#/events/:platform/:id` | Event detail (`views/EventDetail.tsx`) — read-only resolved view + delete/edit |
 | `#/events/:platform/:id/edit` (optional `?targets=…`) | Event editor, edit (`views/EventEditor.tsx`) — source event ∪ extra create targets (Transfer) |
+| `#/announce` (optional `?platform=…&id=…&preset=…`) | Announce (`views/Announce.tsx`) — Discord announcement presets: template editor, live `<t:>` preview, lineup + public platform links, copy |
 | `#/clubs` | Clubs (`views/Clubs.tsx`) — link the same club across platforms (one row per anchor) |
 | `#/jobs` | Jobs (`views/Jobs.tsx`) — persisted job log (create/edit/transfer/delete/sync) with per-step request previews |
 | `#/settings` | Settings (`views/Settings.tsx`) — General + Sync defaults + Experimental (rave.page toggle + instance) |
@@ -631,6 +632,58 @@ comments citing the `EventOut` schema fields): platform tags `windows→pc`,
 `club | festival | rave | concert | showcase`; `energy_level` ∈
 `chill | medium | high | extreme`. Unmappable scene/energy values drop to the
 loss report instead of being sent verbatim.
+
+### Discord announcements (presets)
+
+`#/announce` (`views/Announce.tsx`) renders a Discord-ready post for one of your
+events from a user-editable **preset**. A preset is a header / per-slot line /
+footer template; the pure renderer (`core/discord.ts`, `renderAnnouncement`)
+resolves `{token}` placeholders, markdown-escapes text (URLs kept intact), joins
+the slot lines, and drops the lineup block between header and footer unless the
+author placed `{lineup}` themselves.
+
+**Timestamps** compile to `<t:unix:STYLE>` — Discord shows each in the READER's
+own time zone, so the extension never picks one.
+
+| Style | Renders as |
+|---|---|
+| `t` | 16:20 |
+| `T` | 16:20:30 |
+| `d` | 20/04/2021 |
+| `D` | 20 April 2021 |
+| `f` | 20 April 2021 16:20 |
+| `F` | Tuesday, 20 April 2021 16:20 |
+| `R` | in 2 months |
+
+**Placeholders** are scoped. Event scope (usable in header/footer): `{title}`,
+`{description}`, `{club}`, `{start:STYLE}`, `{end:STYLE}`, `{doors:STYLE}`,
+`{duration}`, `{genres}`, `{links}`, `{link:vrctl|vrcpop|ravepage}`, `{lineup}`,
+`{count}`. Slot scope (the per-slot line): `{n}`, `{performers}`, `{vj}`,
+`{start:STYLE}`, `{end:STYLE}`, `{duration}`, `{genre}`, `{energy}`, `{title}`,
+`{note}`. Event timestamps default to `F`, slot timestamps to `t`. Append `!raw`
+to a token to skip markdown-escaping. The full list ships as `PLACEHOLDER_HELP`
+and is shown in the view's Placeholders disclosure.
+
+**Links are PUBLIC event URLs.** `{links}` / `{link:…}` resolve every ref of the
+event's cross-platform `EventLink` (`runtime/link-store`) through
+`publicEventUrl` (`ui/lib/platform-urls`) in `PLATFORM_ORDER` — the share pages
+anyone can open, never the owner manage/detail surface. With no link, just the
+selected platform's public URL.
+
+**Presets live locally.** Three code builtins (`DEFAULT_PRESETS`: Classic,
+Compact, Countdown) plus user presets in `storage.local` under `announcePresets`
+(`runtime/announce-presets.ts` — builtins first, then user presets by `updatedAt`
+desc; save/delete refuse builtin ids). Built-ins are read-only; **Duplicate to
+edit** copies one into an editable user preset. Edits render live (unsaved
+included); the selected preset id rides in the URL (`?preset=`) so it survives a
+reload.
+
+**2000-char guard.** The preview shows a live character count and a warning
+badge past Discord's 2000-character message limit (the post is not blocked).
+**Copy for Discord** writes the exact text via `navigator.clipboard`, falling
+back to a hidden `<textarea>` + `execCommand('copy')` (extension pages may lack
+async-clipboard permission), and mirrors the text in a hidden `announce-raw`
+textarea for e2e/manual selection.
 
 ## Manual verification browser (`pnpm dev:browser`)
 

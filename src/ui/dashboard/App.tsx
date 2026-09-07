@@ -1,5 +1,6 @@
 // Dashboard shell: minimal hash router + muted footer nav. Routes:
 //   default (#/)      -> Overview (three equal platform cards)
+//   #/announce        -> Announce (Discord announcement presets)
 //   #/kit             -> @rave-page/ui showcase (KitShowcase)
 //   #/dev/ravepage    -> rave.page dev panel (RavepageDevPanel, keeps rp-* testids)
 //   #/dev/vrcpop      -> vrcpop dev panel
@@ -19,6 +20,7 @@ import { connect, disconnect, whoAmI } from '../../adapters/ravepage/auth';
 import type { ConnectionStatus, OwnClub } from '../../adapters/types';
 import Overview from './views/Overview';
 import Events from './views/Events';
+import Announce from './views/Announce';
 import Clubs from './views/Clubs';
 import EventDetail from './views/EventDetail';
 import EventEditor from './views/EventEditor';
@@ -263,6 +265,7 @@ function useHashRoute(): string {
 const TOP_NAV: { hash: string; label: string; match: (path: string) => boolean }[] = [
   { hash: '#/', label: 'Overview', match: (p) => p === '/' },
   { hash: '#/events', label: 'Events', match: (p) => p.startsWith('/events') },
+  { hash: '#/announce', label: 'Announce', match: (p) => p === '/announce' },
   { hash: '#/clubs', label: 'Clubs', match: (p) => p.startsWith('/clubs') },
   { hash: '#/jobs', label: 'Jobs', match: (p) => p === '/jobs' },
   { hash: '#/settings', label: 'Settings', match: (p) => p === '/settings' },
@@ -369,6 +372,8 @@ export function App() {
         <Clubs />
       ) : path === '/events' ? (
         <Events query={query} />
+      ) : path === '/announce' ? (
+        <Announce query={query} />
       ) : (
         <Overview />
       );
