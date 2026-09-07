@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Example DJ — vrcpop</title>
+<meta name="csrf-token" content="TEST_CSRF_TOKEN">
+</head>
+<body>
+<main class="dj-profile">
+  <header class="dj-profile-head"><h1 class="dj-name">Example DJ</h1></header>
+
+  <div class="u-sec" data-section-id="upcoming_sets" data-section-region="main" data-view-mode="cards">
+    <section class="dj-section dj-section--upcoming">
+      <h2 class="dj-section-title">Upcoming sets</h2>
+      <div class="dj-next-hero" data-utc="2030-09-08T03:00:00Z">
+        <div class="dj-next-hero__when">
+          <span class="dj-next-hero__weekday">Sunday</span>
+          <span class="dj-next-hero__date">September 8, 2030</span>
+          <span class="dj-next-hero__time">10:00 PM-11:00 PM <span class="dj-tz">(CDT)</span></span>
+        </div>
+        <div class="dj-next-hero__what">
+          <a class="dj-next-hero__event" href="/event/100777">Example Night</a>
+          <a class="dj-next-hero__club" href="/club/example-club">Example Club</a>
+        </div>
+      </div>
+      <div class="dj-set-row dj-set-row--compact" data-date="2030-09-15">
+        <div class="dj-set-date"><span class="dj-set-day">15</span><span class="dj-set-month">Sep</span></div>
+        <div class="dj-set-info">
+          <a class="dj-set-event" href="/event/100778">Second Night</a>
+          <div class="dj-set-sub">
+            <a href="/group.php?id=grp_00000000-0000-4000-8000-000000000001">Other Club</a>
+            <span class="dj-set-time" data-start="2030-09-15T01:00:00Z" data-end="2030-09-15T05:00:00Z">9:00 PM-1:00 AM EDT</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="u-sec" data-section-id="upcoming_nights" data-section-region="main" data-view-mode="rows">
+    <section class="dj-section">
+      <h2 class="dj-section-title">Nights I'm going to</h2>
+      <div class="dj-set-row dj-set-row--compact" data-date="2030-10-01">
+        <div class="dj-set-info">
+          <a class="dj-set-event" href="/event/100999">RSVP Night (must be ignored)</a>
+          <div class="dj-set-sub">
+            <a href="/club/example-club">Example Club</a>
+            <span class="dj-set-time" data-start="2030-10-01T01:00:00Z" data-end="2030-10-01T05:00:00Z">9:00 PM-1:00 AM EDT</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="u-sec" data-section-id="set_history" data-section-region="main" data-view-mode="rows">
+    <section class="dj-section">
+      <h2 class="dj-section-title">Set history</h2>
+      <div class="dj-set-row dj-set-row--compact" data-date="2020-01-05">
+        <div class="dj-set-info">
+          <a class="dj-set-event" href="/event/100700">Old Set (past)</a>
+          <div class="dj-set-sub">
+            <a href="/club/example-club">Example Club</a>
+            <span class="dj-set-time" data-start="2020-01-05T01:00:00Z" data-end="2020-01-05T05:00:00Z">9:00 PM-1:00 AM EST</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

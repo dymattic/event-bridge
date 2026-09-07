@@ -126,6 +126,18 @@ presets. Public share links: `platform-meta.ts` `PUBLIC_EVENT_URL` (third-party,
 static) + `platform-urls.ts` `publicEventUrl` (rave.page instance). Adapters build
 the inputs; views consume these exports.
 
+## My gigs data sources
+
+Each adapter's `listGigs(names, {now})` returns raw per-platform `Gig[]` (deduped
+per event id, upcoming only); the UI groups/sorts across platforms. `names` empty
+→ `[]` with no I/O. Per platform: **vrctl** scans the admin grid and reads each
+upcoming own-club event's detail form, matching the lineup. **vrcpop** reads the
+user's public performer profile(s) `/u/<slug>` (own + matched search slugs, ≤5),
+plus an own-events lineup complement. **ravepage** combines bookings received for
+the user's matched performer profiles with an own-events lineup complement.
+Third-party detail reads are capped at `MAX_EVENT_READS` (25) per platform per
+call and paced ≥300 ms apart (vrctl/vrcpop); rave.page is our own API, no pacing.
+
 ## Build & manifests
 
 esbuild produces four IIFE bundles (background / agent / popup / dashboard);

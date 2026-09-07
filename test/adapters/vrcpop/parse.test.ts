@@ -2,7 +2,17 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { eventToOwn, parseCsrf, parseDashboard, parseEditPage, parseEventsList, parseVrcpopCardDate } from '../../../src/adapters/vrcpop/parse';
+import {
+  eventToOwn,
+  parseCsrf,
+  parseDashboard,
+  parseEditPage,
+  parseEventsList,
+  parseOwnPerformerSlugs,
+  parsePerformerProfile,
+  parseVrcpopCardDate,
+  parseVrcpopTimeRange,
+} from '../../../src/adapters/vrcpop/parse';
 import { isOwnEventRef, isOwnGroupRef, ownEventRef, type VrcpopEventRef } from '../../../src/adapters/vrcpop/types';
 import { isBridgeError } from '../../../src/core/errors';
 
@@ -119,6 +129,78 @@ describe('parseEditPage', () => {
     expect(out.core.start).toBe('2026-09-03T20:00:00Z');
     expect(out.core.lineup[0]?.performers[0]?.name).toBe('Example DJ');
     expect(out.core.extras.vrcpop).toMatchObject({ version: 2, status: 'published' });
+  });
+});
+
+describe('parseOwnPerformerSlugs', () => {
+  it('reads /manage/performer/<slug> links from the dashboard, validated + deduped', () => {
+    expect(parseOwnPerformerSlugs(fixture('dashboard.html'))).toEqual(['example-dj']);
+  });
+  it('drops invalid slugs and dedupes', () => {
+    const html =
+      '<a href="/manage/performer/good-one"></a>' +
+      '<a href="/manage/performer/good-one"></a>' + // dupe
+      '<a href="/manage/performer/Bad Slug"></a>' + // space -> invalid
+      '<a href="/manage/performer/UPPER"></a>'; // uppercase -> invalid
+    expect(parseOwnPerformerSlugs(html)).toEqual(['good-one']);
+  });
+});
+
+describe('parseVrcpopTimeRange', () => {
+  const start = '2030-09-08T03:00:00Z';
+  it('derives the end from a clock range + UTC start', () => {
+    expect(parseVrcpopTimeRange('10:00 PM-11:00 PM (CDT)', start)).toBe('2030-09-08T04:00:00Z');
+  });
+  it('wraps past midnight', () => {
+    expect(parseVrcpopTimeRange('11:00 PM-1:00 AM EDT', start)).toBe('2030-09-08T05:00:00Z');
+  });
+  it('undefined when unparseable or zero-length', () => {
+    expect(parseVrcpopTimeRange('doors soon', start)).toBeUndefined();
+    expect(parseVrcpopTimeRange('10:00 PM-10:00 PM', start)).toBeUndefined();
+    expect(parseVrcpopTimeRange('10:00 PM-11:00 PM', 'not-a-date')).toBeUndefined();
+  });
+});
+
+describe('parsePerformerProfile', () => {
+  const now = Date.parse('2026-09-07T00:00:00Z');
+  const sets = parsePerformerProfile(fixture('performer-profile.html'), now);
+
+  it('keeps the hero + future rows, ignores upcoming_nights RSVPs and past history', () => {
+    expect(sets.map((s) => s.eventId).sort((a, b) => a - b)).toEqual([100777, 100778]);
+  });
+  it('parses the hero (event/club/times, end derived from the clock range)', () => {
+    const hero = sets.find((s) => s.eventId === 100777)!;
+    expect(hero.fromHero).toBe(true);
+    expect(hero.title).toBe('Example Night');
+    expect(hero.eventPath).toBe('/event/100777');
+    expect(hero.clubName).toBe('Example Club');
+    expect(hero.clubPath).toBe('/club/example-club');
+    expect(hero.start).toBe('2030-09-08T03:00:00Z');
+    expect(hero.end).toBe('2030-09-08T04:00:00Z');
+  });
+  it('parses set rows with data-start/data-end and the group-href club', () => {
+    const row = sets.find((s) => s.eventId === 100778)!;
+    expect(row.fromHero).toBe(false);
+    expect(row.clubName).toBe('Other Club');
+    expect(row.clubPath).toContain('/group.php?id=grp_');
+    expect(row.start).toBe('2030-09-15T01:00:00Z');
+    expect(row.end).toBe('2030-09-15T05:00:00Z');
+  });
+  it('dedupes by event id, hero winning', () => {
+    const html =
+      '<section class="dj-section dj-section--upcoming">' +
+      '<div class="dj-next-hero" data-utc="2030-09-08T03:00:00Z">' +
+      '<span class="dj-next-hero__time">10:00 PM-11:00 PM</span>' +
+      '<a class="dj-next-hero__event" href="/event/555">Hero Title</a>' +
+      '<a class="dj-next-hero__club" href="/club/x">Club X</a></div>' +
+      '<div class="dj-set-row"><a class="dj-set-event" href="/event/555">Row Title</a>' +
+      '<div class="dj-set-sub"><a href="/club/x">Club X</a>' +
+      '<span class="dj-set-time" data-start="2030-09-08T02:00:00Z" data-end="2030-09-08T03:00:00Z"></span></div></div>' +
+      '</section>';
+    const out = parsePerformerProfile(html, now);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.title).toBe('Hero Title');
+    expect(out[0]?.fromHero).toBe(true);
   });
 });
 

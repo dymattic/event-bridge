@@ -12,6 +12,7 @@ const METHODS: (keyof PlatformAdapter)[] = [
   'session',
   'listOwnClubs',
   'listOwnEvents',
+  'listGigs',
   'readEvent',
   'loadVocab',
   'resolvePerformer',

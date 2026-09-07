@@ -22,11 +22,28 @@ manage listings — a raw user-typed id can't reach a write.
 | editPage | `GET /manage/club/<grp>/events/<id>/edit` | `#event-wizard-container[data-event]` JSON (+ `data-event-id/-group-id/-club-scene-type/-default-hosts`) → `fromVrcpop`; `version` kept in `extras.vrcpop` |
 | lineup | `GET /api/event-lineup.php?event_id=` | richer slot detail (prefers `*_timestamp_utc`) |
 | genres / energy | `GET /api/dj/?action=genres\|energy` | vocab `{id,name}` |
-| performerSearchAll | `GET /api/dj/?action=search-all&q=&type=dj` | performer hits |
+| performerSearchAll | `GET /api/dj/?action=search-all&q=&type=dj` | performer hits (`slug` when present) |
+| performerProfile | `GET /u/<slug>` | public profile → upcoming sets (`ProfileSet[]`): hero + `.dj-set-row`s |
 
 `action=search` returns HTTP 400 "Unknown action" (recon) — `resolvePerformer`
 uses `search-all`. `performerSearch` (`action=search`) stays on the allowlist for
 completeness but is not the primary path.
+
+### Performer profile (My gigs)
+
+`listGigs(names)` finds the user's upcoming appearances. Own performer slugs come
+from the dashboard (`<a href="/manage/performer/<slug>">`), plus `search-all`
+hits whose name matches and each name's `slugifyName` candidate — union capped at
+5 slugs (own first). Each `/u/<slug>` page (branded `PerformerSlugRef`;
+`/dj/<slug>` redirects here) is read **once per slug per manual refresh** — user
+agency, no crawling; the page is public and self-asserted (the user's OWN
+profile). The **`upcoming_sets`** section renders only with a future set: parse
+its `.dj-next-hero[data-utc]` (title/club/href; end derived from the clock range
+via `parseVrcpopTimeRange`) plus every `.dj-set-row` outside `upcoming_nights`
+(RSVPs, ignored) whose `data-end`/`data-start` ≥ now; dedupe by event id, hero
+winning. A complement scans own clubs' upcoming events and matches the lineup
+(`matchLineupNames`), capped at `MAX_EVENT_READS` (25) detail reads, paced ≥300 ms
+apart. A 404 slug is skipped. Public event link: `https://vrcpop.com/event/<id>`.
 
 ### Writes (JSON; header `X-CSRF-Token`)
 

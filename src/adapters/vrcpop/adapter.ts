@@ -5,17 +5,27 @@
 // (id, caps, session, listOwnClubs, listOwnEvents, readEvent, loadVocab,
 // resolvePerformer, planCreate/Update/Delete/Poster, execute); once
 // src/adapters/types.ts (P3) lands, the lead binds this to PlatformAdapter.
-import type { EventCore } from '../../core/schema';
+import type { EventCore, IsoUtc } from '../../core/schema';
 import type { JsonValue } from '../../core/hash';
 import { resolveRefs, type PlannedStep } from '../../core/planner';
 import type { SessionInfo } from '../../shared/agent-protocol';
 import { BridgeError } from '../../core/errors';
+import { dedupeGigs, isUpcomingGig, matchLineupNames, nameMatches, type Gig } from '../../core/gigs';
 import { fromVrcpop, type VrcpopDataEvent, type VrcpopLineupBody } from '../../core/mapping/from-vrcpop';
 import type { VrcpopEventPayload } from '../../core/mapping/to-vrcpop';
 
 import { request } from './routes';
 import { classifyRead, parseReadJson, parseWriteJson } from './http-result';
-import { parseDashboard, parseEditPage, parseEventsList, parseCsrf } from './parse';
+import {
+  parseDashboard,
+  parseEditPage,
+  parseEventsList,
+  parseCsrf,
+  parseOwnPerformerSlugs,
+  parsePerformerProfile,
+  parseVrcpopCardDate,
+  type ProfileSet,
+} from './parse';
 import { makeVocab, parsePerformerSearchAll } from './payloads';
 import { planCreate, planDelete, planPoster, planUpdate, type PlanCreateOpts, type PlanPosterOpts, type PlanUpdateOpts } from './planner';
 import { vrcpopCaps, type VrcpopCaps } from './capabilities';
@@ -23,6 +33,8 @@ import {
   isOwnEventRef,
   isOwnGroupRef,
   ownEventRef,
+  performerSlugRef,
+  slugifyName,
   type OwnEventRef,
   type OwnGroupRef,
   type PerformerHit,
@@ -114,6 +126,126 @@ async function freshCsrf(agent: VrcpopAgent): Promise<string> {
   return parseCsrf(res.body ?? '');
 }
 
+// ---- my gigs ----
+
+// Human-scale cap on own-event detail reads per call.
+export const MAX_EVENT_READS = 25;
+
+const APP = 'https://vrcpop.com';
+const MAX_SLUGS = 5; // profiles read per call (own first)
+
+export interface VrcpopGigsOpts {
+  now: number;
+  pace: () => Promise<void>; // >=300ms spacer (platform.ts); no-op in tests
+  maxEventReads?: number;
+}
+
+function profileGig(st: ProfileSet, matchedName: string): Gig {
+  // Profile set times ARE the user's slot; the event start is unknown here, so
+  // start := setStart (documented on Gig).
+  const g: Gig = {
+    platform: 'vrcpop',
+    eventId: String(st.eventId),
+    title: st.title,
+    eventUrl: `${APP}${st.eventPath}`,
+    start: st.start as IsoUtc,
+    setStart: st.start as IsoUtc,
+    matchedName,
+    status: 'confirmed',
+    source: 'profile',
+  };
+  if (st.clubName) g.clubName = st.clubName;
+  if (st.clubPath) g.clubUrl = `${APP}${st.clubPath}`;
+  if (st.end) {
+    g.end = st.end as IsoUtc;
+    g.setEnd = st.end as IsoUtc;
+  }
+  return g;
+}
+
+async function listGigs(agent: VrcpopAgent, names: readonly string[], opts: VrcpopGigsOpts): Promise<Gig[]> {
+  if (names.length === 0) return [];
+  const { now, pace } = opts;
+  const maxReads = opts.maxEventReads ?? MAX_EVENT_READS;
+
+  // 1. dashboard -> own clubs + own performer slugs (+ later the complement scan)
+  await pace();
+  const dashRes = await request('dashboard', {}, { agent });
+  classifyRead(dashRes, 'dashboard');
+  const dashHtml = dashRes.body ?? '';
+  const clubs = parseDashboard(dashHtml).clubs;
+  const ownSlugs = parseOwnPerformerSlugs(dashHtml);
+
+  // 2. resolve profile slugs: own first, then search-all hits matching a name,
+  //    plus each name's slugify candidate. Cap MAX_SLUGS total (own first).
+  const slugMatched = new Map<string, string>(); // slug -> the typed name
+  for (const s of ownSlugs) if (!slugMatched.has(s)) slugMatched.set(s, names[0] ?? '');
+  for (const name of names) {
+    await pace();
+    const res = await request('performerSearchAll', { q: name }, { agent });
+    const hits = parsePerformerSearchAll(parseReadJson(res, 'performer search'));
+    for (const h of hits) {
+      if (!h.slug) continue;
+      const m = nameMatches(h.name, names);
+      if (m !== null && !slugMatched.has(h.slug)) slugMatched.set(h.slug, m);
+    }
+    const cand = slugifyName(name);
+    if (cand && !slugMatched.has(cand)) slugMatched.set(cand, name);
+  }
+  const slugs = Array.from(slugMatched.entries()).slice(0, MAX_SLUGS);
+
+  const gigs: Gig[] = [];
+
+  // 3. per slug (paced): read the public profile page; 404 -> skip.
+  for (const [slug, matchedName] of slugs) {
+    await pace();
+    const res = await request('performerProfile', { slug: performerSlugRef(slug) }, { agent });
+    if (res.status === 404) continue;
+    classifyRead(res, 'performer profile');
+    for (const st of parsePerformerProfile(res.body ?? '', now)) {
+      gigs.push(profileGig(st, matchedName));
+    }
+  }
+
+  // 4. complement: own events the user manages whose lineup names a name.
+  let reads = 0;
+  outer: for (const club of clubs) {
+    await pace();
+    const evRes = await request('eventsList', { group: club.ref }, { agent });
+    classifyRead(evRes, 'events list');
+    for (const ev of parseEventsList(evRes.body ?? '').events) {
+      if (ev.status === 'past') continue;
+      const cardIso = parseVrcpopCardDate(ev.date);
+      if (cardIso !== undefined && Date.parse(cardIso) < now) continue; // past card
+      if (reads >= maxReads) break outer;
+      reads++;
+      await pace();
+      const { core } = await readEvent(agent, club.ref, ev.ref);
+      const match = matchLineupNames(core, names);
+      if (!match) continue;
+      const id = String(ev.id);
+      const g: Gig = {
+        platform: 'vrcpop',
+        eventId: id,
+        title: core.title || ev.title,
+        eventUrl: `${APP}/event/${id}`,
+        clubName: club.name,
+        start: core.start,
+        matchedName: match.matchedName,
+        status: 'confirmed',
+        source: 'own-event',
+      };
+      if (core.end) g.end = core.end;
+      if (match.setStart) g.setStart = match.setStart;
+      if (match.setEnd) g.setEnd = match.setEnd;
+      gigs.push(g);
+    }
+  }
+
+  // 5. dedupe (profile wins over own-event for a shared event id) + upcoming.
+  return dedupeGigs(gigs).filter((g) => isUpcomingGig(g, now));
+}
+
 // ---- execute (one step) ----
 
 async function execute(step: PlannedStep, ctx: ExecuteCtx): Promise<JsonValue> {
@@ -198,6 +330,7 @@ export interface VrcpopAdapter {
   readEvent(agent: VrcpopAgent, group: OwnGroupRef, event: OwnEventRef): Promise<ReadEventResult>;
   loadVocab(agent: VrcpopAgent): Promise<VrcpopVocab>;
   resolvePerformer(agent: VrcpopAgent, q: string): Promise<PerformerHit[]>;
+  listGigs(agent: VrcpopAgent, names: readonly string[], opts: VrcpopGigsOpts): Promise<Gig[]>;
   freshCsrf(agent: VrcpopAgent): Promise<string>;
   planCreate(core: EventCore, opts: PlanCreateOpts): PlannedStep[];
   planUpdate(core: EventCore, opts: PlanUpdateOpts): PlannedStep[];
@@ -216,6 +349,7 @@ export const vrcpopAdapter: VrcpopAdapter = {
   readEvent,
   loadVocab,
   resolvePerformer,
+  listGigs,
   freshCsrf,
   planCreate,
   planUpdate,

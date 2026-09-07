@@ -20,6 +20,7 @@ import type {
   AdapterVocab,
   ConnectionStatus,
   CreateOpts,
+  ListGigsOpts,
   OrganizerFilter,
   OwnClub,
   OwnEvent,
@@ -28,6 +29,7 @@ import type {
   PlatformAdapter,
   UpdateOpts,
 } from '../types';
+import type { Gig } from '../../core/gigs';
 import { withAgent } from '../../ui/dashboard/lib/runtime-client';
 import { getSessionStatus } from '../../runtime/sessions';
 import { vrcpopAdapter as native } from './adapter';
@@ -46,6 +48,17 @@ const EMPTY_REPORT: LossReport = { dropped: [], approximated: [], required: [] }
 
 function withVrcpop<T>(fn: (agent: VrcpopAgent) => Promise<T>): Promise<T> {
   return withAgent('vrcpop', (agent) => fn(agent), { allowOpen: true });
+}
+
+// Enforces >=ms between resolutions of the returned fn (human-scale third-party
+// read spacing). Module-local; unit tests drive the native adapter with a no-op.
+function pacer(ms: number): () => Promise<void> {
+  let last = 0;
+  return async () => {
+    const wait = last + ms - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    last = Date.now();
+  };
 }
 
 function clubToOwn(c: VrcpopClub): OwnClub {
@@ -111,6 +124,10 @@ async function resolvePerformer(query: string): Promise<PerformerMatch[]> {
   return withVrcpop(async (a) =>
     (await native.resolvePerformer(a, query)).map((h) => ({ id: h.profileId != null ? String(h.profileId) : undefined, name: h.name })),
   );
+}
+
+async function listGigs(names: readonly string[], opts?: ListGigsOpts): Promise<Gig[]> {
+  return withVrcpop((a) => native.listGigs(a, names, { now: opts?.now ?? Date.now(), pace: pacer(300) }));
 }
 
 // ---- plans (pure) ----
@@ -180,6 +197,7 @@ export const vrcpopAdapter: PlatformAdapter = {
   session,
   listOwnClubs,
   listOwnEvents,
+  listGigs,
   readEvent,
   loadVocab,
   resolvePerformer,

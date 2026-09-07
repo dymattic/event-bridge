@@ -5,6 +5,7 @@
 // chunk PUT in upload.ts, which the generated MediaUploadService.uploadChunk
 // cannot express: it sends no request body and no X-Chunk-Checksum header).
 import { AuthService } from './api-client/services/AuthService';
+import { BookingsService } from './api-client/services/BookingsService';
 import { GroupsService } from './api-client/services/GroupsService';
 import { EventsService } from './api-client/services/EventsService';
 import { EventSlotsService } from './api-client/services/EventSlotsService';
@@ -22,6 +23,9 @@ export const ROUTES = {
   getMyGroups: GroupsService.getMyGroups,
   listOrganizers: EventsService.listEventOrganizers,
   listEvents: EventsService.listEvents,
+  // my gigs — own performer profiles + bookings received
+  listMyPerformers: PerformersService.listMyPerformers,
+  listReceivedBookings: BookingsService.listReceivedBookings,
   // event read
   getEvent: EventsService.getEvent,
   getTimeline: EventsService.getEventTimeline,

@@ -175,6 +175,118 @@ function jsonAttr(el: Element, name: string): unknown {
   }
 }
 
+// ---- performer profile (My gigs, public /u/<slug>) ----
+
+const SLUG_RE = /^[a-z0-9-]{1,64}$/;
+const ID_IN_HREF = /\/event\/(\d+)/;
+
+// Own performer slugs from the dashboard: <a href="/manage/performer/<slug>">.
+// Validated + deduped; the manage link asserts the user owns that profile.
+export function parseOwnPerformerSlugs(dashboardHtml: string): string[] {
+  const doc = parse(dashboardHtml);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const a of Array.from(doc.querySelectorAll('a[href^="/manage/performer/"]'))) {
+    const slug = (a.getAttribute('href') ?? '').replace('/manage/performer/', '').replace(/[/?#].*$/, '');
+    if (SLUG_RE.test(slug) && !seen.has(slug)) {
+      seen.add(slug);
+      out.push(slug);
+    }
+  }
+  return out;
+}
+
+function clockMinutes(h: number, m: number, ap: string | undefined): number {
+  let hh = h % 12;
+  if (ap && /pm/i.test(ap)) hh += 12;
+  return hh * 60 + m;
+}
+
+// Derive a slot END from a rendered clock range + a UTC start. "10:00 PM-11:00 PM
+// (CDT)" + startIso -> start + (end_clock - start_clock), wrapping past midnight.
+// Returns ISO-Z, or undefined when the range/start doesn't parse or is zero-length.
+export function parseVrcpopTimeRange(text: string, startIso: string): string | undefined {
+  const startMs = Date.parse(startIso);
+  if (!Number.isFinite(startMs)) return undefined;
+  const m = /(\d{1,2}):(\d{2})\s*(am|pm)?\s*[-–—]\s*(\d{1,2}):(\d{2})\s*(am|pm)?/i.exec(text);
+  if (!m) return undefined;
+  const a = clockMinutes(Number(m[1]), Number(m[2]), m[3]);
+  const b = clockMinutes(Number(m[4]), Number(m[5]), m[6]);
+  const durMin = (b - a + 1440) % 1440;
+  if (durMin === 0) return undefined;
+  return new Date(startMs + durMin * 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
+export interface ProfileSet {
+  eventId: number;
+  title: string;
+  eventPath: string;
+  clubName?: string;
+  clubPath?: string;
+  start: string;
+  end?: string;
+  fromHero: boolean;
+}
+
+function eventIdFromHref(href: string): number | null {
+  const m = ID_IN_HREF.exec(href);
+  return m?.[1] ? Number(m[1]) : null;
+}
+
+// Parse a performer profile page into upcoming ProfileSets: the "Upcoming sets"
+// hero (always kept — the section only renders with a future set) plus every
+// .dj-set-row (outside upcoming_nights RSVPs) whose end/start is >= now. Deduped
+// by event id, hero winning. Entities decode via DOMParser textContent.
+export function parsePerformerProfile(html: string, now: number): ProfileSet[] {
+  const doc = parse(html);
+  const byId = new Map<number, ProfileSet>();
+
+  const hero = doc.querySelector('.dj-section--upcoming .dj-next-hero[data-utc]');
+  if (hero) {
+    const start = hero.getAttribute('data-utc') ?? '';
+    const eventA = hero.querySelector('.dj-next-hero__event');
+    const eventPath = eventA?.getAttribute('href') ?? '';
+    const id = eventIdFromHref(eventPath);
+    if (id != null && start) {
+      const clubA = hero.querySelector('.dj-next-hero__club');
+      const timeText = collapse(hero.querySelector('.dj-next-hero__time')?.textContent);
+      const set: ProfileSet = { eventId: id, title: collapse(eventA?.textContent), eventPath, start, fromHero: true };
+      const clubName = collapse(clubA?.textContent);
+      const clubPath = clubA?.getAttribute('href') ?? '';
+      if (clubName) set.clubName = clubName;
+      if (clubPath) set.clubPath = clubPath;
+      const end = parseVrcpopTimeRange(timeText, start);
+      if (end) set.end = end;
+      byId.set(id, set);
+    }
+  }
+
+  for (const row of Array.from(doc.querySelectorAll('.dj-set-row'))) {
+    if (row.closest('[data-section-id="upcoming_nights"]')) continue; // RSVPs, not sets
+    const timeEl = row.querySelector('.dj-set-time');
+    const dataStart = timeEl?.getAttribute('data-start') ?? '';
+    const dataEnd = timeEl?.getAttribute('data-end') ?? '';
+    const when = dataEnd || dataStart;
+    if (!when) continue;
+    const whenMs = Date.parse(when);
+    if (!Number.isFinite(whenMs) || whenMs < now) continue; // past / unparseable
+    const eventA = row.querySelector('.dj-set-event');
+    const eventPath = eventA?.getAttribute('href') ?? '';
+    const id = eventIdFromHref(eventPath);
+    if (id == null || byId.has(id)) continue; // hero wins on dupe
+    const set: ProfileSet = { eventId: id, title: collapse(eventA?.textContent), eventPath, start: dataStart || dataEnd, fromHero: false };
+    const clubA = row.querySelector('.dj-set-sub a');
+    const clubName = collapse(clubA?.textContent);
+    const clubPath = clubA?.getAttribute('href') ?? '';
+    if (clubName) set.clubName = clubName;
+    if (clubPath) set.clubPath = clubPath;
+    if (dataEnd) set.end = dataEnd;
+    byId.set(id, set);
+  }
+
+  return Array.from(byId.values());
+}
+
 export function parseEditPage(html: string): EditPageParse {
   const doc = parse(html);
   const container = doc.querySelector('#event-wizard-container');

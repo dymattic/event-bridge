@@ -12,8 +12,10 @@ import type { VrcpopEventPayload } from '../../core/mapping/to-vrcpop';
 import {
   isOwnEventRef,
   isOwnGroupRef,
+  isPerformerSlugRef,
   type OwnEventRef,
   type OwnGroupRef,
+  type PerformerSlugRef,
   type VrcpopAgent,
 } from './types';
 
@@ -28,6 +30,7 @@ export type RouteId =
   | 'energy'
   | 'performerSearch'
   | 'performerSearchAll'
+  | 'performerProfile'
   | 'create'
   | 'update'
   | 'delete'
@@ -54,6 +57,9 @@ export const ROUTES: readonly RouteDef[] = [
   { id: 'energy', method: 'GET', kind: 'read', pattern: /^\/api\/dj\/\?action=energy$/ },
   { id: 'performerSearch', method: 'GET', kind: 'read', pattern: /^\/api\/dj\/\?action=search&q=[^&]*$/ },
   { id: 'performerSearchAll', method: 'GET', kind: 'read', pattern: /^\/api\/dj\/\?action=search-all&q=[^&]*&type=dj$/ },
+  // Public performer profile (My gigs). Read once per slug per manual refresh —
+  // the page is public; own/self-asserted profile only, no crawling.
+  { id: 'performerProfile', method: 'GET', kind: 'read', pattern: /^\/u\/[a-z0-9-]{1,64}$/ },
   { id: 'create', method: 'POST', kind: 'write', pattern: /^\/api\/events\/\?action=create$/ },
   { id: 'update', method: 'POST', kind: 'write', pattern: /^\/api\/events\/\?action=update$/ },
   { id: 'delete', method: 'POST', kind: 'write', pattern: /^\/api\/events\/\?action=delete$/ },
@@ -87,6 +93,7 @@ export interface RouteParams {
   energy: Record<string, never>;
   performerSearch: { q: string };
   performerSearchAll: { q: string };
+  performerProfile: { slug: PerformerSlugRef };
   create: { group: OwnGroupRef; body: VrcpopEventPayload };
   update: { group: OwnGroupRef; event: OwnEventRef; body: unknown };
   delete: { event: OwnEventRef; body: { event_id: number } };
@@ -108,6 +115,11 @@ function requireGroup(g: unknown): OwnGroupRef {
 function requireEvent(e: unknown): OwnEventRef {
   if (!isOwnEventRef(e)) throw new BridgeError('NOT_AUTHORIZED', 'event id is not an own-event ref (must come from listOwnEvents)');
   return e;
+}
+
+function requireSlug(s: unknown): PerformerSlugRef {
+  if (!isPerformerSlugRef(s)) throw new BridgeError('NOT_AUTHORIZED', 'performer slug is not a branded ref (must come from performerSlugRef)');
+  return s;
 }
 
 // Build the same-origin HttpRequest for a route. Enforces brands; does NOT attach
@@ -143,6 +155,11 @@ function buildRequest<K extends RouteId>(routeId: K, params: RouteParams[K]): Ht
     case 'performerSearchAll': {
       const p = params as RouteParams['performerSearchAll'];
       return { method: 'GET', path: `/api/dj/?action=search-all&q=${encodeURIComponent(p.q)}&type=dj`, responseType: 'json' };
+    }
+    case 'performerProfile': {
+      const p = params as RouteParams['performerProfile'];
+      const s = requireSlug(p.slug);
+      return { method: 'GET', path: `/u/${s.slug}`, responseType: 'text' };
     }
     case 'create': {
       const p = params as RouteParams['create'];
