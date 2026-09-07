@@ -134,6 +134,24 @@ describe('renderAnnouncement — template semantics', () => {
   });
 });
 
+describe('lineup placement', () => {
+  const base = preset('builtin:compact');
+  it('auto-inserts the lineup block between header and footer by default', () => {
+    const out = renderAnnouncement(base, ctx);
+    const lines = out.split('\n');
+    expect(lines[0]).toContain('Neon Rave');
+    expect(lines[1]).toContain('Dy-Mattic & K3N');
+    expect(lines[lines.length - 1]).toBe(LINKS_MD);
+  });
+  it('renders the lineup only where the author placed {lineup}', () => {
+    const p: AnnouncePreset = { ...base, id: 'u1', builtin: false, header: '{links}\n{lineup}\n**{title}**', footer: '' };
+    const out = renderAnnouncement(p, ctx);
+    expect(out.split('\n').filter((l) => l.includes('Dy-Mattic & K3N'))).toHaveLength(1);
+    expect(out.startsWith(LINKS_MD)).toBe(true);
+    expect(out.endsWith('**Neon Rave**')).toBe(true);
+  });
+});
+
 describe('DEFAULT_PRESETS / PLACEHOLDER_HELP', () => {
   it('exposes 3 built-ins with fixed timestamps', () => {
     expect(DEFAULT_PRESETS.map((p) => p.id)).toEqual(['builtin:classic', 'builtin:compact', 'builtin:countdown']);

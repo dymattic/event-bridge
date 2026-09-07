@@ -184,11 +184,12 @@ function eventResolver(ctx: AnnounceContext, lineupBlock: string): Resolver {
 export function renderAnnouncement(preset: AnnouncePreset, ctx: AnnounceContext): string {
   const lineupBlock = renderLineup(preset, ctx.core);
   const resolve = eventResolver(ctx, lineupBlock);
-  const parts = [
-    renderTemplate(preset.header, resolve),
-    lineupBlock,
-    renderTemplate(preset.footer, resolve),
-  ];
+  // Lineup block sits between header and footer unless the author placed
+  // `{lineup}` themselves - then it renders only where they put it.
+  const placed = preset.header.includes('{lineup}') || preset.footer.includes('{lineup}');
+  const parts = [renderTemplate(preset.header, resolve)];
+  if (!placed) parts.push(lineupBlock);
+  parts.push(renderTemplate(preset.footer, resolve));
   return parts.join('\n').replace(/\s+$/, ''); // trim trailing whitespace only
 }
 
