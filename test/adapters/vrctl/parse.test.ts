@@ -186,6 +186,10 @@ describe('parseTimeline', () => {
     expect(e.slots[0]?.performerNames).toEqual(['Someone Else']); // 5999 unknown -> skipped
   });
 
+  it('tolerates a null event name (real payloads carry them)', () => {
+    const p = parseTimeline(JSON.stringify({ lastUpdates: [{ day: '2030-01-01', instant: 1 }], eventData: { events: [{ id: 1, name: null, start: 1893456000, eventSlots: [] }], organizers: [], performers: [] } }));
+    expect(p.events[0]!.name).toBe('');
+  });
   it('PARSE on non-JSON or a payload missing lastUpdates/eventData', () => {
     expect(() => parseTimeline('<html>500</html>')).toThrow();
     expect(() => parseTimeline('{"nope":true}')).toThrow();

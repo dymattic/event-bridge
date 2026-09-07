@@ -135,7 +135,7 @@ async function scanTimeline(send: HttpSend, names: readonly string[], now: numbe
         const gig: Gig = {
           platform: 'vrctl',
           eventId: ev.id,
-          title: ev.name,
+          title: ev.name || 'Untitled event',
           eventUrl: `https://vrc.tl/event/${ev.id}`,
           start: asIsoUtc(ev.start),
           setStart: asIsoUtc(slot.start),

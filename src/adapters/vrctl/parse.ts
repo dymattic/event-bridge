@@ -457,10 +457,10 @@ export function parseTimeline(jsonText: string): VrctlTimelinePage {
   for (const e of Array.isArray(ed.events) ? ed.events : []) {
     if (!e || typeof e !== 'object') continue;
     const ev = e as Record<string, unknown>;
-    if (typeof ev.id !== 'number' || typeof ev.name !== 'string' || typeof ev.start !== 'number') {
+    if (typeof ev.id !== 'number' || typeof ev.start !== 'number') {
       throw new BridgeError('PARSE', 'timeline: malformed event');
     }
-    const out: VrctlTimelineEvent = { id: String(ev.id), name: ev.name, start: isoZ(ev.start), promoted: ev.promoted === true, slots: [] };
+    const out: VrctlTimelineEvent = { id: String(ev.id), name: typeof ev.name === 'string' ? ev.name : '', start: isoZ(ev.start), promoted: ev.promoted === true, slots: [] };
     if (typeof ev.end === 'number' && ev.end > 0) out.end = isoZ(ev.end);
 
     let org: string | undefined;
