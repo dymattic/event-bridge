@@ -61,6 +61,16 @@ id (`^\d+$`) and refuses any grid action key other than `delete`.
 - Tag option ids (`flags[1..6]`) and timezone/howToJoin values are **scraped at
   runtime**, never hardcoded.
 
+## My gigs
+
+`listGigs(names)` covers **only clubs the user manages**: it scans the admin grid
+(`listOwnEvents`), keeps rows whose start (`parseGridDate`, the same approximate
+parse feeding `OwnEvent.start`) is ≥ now or unparseable, reads each upcoming
+event's detail form (capped at `MAX_EVENT_READS` = 25, paced ≥300 ms apart), and
+emits a `Gig` when the lineup names a matching performer (`matchLineupNames`).
+The public timeline is deliberately not read (policy), so gigs at clubs the user
+doesn't manage are not listed. Public event link: `https://vrc.tl/event/<id>`.
+
 ## Redirect handling (important)
 
 An in-tab `fetch(..., {redirect:'manual'})` yields an **opaqueredirect** response

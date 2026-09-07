@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isAllowed, assertAllowed, request, ROUTES } from '../../../src/adapters/vrcpop/routes';
-import { ownEventRef, ownGroupRef } from '../../../src/adapters/vrcpop/types';
+import { ownEventRef, ownGroupRef, performerSlugRef } from '../../../src/adapters/vrcpop/types';
 import { isBridgeError } from '../../../src/core/errors';
 import type { VrcpopEventPayload } from '../../../src/core/mapping/to-vrcpop';
 import { makeFakeAgent, ok } from './fake-agent';
@@ -27,6 +27,7 @@ describe('vrcpop route allowlist', () => {
     expect(isAllowed('GET', '/api/dj/?action=energy')).toBe(true);
     expect(isAllowed('GET', '/api/dj/?action=search&q=abc')).toBe(true);
     expect(isAllowed('GET', '/api/dj/?action=search-all&q=abc&type=dj')).toBe(true);
+    expect(isAllowed('GET', '/u/example-dj')).toBe(true);
     expect(isAllowed('POST', '/api/events/?action=create')).toBe(true);
     expect(isAllowed('POST', '/api/events/?action=update')).toBe(true);
     expect(isAllowed('POST', '/api/events/?action=delete')).toBe(true);
@@ -43,6 +44,8 @@ describe('vrcpop route allowlist', () => {
     expect(isAllowed('GET', '/api/events/?action=collab-list&event_id=1')).toBe(false);
     expect(isAllowed('GET', '/api/dj/?action=session')).toBe(false);
     expect(isAllowed('GET', '/manage/club/grp_00000000-0000-4000-8000-000000000001/settings')).toBe(false);
+    expect(isAllowed('GET', '/u/Bad Slug')).toBe(false); // space -> not a slug
+    expect(isAllowed('GET', '/u/UPPER')).toBe(false); // uppercase -> not a slug
     // right path, wrong method:
     expect(isAllowed('GET', '/api/events/?action=create')).toBe(false);
   });
@@ -104,6 +107,24 @@ describe('request() brand + CSRF enforcement', () => {
       expect(byName.group_id).toMatchObject({ value: GRP.id });
       expect(byName.event_id).toMatchObject({ value: '100001' });
     }
+  });
+
+  it('performerProfile: only a branded slug reaches GET /u/<slug>', async () => {
+    const { agent, httpCalls } = makeFakeAgent(() => ok('<html></html>'));
+    await request('performerProfile', { slug: performerSlugRef('example-dj') }, { agent });
+    expect(httpCalls[0]!.method).toBe('GET');
+    expect(httpCalls[0]!.path).toBe('/u/example-dj');
+    expect(isAllowed('GET', httpCalls[0]!.path)).toBe(true);
+  });
+
+  it('performerProfile: a raw (unbranded) slug is refused', async () => {
+    const { agent } = makeFakeAgent(() => ok('<html></html>'));
+    const raw = { slug: 'example-dj' } as unknown as ReturnType<typeof performerSlugRef>;
+    await expect(request('performerProfile', { slug: raw }, { agent })).rejects.toMatchObject({ code: 'NOT_AUTHORIZED' });
+  });
+
+  it('performerSlugRef rejects a non-slug at construction', () => {
+    expect(code(() => performerSlugRef('Bad Slug'))).toBe('VALIDATION');
   });
 
   it('url-encodes the performer query and stays on the allowlist', async () => {

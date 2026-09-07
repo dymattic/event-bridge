@@ -77,6 +77,19 @@ non-admin event owner).
 `fromRavepage` mirrors: `pc→windows`, `quest→android`, and `age_gate` other than
 `all_ages` (or empty) ⇒ `ageGated`.
 
+## My gigs
+
+`listGigs(names)` combines two sources. **Bookings received**: for each of the
+user's own performer profiles (`listMyPerformers`) whose name matches, list
+`listReceivedBookings({performerId, isActive:true})` and emit a `Gig` per booking
+(`declined`/`cancelled` dropped; `accepted`→`confirmed`, else `pending`).
+**Own events** (complement): scan own clubs' upcoming events (start ≥ now or
+missing, capped at `MAX_EVENT_READS` = 25) and emit a `Gig` when
+`listEventPerformers` names one of `names` or a matched performer id. Results are
+deduped per event id (a booking wins over the same event's own-event row) and
+filtered to upcoming. rave.page is our own API, so no pacing. Event links use the
+configured instance `appOrigin`: `${appOrigin}/events/<id>`.
+
 ## Poster pipeline
 
 URL posters ride the event body (`cover_image_url`); a platform ref uses

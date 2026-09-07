@@ -356,6 +356,17 @@ export function parseGrid(html: string): VrctlGridRow[] {
   return out;
 }
 
+// Grid start/end cells render "YYYY-MM-DD HH:MM" in the event's own timezone (no
+// offset), so a browser-local parse is an APPROXIMATION — fine for listing +
+// upcoming filtering; the exact instant comes from the detail form. Returns an
+// ISO instant, or undefined when the label doesn't parse (never NaN).
+export function parseGridDate(label: string): string | undefined {
+  const t = label.trim();
+  if (!t) return undefined;
+  const ms = Date.parse(t.replace(' ', 'T'));
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined;
+}
+
 // ---- performer autocomplete (select2 JSON) ----
 
 export interface VrctlPerformer {

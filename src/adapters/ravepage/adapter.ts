@@ -3,17 +3,20 @@
 // JSON PlannedStep[] whose slot/performer bodies reference the just-created event
 // (and slot) ids via {$ref} placeholders resolved at run time. Poster BYTES are
 // uploaded imperatively (setPoster) — not a JSON step.
-import type { EventCore, PosterFile, PosterRef } from '../../core/schema';
+import type { EventCore, IsoUtc, PosterFile, PosterRef } from '../../core/schema';
 import { computeLoss } from '../../core/capabilities';
 import { fromRavepage } from '../../core/mapping/from-ravepage';
 import { toRavepage } from '../../core/mapping/to-ravepage';
 import { ref, resolveRefs, type PlannedStep } from '../../core/planner';
 import type { JsonValue } from '../../core/hash';
 import { BridgeError } from '../../core/errors';
+import { dedupeGigs, isUpcomingGig, nameMatches, type Gig } from '../../core/gigs';
+import { getRavepageInstance } from '../../runtime/settings';
 import type {
   AdapterVocab,
   ConnectionStatus,
   CreateOpts,
+  ListGigsOpts,
   OrganizerFilter,
   OwnClub,
   OwnEvent,
@@ -141,6 +144,101 @@ export async function resolvePerformer(query: string): Promise<PerformerMatch[]>
     await ensureConfigured();
     const performers = await ROUTES.searchPerformers({ q: query });
     return performers.map((p) => ({ id: p.id, name: p.name ?? '' }));
+  } catch (e) {
+    throw toBridgeError(e);
+  }
+}
+
+// ---- my gigs ----
+
+// Human-scale cap on per-event detail reads (own-event complement). rave.page is
+// our own API so no inter-request pacing is needed.
+export const MAX_EVENT_READS = 25;
+
+// rave.page returns strict ISO-UTC instants for slot/event times; event_date is
+// free-text. Gig time fields are IsoUtc-branded — cast at this trusted boundary.
+function iso(s: string | undefined): IsoUtc | undefined {
+  return s ? (s as IsoUtc) : undefined;
+}
+
+export async function listGigs(names: readonly string[], opts?: ListGigsOpts): Promise<Gig[]> {
+  if (names.length === 0) return [];
+  const now = opts?.now ?? Date.now();
+  try {
+    await ensureConfigured();
+    const { appOrigin } = await getRavepageInstance();
+    const eventUrl = (id: string): string => `${appOrigin}/events/${id}`;
+
+    const mine = await ROUTES.listMyPerformers();
+    const matched = mine.filter((p) => nameMatches(p.name ?? '', names) !== null);
+    const matchedName = new Map<string, string>(); // performer id -> the typed name
+    for (const p of matched) {
+      const m = nameMatches(p.name ?? '', names);
+      if (p.id && m) matchedName.set(p.id, m);
+    }
+
+    const gigs: Gig[] = [];
+
+    // Bookings received for each matched performer profile.
+    for (const p of matched) {
+      if (!p.id) continue;
+      const bookings = await ROUTES.listReceivedBookings({ performerId: p.id, isActive: true, limit: 200 });
+      for (const b of bookings) {
+        if (b.status === 'declined' || b.status === 'cancelled') continue;
+        const start = b.event_date ?? b.slot_starts_at;
+        if (!b.event_id || !start) continue;
+        gigs.push({
+          platform: 'ravepage',
+          eventId: b.event_id,
+          title: b.event_name ?? '',
+          eventUrl: eventUrl(b.event_id),
+          clubName: b.venue_name ?? b.requester_name,
+          start: start as IsoUtc,
+          setStart: iso(b.slot_starts_at),
+          setEnd: iso(b.slot_ends_at),
+          matchedName: matchedName.get(p.id) ?? names[0] ?? '',
+          status: b.status === 'accepted' ? 'confirmed' : 'pending',
+          source: 'booking',
+        });
+      }
+    }
+
+    // Complement: own events whose lineup carries a name (or a matched performer
+    // id). dedupe lets a booking row win over the same event's own-event row.
+    const clubs = await listOwnClubs();
+    let reads = 0;
+    outer: for (const club of clubs) {
+      const events = await listOwnEvents({ organizerType: club.organizerType, organizerId: club.id });
+      for (const e of events) {
+        if (!e.id) continue;
+        if (e.start && Date.parse(e.start) < now) continue; // past (missing start kept)
+        if (reads >= MAX_EVENT_READS) break outer;
+        reads++;
+        const performers = await ROUTES.listPerformers({ eventId: e.id });
+        for (const ep of performers) {
+          const byName = nameMatches(ep.performer?.name ?? '', names);
+          const byId = ep.performer_id != null && matchedName.has(ep.performer_id);
+          if (byName === null && !byId) continue;
+          const mn = byName ?? (ep.performer_id != null ? matchedName.get(ep.performer_id) : undefined) ?? names[0] ?? '';
+          gigs.push({
+            platform: 'ravepage',
+            eventId: e.id,
+            title: e.title ?? '',
+            eventUrl: eventUrl(e.id),
+            clubName: club.name,
+            start: (e.start ?? ep.starts_at ?? '') as IsoUtc,
+            setStart: iso(ep.starts_at),
+            setEnd: iso(ep.ends_at),
+            matchedName: mn,
+            status: 'confirmed',
+            source: 'own-event',
+          });
+          break; // one gig per event
+        }
+      }
+    }
+
+    return dedupeGigs(gigs).filter((g) => isUpcomingGig(g, now));
   } catch (e) {
     throw toBridgeError(e);
   }
@@ -467,6 +565,7 @@ export const ravepageAdapter: PlatformAdapter = {
   session: (): Promise<ConnectionStatus> => authStatus(),
   listOwnClubs,
   listOwnEvents,
+  listGigs,
   readEvent,
   loadVocab,
   resolvePerformer,

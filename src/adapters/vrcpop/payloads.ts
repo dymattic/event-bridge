@@ -31,18 +31,21 @@ export function makeVocab(genresBody: unknown, energyBody: unknown): VrcpopVocab
 
 interface SearchAllBody {
   success?: boolean;
-  profiles?: { name: string; profile_id?: number | null; id?: number | null }[];
+  profiles?: { name: string; profile_id?: number | null; id?: number | null; slug?: string | null }[];
   historical?: { name: string; use_count?: number; source?: string }[];
 }
 
 // action=search-all is the working performer lookup (action=search returns 400
 // "Unknown action" per recon). Profiles (linked accounts) first, then historical
-// free-text names the club has used before.
+// free-text names the club has used before. `slug` (profile page) rides along
+// when present — the owner's own name may return historical-only (no profiles).
 export function parsePerformerSearchAll(body: unknown): PerformerHit[] {
   const b = (body ?? {}) as SearchAllBody;
   const out: PerformerHit[] = [];
   for (const p of b.profiles ?? []) {
-    out.push({ name: p.name, profileId: p.profile_id ?? p.id ?? null, source: 'profile' });
+    const hit: PerformerHit = { name: p.name, profileId: p.profile_id ?? p.id ?? null, source: 'profile' };
+    if (p.slug) hit.slug = p.slug;
+    out.push(hit);
   }
   for (const h of b.historical ?? []) {
     out.push({ name: h.name, profileId: null, source: 'historical' });

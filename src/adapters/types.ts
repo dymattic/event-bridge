@@ -12,6 +12,7 @@ import type { EventCore, PlatformId, PosterFile, PosterRef } from '../core/schem
 import type { LossReport, PlatformCapabilities } from '../core/capabilities';
 import type { PlannedStep } from '../core/planner';
 import type { JsonValue } from '../core/hash';
+import type { Gig } from '../core/gigs';
 
 // Extension-owned connection state (rave.page: token store; vrcpop/vrctl: page session).
 export interface ConnectionStatus {
@@ -79,12 +80,22 @@ export interface UpdateOpts {
   genreVocab?: Record<string, string>;
 }
 
+// "My gigs" lookup options. `now` (ms epoch) fixes the upcoming boundary so
+// tests are deterministic; defaults to Date.now() at the platform binding.
+export interface ListGigsOpts {
+  now?: number;
+}
+
 export interface PlatformAdapter {
   readonly id: PlatformId;
   readonly caps: PlatformCapabilities;
   session(): Promise<ConnectionStatus>;
   listOwnClubs(): Promise<OwnClub[]>;
   listOwnEvents(organizer: OrganizerFilter): Promise<OwnEvent[]>;
+  // Upcoming appearances of the user (any of `names` on a lineup), raw per
+  // platform: deduped per event id, upcoming only. `names` empty → [] (no I/O).
+  // The UI groups/sorts across platforms itself.
+  listGigs(names: readonly string[], opts?: ListGigsOpts): Promise<Gig[]>;
   readEvent(id: string): Promise<EventCore>;
   loadVocab(): Promise<AdapterVocab>;
   resolvePerformer(query: string): Promise<PerformerMatch[]>;

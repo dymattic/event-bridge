@@ -18,6 +18,7 @@ import type {
   AdapterVocab,
   ConnectionStatus,
   CreateOpts,
+  ListGigsOpts,
   OrganizerFilter,
   OwnClub,
   OwnEvent,
@@ -26,12 +27,15 @@ import type {
   PlatformAdapter,
   UpdateOpts,
 } from '../types';
+import type { Gig } from '../../core/gigs';
 import { withAgent } from '../../ui/dashboard/lib/runtime-client';
 import { getSessionStatus } from '../../runtime/sessions';
 import { asCategoryId, asDeleteAction, asEventId, asOrganizerId } from './ids';
+import { parseGridDate } from './parse';
 import {
   listOwnClubs as ownClubs,
   listOwnEvents as gridRows,
+  listGigs as nativeListGigs,
   readEvent as readCore,
   resolvePerformer as performerSearch,
 } from './adapter';
@@ -71,6 +75,17 @@ function asObj(v: JsonValue): Record<string, JsonValue> {
   return v;
 }
 
+// Enforces >=ms between resolutions of the returned fn (human-scale third-party
+// read spacing). Module-local; unit tests inject a no-op pace instead.
+function pacer(ms: number): () => Promise<void> {
+  let last = 0;
+  return async () => {
+    const wait = last + ms - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    last = Date.now();
+  };
+}
+
 // ---- discovery / read ----
 
 async function session(): Promise<ConnectionStatus> {
@@ -95,8 +110,12 @@ async function listOwnEvents(organizer: OrganizerFilter): Promise<OwnEvent[]> {
     const rows = await gridRows(ctx.send);
     return rows
       .filter((r) => !organizer.organizerId || r.organizerId === organizer.organizerId)
-      .map((r) => ({ id: r.eventId, title: r.name, start: r.start, status: r.promoted ? 'promoted' : undefined, visibility: undefined }));
+      .map((r) => ({ id: r.eventId, title: r.name, start: parseGridDate(r.start), status: r.promoted ? 'promoted' : undefined, visibility: undefined }));
   });
+}
+
+async function listGigs(names: readonly string[], opts?: ListGigsOpts): Promise<Gig[]> {
+  return withVrctl((ctx) => nativeListGigs(ctx.send, names, { now: opts?.now ?? Date.now(), pace: pacer(300) }));
 }
 
 async function readEvent(id: string): Promise<EventCore> {
@@ -281,6 +300,7 @@ export const vrctlAdapter: PlatformAdapter = {
   session,
   listOwnClubs,
   listOwnEvents,
+  listGigs,
   readEvent,
   loadVocab,
   resolvePerformer,
