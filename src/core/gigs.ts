@@ -184,7 +184,12 @@ function sharesClub(a: Gig, b: Gig): boolean {
   return ca !== '' && ca === normClub(b.clubName);
 }
 
-// Pairwise join test (never same platform). start-based (not setStart).
+const SET_MATCH_MS = 15 * 60_000;
+
+// Pairwise join test (never same platform). Title rules are start-based (not
+// setStart); the club rule uses the user's SET time - the same club booking the
+// same slot on two platforms is one gig even when the event titles differ
+// (live 2026-09-07: "Kebab Afterparty" on vrc.tl vs "Kebab Monday" on vrcpop).
 function gigsJoin(a: Gig, b: Gig, windowMs: number): boolean {
   if (a.platform === b.platform) return false;
   const ta = normalizeTitle(a.title);
@@ -192,6 +197,7 @@ function gigsJoin(a: Gig, b: Gig, windowMs: number): boolean {
   const dt = Math.abs(ms(a.start) - ms(b.start));
   if (ta !== '' && ta === tb && dt <= windowMs) return true;
   if (sharesClub(a, b) && dt <= HOUR_MS && diceBigrams(ta, tb) >= 0.8) return true;
+  if (sharesClub(a, b) && a.setStart && b.setStart && Math.abs(ms(a.setStart) - ms(b.setStart)) <= SET_MATCH_MS) return true;
   return false;
 }
 

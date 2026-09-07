@@ -194,6 +194,13 @@ describe('groupGigs', () => {
     ]);
     expect(groups).toHaveLength(1);
   });
+  it('joins same club + same set time across platforms even when titles differ', () => {
+    const a = gig({ platform: 'vrctl', eventId: '1', title: 'Kebab Afterparty', clubName: 'VRC Dönertreff', start: iso('2026-09-07T20:00:00Z'), setStart: iso('2026-09-07T21:00:00Z'), setEnd: iso('2026-09-07T22:00:00Z') });
+    const b = gig({ platform: 'vrcpop', eventId: '2', title: 'Kebab Monday', clubName: 'VRC Dönertreff', start: iso('2026-09-07T21:00:00Z'), setStart: iso('2026-09-07T21:05:00Z'), setEnd: iso('2026-09-07T22:00:00Z') });
+    const c = gig({ platform: 'vrcpop', eventId: '3', title: 'Kebab Monday', clubName: 'VRC Dönertreff', start: iso('2026-09-07T21:00:00Z'), setStart: iso('2026-09-07T23:00:00Z') });
+    expect(groupGigs([a, b]).map((g) => g.gigs.length)).toEqual([2]);
+    expect(groupGigs([a, c]).map((g) => g.gigs.length)).toEqual([1, 1]); // >15 min apart
+  });
   it('keeps far-apart same-title events separate (>window)', () => {
     const groups = groupGigs([
       gig({ platform: 'vrctl', eventId: 'a', title: 'Recurring', start: iso('2026-09-10T20:00:00Z') }),
