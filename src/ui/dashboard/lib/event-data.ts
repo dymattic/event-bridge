@@ -12,7 +12,7 @@ import { dedupeGigs, isUpcomingGig, sortGigs } from '../../../core/gigs';
 import type { Platform } from '../../../shared/agent-protocol';
 import { getAdapter } from '../../../adapters/registry';
 import type { OwnClub, VocabEntry } from '../../../adapters/types';
-import { getSessionStatus } from '../../../runtime/sessions';
+import { getSessionStatus, type SessionState } from '../../../runtime/sessions';
 import { status as ravepageStatus } from '../../../adapters/ravepage/auth';
 import { isRavepageEnabled } from '../../../runtime/settings';
 import { READ_GAP_MS, THIRD_PARTY } from '../../lib/platform-meta';
@@ -23,6 +23,7 @@ export interface PlatformConn {
   connected: boolean;
   label?: string;
   expiresAt?: string;
+  state?: SessionState; // tab platforms: raw session state -> "why not checked" reason
 }
 
 export interface PlatformData {
@@ -45,8 +46,8 @@ export async function loadConnections(): Promise<Record<Platform, PlatformConn>>
   const [vt, vp] = await Promise.all([getSessionStatus('vrctl'), getSessionStatus('vrcpop')]);
   const rp = enabled ? await ravepageStatus() : { connected: false, reconnectSoon: false, label: undefined, expiresAt: undefined };
   return {
-    vrctl: { connected: vt.state === 'logged-in', label: vt.info?.label },
-    vrcpop: { connected: vp.state === 'logged-in', label: vp.info?.label },
+    vrctl: { connected: vt.state === 'logged-in', label: vt.info?.label, state: vt.state },
+    vrcpop: { connected: vp.state === 'logged-in', label: vp.info?.label, state: vp.state },
     ravepage: { connected: rp.connected, label: rp.label, expiresAt: rp.expiresAt },
   };
 }

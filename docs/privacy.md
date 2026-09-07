@@ -31,6 +31,11 @@ Your **My gigs** DJ names are stored locally (`storage.local`); the lookup reads
 your own performer profile, your clubs' events and your bookings only when you
 open the page or press **Refresh** — never on a timer or in the background.
 
+- **vrc.tl** additionally reads the **public timeline** (the same paged listing
+  the site's own web app loads), matched by your DJ name so gigs at clubs you
+  don't manage still appear — one bounded, paced (≥300 ms) pass of ≤12 pages per
+  lookup, only when you open the page or press **Refresh**. Owner-approved.
+
 The **job log** keeps, per step, the *exact request event-bridge sent* (so you can
 audit what it did) — but only the request body, **never** session tokens, cookies
 or CSRF values (those are added by your browser at send time and are never

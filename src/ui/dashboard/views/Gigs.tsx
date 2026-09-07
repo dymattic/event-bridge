@@ -33,8 +33,10 @@ import { enabledPlatforms, getSettings, onSettingsChange, setSettings, type Sett
 import { normalizeGigNames } from '../../lib/gig-names';
 import { PLATFORM_NAME } from '../../lib/platform-meta';
 import { formatLocalDate, formatLocalTime, formatRelativeDay } from '../../lib/format';
+import { ravepageStatusView, tabStatusView } from '../../lib/status';
 import { useResource } from '../../lib/resource';
-import { loadConnections, loadGigs, type GigsLoad } from '../lib/event-data';
+import { ensureAgent } from '../../../runtime/tabs';
+import { loadConnections, loadGigs, type GigsLoad, type PlatformConn } from '../lib/event-data';
 import { downloadText } from '../lib/download';
 
 const EXPORT_OPTIONS: SmartSelectOption[] = [
@@ -43,6 +45,13 @@ const EXPORT_OPTIONS: SmartSelectOption[] = [
 ];
 
 const allPending = (g: GigGroup): boolean => g.gigs.every((x) => x.status === 'pending');
+
+// Why a platform was NOT checked, in the SAME wording as the Overview status
+// (tabStatusView / ravepageStatusView). Only called for a not-queried platform.
+function notCheckedReason(p: Platform, conn: PlatformConn): string {
+  if (p === 'ravepage') return ravepageStatusView(conn.connected, conn.label, conn.expiresAt).text;
+  return tabStatusView({ state: conn.state ?? 'no-tab' }).text;
+}
 
 // "10:00 PM" or "10:00 PM–11:00 PM" (set times when known, else event start).
 function whenTime(g: GigGroup): string {
@@ -127,6 +136,7 @@ export default function Gigs(): React.JSX.Element {
   const [enabled, setEnabled] = useState<Platform[]>(['vrctl', 'vrcpop']);
   const [nameInput, setNameInput] = useState('');
   const [exportMode, setExportMode] = useState<IcsMode>('set');
+  const [opening, setOpening] = useState<Platform | null>(null);
 
   useEffect(() => {
     const apply = (s: Settings): void => {
@@ -142,6 +152,11 @@ export default function Gigs(): React.JSX.Element {
   const conns = useResource('connections', loadConnections);
   const c = conns.data;
   const queried: Platform[] = enabled.filter((p) => c?.[p]?.connected);
+  const unchecked: Platform[] = c ? enabled.filter((p) => !queried.includes(p)) : [];
+  const uncheckedNote =
+    c && unchecked.length
+      ? ` Not checked: ${unchecked.map((p) => `${PLATFORM_NAME[p]} (${notCheckedReason(p, c[p])})`).join(', ')}.`
+      : '';
 
   // Infinite TTL = load once per (platforms × names) key; refresh() is the only
   // re-fetch. Empty names or nothing connected -> null key -> no load.
@@ -162,6 +177,17 @@ export default function Gigs(): React.JSX.Element {
     setNameInput('');
   };
   const removeName = (idx: number): void => persistNames(names.filter((_, i) => i !== idx));
+
+  // Open a tab platform WITHOUT stealing focus (active:false), then reload the
+  // connections resource. Once it reports connected, `queried` grows -> the gigs
+  // key changes -> loadGigs re-runs automatically for that platform (no Refresh).
+  const onOpen = (p: Platform): void => {
+    setOpening(p);
+    void ensureAgent(p, { allowOpen: true, active: false })
+      .then(() => conns.refresh())
+      .catch((e: unknown) => addNotification(e instanceof Error ? e.message : String(e), 'error'))
+      .finally(() => setOpening(null));
+  };
 
   const onExport = (): void => {
     if (groups.length === 0) return;
@@ -246,6 +272,47 @@ export default function Gigs(): React.JSX.Element {
         </CardContent>
       </Card>
 
+      {/* Per-platform "checked / not checked (why)" so a silently-skipped platform
+          is visible and fixable from here (Open a tab / connect rave.page). */}
+      {names.length > 0 && c && (
+        <div data-testid="gigs-sources" className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span className="text-2xs uppercase tracking-wide text-muted-foreground">Sources</span>
+          {enabled.map((p) => {
+            const conn = c[p];
+            const checked = queried.includes(p);
+            return (
+              <span key={p} data-testid={`gigs-source-${p}`} className="inline-flex items-center gap-1.5 text-sm">
+                <span className="text-foreground">{PLATFORM_NAME[p]}</span>
+                {checked ? (
+                  <Badge variant="success">checked</Badge>
+                ) : (
+                  <>
+                    <Badge variant="secondary">{notCheckedReason(p, conn)}</Badge>
+                    {p !== 'ravepage' && conn.state === 'no-tab' && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        data-testid={`gigs-open-${p}`}
+                        disabled={opening === p}
+                        onClick={() => onOpen(p)}
+                      >
+                        {opening === p ? 'Opening…' : `Open ${PLATFORM_NAME[p]}`}
+                      </Button>
+                    )}
+                    {p === 'ravepage' && !conn.connected && (
+                      <Button asChild size="sm" variant="outline" data-testid="gigs-connect-ravepage">
+                        <a href="#/settings">Connect in Settings</a>
+                      </Button>
+                    )}
+                  </>
+                )}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {names.length === 0 ? (
         <EmptyState
           data-testid="gigs-empty-names"
@@ -274,7 +341,7 @@ export default function Gigs(): React.JSX.Element {
           data-testid="gigs-empty"
           headingLevel="h2"
           title={`No upcoming gigs found for ${names.join(', ')}`}
-          description={`Checked by name on ${queried.map((p) => PLATFORM_NAME[p]).join(', ')}. Nothing upcoming with your name on the lineup yet.`}
+          description={`Checked by name on ${queried.map((p) => PLATFORM_NAME[p]).join(', ')}. Nothing upcoming with your name on the lineup yet.${uncheckedNote}`}
         />
       ) : (
         <>
@@ -306,7 +373,7 @@ export default function Gigs(): React.JSX.Element {
       ))}
 
       <p className="text-2xs text-muted-foreground mt-6 max-w-2xl">
-        event-bridge reads your own performer profile (vrcpop.com), the events of clubs you manage (vrc.tl, vrcpop.com) and your bookings (rave.page) — once per refresh, nothing runs in the background.
+        event-bridge reads your own performer profile (vrcpop.com), the public timeline and the events of clubs you manage (vrc.tl), your clubs&apos; events (vrcpop.com) and your bookings (rave.page) — once per refresh, nothing runs in the background.
       </p>
     </main>
   );

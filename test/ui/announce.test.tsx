@@ -35,21 +35,10 @@ vi.mock('../../src/shared/webext', () => ({
   },
 }));
 
-vi.mock('../../src/ui/dashboard/lib/event-data', () => ({
-  loadConnections: () =>
-    Promise.resolve({
-      vrctl: { connected: false },
-      vrcpop: { connected: true },
-      ravepage: { connected: false },
-    }),
-  loadPlatformData: (p: string) =>
-    Promise.resolve(
-      p === 'vrcpop'
-        ? { clubs: [], events: [{ platform: 'vrcpop', id: '100001', title: "what's poppin", start: '2030-01-05T22:00:00Z', status: 'published', clubId: 'c1', clubName: 'Example Club' }] }
-        : { clubs: [], events: [] },
-    ),
-  readEventCore: () => Promise.resolve(h.core),
-}));
+// Controllable so a test can vary connections / events (defaults in beforeEach
+// reproduce the original fixed mock: vrcpop connected with one upcoming event).
+const evd = vi.hoisted(() => ({ loadConnections: vi.fn(), loadPlatformData: vi.fn(), readEventCore: vi.fn() }));
+vi.mock('../../src/ui/dashboard/lib/event-data', () => evd);
 
 vi.mock('../../src/runtime/link-store', () => ({
   listLinks: () =>
@@ -159,6 +148,15 @@ beforeEach(() => {
   h.core = makeCore();
   h.writeText = vi.fn((_t: string) => Promise.resolve());
   Object.defineProperty(navigator, 'clipboard', { value: { writeText: h.writeText }, configurable: true });
+  evd.loadConnections.mockReset().mockResolvedValue({ vrctl: { connected: false }, vrcpop: { connected: true }, ravepage: { connected: false } });
+  evd.loadPlatformData.mockReset().mockImplementation((p: string) =>
+    Promise.resolve(
+      p === 'vrcpop'
+        ? { clubs: [], events: [{ platform: 'vrcpop', id: '100001', title: "what's poppin", start: '2030-01-05T22:00:00Z', status: 'published', clubId: 'c1', clubName: 'Example Club' }] }
+        : { clubs: [], events: [] },
+    ),
+  );
+  evd.readEventCore.mockReset().mockImplementation(() => Promise.resolve(h.core));
 });
 afterEach(() => {
   act(() => root.unmount());
@@ -245,5 +243,20 @@ describe('Announce view', () => {
     await render('platform=vrcpop&id=100001&preset=user-long');
     expect(previewText().length).toBeGreaterThan(2000);
     expect(id('announce-over-limit')).toBeTruthy();
+  });
+
+  it('(g) connected but no upcoming events -> announce-no-events with a Create link', async () => {
+    evd.loadPlatformData.mockResolvedValue({ clubs: [], events: [] });
+    await render('');
+    expect(id('announce-no-events')).toBeTruthy();
+    expect(id('announce-no-events')?.querySelector('a[href="#/events/new"]')).toBeTruthy();
+    expect(id('announce-none-connected')).toBeNull();
+  });
+
+  it('(h) while events are loading, shows no empty state', async () => {
+    evd.loadPlatformData.mockReturnValue(new Promise<never>(() => undefined)); // never settles
+    await render('');
+    expect(id('announce-no-events')).toBeNull();
+    expect(id('announce-none-connected')).toBeNull();
   });
 });

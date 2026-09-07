@@ -45,6 +45,9 @@ vi.mock('../../src/ui/dashboard/lib/event-data', () => ({
 const dl = vi.hoisted(() => ({ downloadText: vi.fn() }));
 vi.mock('../../src/ui/dashboard/lib/download', () => ({ downloadText: dl.downloadText }));
 
+const tabs = vi.hoisted(() => ({ ensureAgent: vi.fn() }));
+vi.mock('../../src/runtime/tabs', () => ({ ensureAgent: tabs.ensureAgent }));
+
 import Gigs from '../../src/ui/dashboard/views/Gigs';
 
 // Two platforms on the SAME event within 1h (group into one row, two chips) + a
@@ -105,6 +108,7 @@ beforeEach(() => {
   data.loadConnections.mockReset().mockResolvedValue(CONNS);
   data.loadGigs.mockReset().mockResolvedValue({ gigs: GIGS, errors: {}, queried: ['vrctl', 'vrcpop'] });
   dl.downloadText.mockReset();
+  tabs.ensureAgent.mockReset().mockResolvedValue({ tabId: 1, opened: true });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
@@ -191,5 +195,59 @@ describe('Gigs view', () => {
     const err = q('gigs-error-vrcpop');
     expect(err).toBeTruthy();
     expect(err?.textContent).toContain('vrcpop.com: vrcpop asked us to slow down.');
+  });
+
+  // vrc.tl no tab open, vrcpop connected: sources line shows WHY vrc.tl was
+  // skipped + an Open button, and only vrcpop is queried.
+  const VRCTL_NO_TAB = {
+    vrctl: { connected: false, state: 'no-tab' },
+    vrcpop: { connected: true, state: 'logged-in' },
+    ravepage: { connected: false },
+  };
+
+  it('(h) sources line: unchecked platform shows its reason + Open button; only connected platform queried', async () => {
+    data.loadConnections.mockResolvedValue(VRCTL_NO_TAB);
+    h.state.store = { settings: { gigs: { names: ['Example DJ'] } } };
+    await render();
+    expect(q('gigs-sources')).toBeTruthy();
+    expect(q('gigs-source-vrctl')?.textContent).toContain('No tab open');
+    expect(q('gigs-open-vrctl')).toBeTruthy();
+    expect(q('gigs-source-vrcpop')?.textContent).toContain('checked');
+    expect(data.loadGigs).toHaveBeenCalledTimes(1);
+    expect(data.loadGigs).toHaveBeenCalledWith(['vrcpop'], ['Example DJ']);
+  });
+
+  it('(i) Open button calls ensureAgent (no focus steal) and re-queries once connected — no manual Refresh', async () => {
+    data.loadConnections.mockResolvedValue(VRCTL_NO_TAB);
+    h.state.store = { settings: { gigs: { names: ['Example DJ'] } } };
+    await render();
+    expect(data.loadGigs).toHaveBeenCalledWith(['vrcpop'], ['Example DJ']);
+
+    // Session flips to connected after the tab opens.
+    data.loadConnections.mockResolvedValue({
+      vrctl: { connected: true, state: 'logged-in' },
+      vrcpop: { connected: true, state: 'logged-in' },
+      ravepage: { connected: false },
+    });
+    await click(q('gigs-open-vrctl'));
+    await flush();
+
+    expect(tabs.ensureAgent).toHaveBeenCalledWith('vrctl', { allowOpen: true, active: false });
+    expect(data.loadGigs).toHaveBeenCalledWith(['vrctl', 'vrcpop'], ['Example DJ']);
+  });
+
+  it('(j) empty state lists the unchecked platform + reason', async () => {
+    data.loadConnections.mockResolvedValue(VRCTL_NO_TAB);
+    data.loadGigs.mockResolvedValue({ gigs: [], errors: {}, queried: ['vrcpop'] });
+    h.state.store = { settings: { gigs: { names: ['Example DJ'] } } };
+    await render();
+    expect(q('gigs-empty')).toBeTruthy();
+    expect(q('gigs-empty')?.textContent).toContain('Not checked: vrc.tl (No tab open)');
+  });
+
+  it('(k) footer copy mentions the vrc.tl public timeline', async () => {
+    h.state.store = { settings: { gigs: { names: ['Example DJ'] } } };
+    await render();
+    expect(container.textContent).toContain('public timeline');
   });
 });

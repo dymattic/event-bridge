@@ -529,6 +529,18 @@ page opens (or the key changes) and again only on an explicit **Refresh** —
 **never** on a timer or in the background. e2e asserts `recorder.profileGets`
 stays `1` until Refresh.
 
+**Sources line + empty states.** Above the table a `gigs-sources` row shows every
+enabled platform as a `Badge` — `success` "checked" when it was queried, else
+`secondary` with the reason (`No tab open` / `Signed out` / `No access` /
+`Not connected`, reusing `ui/lib/status.ts` wording); a tab platform with no tab
+open gets an **Open vrc.tl / Open vrcpop.com** button
+(`ensureAgent(p, { allowOpen: true, active: false })` then `conns.refresh()` — the
+reconnect grows `queried`, changing the resource key so the lookup re-runs with no
+manual Refresh), and rave.page a **Connect in Settings** link. The empty state
+also names the unchecked platforms + reason, and the footer states event-bridge
+reads your performer profile (vrcpop.com), the public timeline and clubs you manage
+(vrc.tl), your clubs' events (vrcpop.com) and your bookings (rave.page).
+
 **Grouping + display.** `core/gigs.ts` `groupGigs` merges the same logical event
 across platforms into one row (single-linkage on normalized title + start within a
 6h window, or a shared club within 1h with a high title similarity; at most one

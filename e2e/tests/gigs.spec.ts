@@ -80,6 +80,35 @@ test('vrc.tl: lists a gig from the public timeline at a club the user does not m
   await expect.poll(() => tlCount(rec), { timeout: T }).toBe(afterLoad + 1); // exactly one more pass
 });
 
+test('sources line: opens a not-checked vrc.tl tab and re-queries it without a manual Refresh', async ({ context }) => {
+  // vrcpop logged-in tab open; vrc.tl mocked but NO vrc.tl tab -> "No tab open".
+  const recVp = newRecorder();
+  await mockVrcpopSite(context, recVp);
+  const recVt: RecordedRequest[] = [];
+  await mockVrctlSite(context, recVt); // logged-in; tab NOT opened yet
+  await openPlatformTab(context, 'vrcpop');
+
+  const page = await openDashboard(context);
+  await page.evaluate(() => {
+    location.hash = '#/gigs';
+  });
+  await page.reload();
+  await expect(page.getByTestId('gigs')).toBeVisible({ timeout: T });
+  await addName(page, 'Example DJ');
+
+  // vrc.tl skipped with a visible reason + an Open button; vrcpop was checked.
+  await expect(page.getByTestId('gigs-source-vrctl')).toContainText('No tab open', { timeout: T });
+  await expect(page.getByTestId('gigs-open-vrctl')).toBeVisible();
+  await expect(page.getByTestId('gigs-source-vrcpop')).toContainText('checked', { timeout: T });
+
+  // Open vrc.tl from the gigs page (no focus steal). Once its session flips to
+  // connected, the gigs lookup re-runs on its own — no manual Refresh.
+  const OPEN_TIMEOUT = 45_000;
+  await page.getByTestId('gigs-open-vrctl').click();
+  await expect(page.getByTestId('gigs-source-vrctl')).toContainText('checked', { timeout: OPEN_TIMEOUT });
+  await expect(page.getByTestId('gigs-table')).toContainText('Timeline Night', { timeout: OPEN_TIMEOUT });
+});
+
 test('exports an ICS file', async ({ context }) => {
   const { page } = await setupVrcpop(context);
   await addName(page, 'Example DJ');

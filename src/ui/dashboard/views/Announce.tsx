@@ -125,6 +125,12 @@ export default function Announce({ query }: { query: string }): React.JSX.Elemen
 
   const connectedPlatforms = enabled.filter((p) => c?.[p].connected);
   const anyConnected = connectedPlatforms.length > 0;
+  // First load of any connected platform's events still in flight -> show the
+  // spinner, never flash the "nothing to announce" empty state.
+  const eventsLoading =
+    (!!c?.vrctl.connected && vt.loading && !vt.data) ||
+    (!!c?.vrcpop.connected && vp.loading && !vp.data) ||
+    (enabled.includes('ravepage') && !!c?.ravepage.connected && rp.loading && !rp.data);
 
   const rows = [vt.data, vp.data, rp.data].flatMap((d) => d?.events ?? []);
   const eventOptions: SmartSelectOption[] = rows
@@ -311,6 +317,22 @@ export default function Announce({ query }: { query: string }): React.JSX.Elemen
                     <a href="#/" className="text-sm text-brand-violet-soft underline">
                       Go to Overview
                     </a>
+                  }
+                />
+              ) : eventsLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <LoadingSpinner /> Loading your events…
+                </div>
+              ) : eventOptions.length === 0 ? (
+                <EmptyState
+                  data-testid="announce-no-events"
+                  headingLevel="h2"
+                  title="No upcoming events to announce"
+                  description="Announcements are built from your upcoming own events. Create one first or transfer an existing event."
+                  action={
+                    <Button asChild>
+                      <a href="#/events/new">Create event</a>
+                    </Button>
                   }
                 />
               ) : (
