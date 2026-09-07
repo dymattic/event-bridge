@@ -30,3 +30,17 @@ export const THIRD_PARTY: Record<Platform, boolean> = {
 
 // Minimum gap between successive agent HTTP reads to the same third-party host.
 export const READ_GAP_MS = 300;
+
+// Public event-page URL builders for the third-party hosts (static, no settings).
+// The PUBLIC share link, distinct from the owner's manage URL (-> platform-urls
+// eventUrl). rave.page's public URL derives from the instance -> publicEventUrl.
+// verified 2026-09-07: both return 200 with OG tags.
+export const PUBLIC_EVENT_URL: Record<'vrctl' | 'vrcpop', (id: string) => string> = {
+  vrctl: (id) => `https://vrc.tl/event/${id}`,
+  vrcpop: (id) => `https://vrcpop.com/event/${id}`,
+};
+
+// Public performer profile URL (vrcpop slug-based).
+export const PUBLIC_PERFORMER_URL = {
+  vrcpop: (slug: string) => `https://vrcpop.com/u/${slug}`,
+};

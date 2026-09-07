@@ -113,6 +113,19 @@ background, and a public publish flip always needs the red confirm.
 single `beforeunload` prompt while any write (plan run or poster upload) is
 active, so closing the tab mid-run warns instead of silently abandoning it.
 
+## Core: gigs / ics / discord
+
+Three pure `src/core` modules (schema + time only; never ui) back two features.
+`gigs.ts` matches the user's DJ names to lineups (`normalizeName`/`matchLineupNames`),
+then dedupes/sorts/cross-platform-groups `Gig[]` into `GigGroup[]` (same-title-in-
+window or close-club fuzzy join; never two of one platform). `ics.ts` builds an
+RFC 5545 calendar (set/event mode, CRLF, 75-octet folding, TEXT escaping) for "My
+gigs" export. `discord.ts` renders template announcements with `<t:unix:STYLE>`
+timestamps, markdown escaping (`!raw` opt-out, URLs kept) and three built-in
+presets. Public share links: `platform-meta.ts` `PUBLIC_EVENT_URL` (third-party,
+static) + `platform-urls.ts` `publicEventUrl` (rave.page instance). Adapters build
+the inputs; views consume these exports.
+
 ## Build & manifests
 
 esbuild produces four IIFE bundles (background / agent / popup / dashboard);
