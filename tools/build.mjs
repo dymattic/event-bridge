@@ -2,13 +2,32 @@
 // Hard-fails on any error. React 19 needs process.env.NODE_ENV defined at bundle time.
 import { build, context } from 'esbuild';
 import { execFileSync, spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
 const require = createRequire(import.meta.url);
 const watch = process.argv.includes('--watch');
-const buildId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function sourceFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+    return entry.isDirectory() ? sourceFiles(path) : [path];
+  });
+}
+// Reproducible from the AMO source archive, including without a Git checkout.
+// Normalize source line endings so Windows and Linux produce the same ID.
+const fingerprint = createHash('sha256');
+const inputs = [...sourceFiles('src'), ...sourceFiles('manifest'), ...sourceFiles('vendor'),
+  'package.json', 'pnpm-lock.yaml', 'tools/build.mjs'];
+for (const path of inputs.sort()) {
+  const bytes = readFileSync(path);
+  fingerprint.update(path).update('\0').update(/\.(?:tsx?|json|css|md|mjs|yaml|html|txt|svg)$/.test(path)
+    ? bytes.toString('utf8').replace(/\r\n/g, '\n') : bytes).update('\0');
+}
+const buildId = watch
+  ? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  : fingerprint.digest('hex').slice(0, 16);
 
 // Resolve the @tailwindcss/cli bin (no shell, argv array only).
 const twPkgPath = require.resolve('@tailwindcss/cli/package.json');

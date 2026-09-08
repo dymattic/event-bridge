@@ -6,15 +6,14 @@
  * file adds ONLY the extension's own Orbitron @font-face (dist-relative url) and
  * body defaults. Re-sync tokens by re-vendoring the kit (`pnpm vendor:ui`) -
  * never by copying token blocks back here. */
-@import "tailwindcss";
+@import "tailwindcss" source(none);
 @import "@rave-page/ui/tokens.css";
 
-/* Tailwind auto-ignores node_modules, so opt the kit's class strings back in
-   explicitly (required - the kit's variant classes live in its src/). Keep
-   scanning the extension's own components too. Paths are relative to THIS file
-   (src/ui/styles.css). */
+/* Explicit inputs keep reviewer archives and Git checkouts identical.
+   Kit variants and extension UI are the only class sources. Paths are relative
+   to this file (src/ui/styles.css). */
 @source "../../node_modules/@rave-page/ui/src";
-@source "./**/*.tsx";
+@source "./";
 
 /* Orbitron ships in dist/{chrome,firefox}/fonts/ (assemble copies
    src/ui/fonts). We do NOT import the kit's font.css: its url() is relative to

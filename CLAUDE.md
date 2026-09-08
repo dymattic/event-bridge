@@ -117,10 +117,12 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
 
 ## Git / publishing
 
-- Local repo for now; **no remote until the user explicitly approves the GitHub
-  publish** (workspace rule: never publish beyond repository policy and
-  explicit approval). Before first push: audit history for anything violating
-  public-repo hygiene - history is forever on GitHub.
+- Published at `dymattic/event-bridge`. User decision 2026-09-08: every push
+  to `master` automatically publishes a versioned GitHub pre-release after all
+  CI gates pass. Chrome/Firefox packages, matching Mozilla reviewer sources and
+  checksums are required. See `docs/development.md` for versioning and rebuilds.
+  This authorizes CI releases; agent pushes still require user authorization.
+  Mozilla signing/listing is separate.
 - **GitHub namespace: `dymattic/event-bridge`** (user's personal account, NOT a
   rave.page org) - user decision 2026-09-03.
 - Commit after each logical unit once gates pass; don't batch features.

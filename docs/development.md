@@ -28,10 +28,10 @@ upstream in the kit, never forked here. Extension-specific views stay in
 `src/ui/styles.css` is the Tailwind entry:
 
 ```css
-@import "tailwindcss";
+@import "tailwindcss" source(none);
 @import "@rave-page/ui/tokens.css";
 @source "../../node_modules/@rave-page/ui/src";   /* node_modules is auto-ignored; opt the kit back in */
-@source "./**/*.tsx";                             /* the extension's own components */
+@source "./";                                    /* the extension's own UI */
 ```
 
 It adds only the extension's own Orbitron `@font-face` (dist-relative
@@ -119,7 +119,7 @@ The images under `docs/screenshots/` are generated, never hand-captured. Run:
 pnpm screenshots   # builds, then runs e2e/tests/readme-screenshots.spec.ts with EB_SCREENSHOTS=1
 ```
 
-`readme-screenshots.spec.ts` is `test.skip`ped unless `EB_SCREENSHOTS=1`, so the
+`readme-screenshots.spec.ts` is excluded from test discovery unless `EB_SCREENSHOTS=1`, so the
 normal `pnpm e2e` run never writes images. It drives the extension through the
 same e2e fixtures + mocks the other specs use (all three platforms connected),
 so **every capture comes from the mocked test platforms — never a real
@@ -137,15 +137,29 @@ at resolve time. Never `@latest`, never a range.
 
 ## Packaging & release
 
-The version is single-sourced from `package.json`; `tools/assemble.mjs` stamps
-it into each generated `dist/*/manifest.json` at build (never edit
-`manifest/*.json` version). Bump `package.json` `version` before packaging.
+Every push to `master` publishes a GitHub pre-release after both CI gate jobs
+pass. Pull requests only run checks. Each pushed master tip gets its own version,
+tag, Chrome ZIP, Firefox ZIP, matching source ZIP and `SHA256SUMS`.
+
+`tools/prepare-release.mjs` adds the first-parent commit distance from `v0.2.0`
+to that tag's patch version: one master commit advances one patch. Merge commits
+advance once; retries keep the same version, and overlapping runs cannot reuse
+one another's tags. A push containing several commits releases its final tip;
+the version accounts for every intervening master commit. Failed gates publish
+nothing. Existing releases are never overwritten.
+
+CI stamps `package.json` in its checkout before building; it does not push a
+version-bump commit. The source ZIP includes that stamped version. The committed
+package version remains the development baseline. `tools/assemble.mjs` copies
+the package version into both manifests. Never edit generated manifests.
 
 ```sh
-pnpm package   # build + zip dist/chrome and dist/firefox into web-ext-artifacts/
+node tools/prepare-release.mjs --write  # full Git history + v0.2.0 tag required
+pnpm build
+pnpm package   # zip the existing build into web-ext-artifacts/
 ```
 
-`tools/package.mjs` writes two store-ready zips (git-ignored):
+`tools/package.mjs` rejects stale manifest versions and writes (git-ignored):
 
 - `web-ext-artifacts/event-bridge-chrome-<version>.zip` — a zero-dep Node ZIP of
   `dist/chrome` (stored, no compression), the folder a user unzips and
@@ -153,20 +167,44 @@ pnpm package   # build + zip dist/chrome and dist/firefox into web-ext-artifacts
 - `web-ext-artifacts/event-bridge-firefox-<version>.zip` — built by
   `pnpm dlx web-ext@10.6.0 build` (pinned, run on demand — not a dep), so it's
   the exact artefact AMO would sign.
+- `web-ext-artifacts/event-bridge-source-<version>.zip` — tracked sources,
+  stamped `package.json`, lockfile and vendored kit, including its sources.
+- `web-ext-artifacts/SHA256SUMS` — SHA-256 of all three archives.
 
 **No store listings exist yet.** Distribution today is the zips + "Load unpacked"
 (Chrome) / "Load Temporary Add-on" (Firefox). A Firefox temporary add-on is
 **gone on browser restart** until a signed build exists; signing (AMO or a
 self-distributed signed xpi) is a pre-publish decision for the maintainer.
 
-Release steps:
+The release job rebuilds the source archive in a fresh directory and requires
+both browser outputs to match byte-for-byte. It has `contents: write`; test jobs
+retain read-only permissions. It tags the exact checked commit and attaches all
+four files. No AMO credentials
+are used: Mozilla listing/signing remains a separate maintainer action.
 
-1. `pnpm check:pins && pnpm typecheck && pnpm test && pnpm build && pnpm e2e && pnpm lint:firefox` — all green.
-2. Bump `package.json` `version`; commit.
-3. `pnpm package`; verify both zips exist and open.
-4. (Once the repo is on GitHub) attach the zips to a GitHub Release. CI
-   (`.github/workflows/ci.yml`) runs the gates on every push/PR; it is inert
-   until a remote exists.
+### Mozilla reviewer build
+
+Upload the Firefox ZIP as the extension and the matching **event-bridge-source**
+ZIP as source (the generic GitHub source download has the development version).
+See [Mozilla source submission requirements](https://extensionworkshop.com/documentation/publish/source-code-submission/).
+
+Release environment: GitHub Actions Ubuntu x86-64, Node 22, pnpm 10.33.0.
+Install [Node 22](https://nodejs.org/en/download), then install the pinned package
+manager with `npm install --global pnpm@10.33.0`. Extract the source ZIP and run
+from its root:
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+Compare `dist/firefox` with the extracted Firefox ZIP. No Git checkout, sibling
+repository, credentials or live platform access is needed. The release build ID
+is a hash of source/build inputs, stable across rebuilds. Tailwind scans only
+the explicit kit/UI sources, so Git ignore state cannot change CSS output;
+watch builds retain a
+fresh ID so development agents reload. Dependencies are downloaded through pnpm;
+the private-origin UI kit and its original source ship in `vendor/`.
 
 ## Runtime model (P2)
 

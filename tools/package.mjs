@@ -5,7 +5,8 @@
 //   - Firefox: `pnpm dlx web-ext@10.6.0 build` (pinned, on-demand — never a dep),
 //     so the artefact matches exactly what AMO would sign.
 // Version is single-sourced from package.json. Requires `pnpm build` first.
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
@@ -26,6 +27,8 @@ for (const target of ['chrome', 'firefox']) {
     console.error(`package: dist/${target} is missing — run \`pnpm build\` first`);
     process.exit(1);
   }
+  const manifest = JSON.parse(readFileSync(join(root, 'dist', target, 'manifest.json'), 'utf8'));
+  if (manifest.version !== version) throw new Error(`package: stale dist/${target}; rebuild for ${version}`);
 }
 
 // ---- minimal STORE-only ZIP writer (Node built-ins only) ----
@@ -59,8 +62,8 @@ function walk(dir) {
 const DOS_TIME = 0;
 const DOS_DATE = 0x0021;
 
-function zipStore(sourceDir, zipPath) {
-  const files = walk(sourceDir).sort(); // stable entry order
+function zipStore(sourceDir, zipPath, paths = walk(sourceDir)) {
+  const files = paths.sort(); // stable entry order
   const locals = [];
   const central = [];
   let offset = 0;
@@ -136,7 +139,21 @@ execSync(
 );
 const firefoxZip = join(outDir, firefoxName);
 
+// Only tracked source; the CI-stamped package.json matches the browser zips.
+// Includes the vendored kit sources, lockfile and reviewer build instructions.
+const tracked = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean);
+if (tracked.some((path) => /(^|\/)(?:\.env(?:\.|$)|\.devnotes\/|\.profile\/|CLAUDE\.local\.md$)|\.(?:har|log)$/.test(path))) {
+  throw new Error('package: private files must not be tracked');
+}
+const sourceZip = join(outDir, `event-bridge-source-${version}.zip`);
+zipStore(root, sourceZip, tracked.map((path) => join(root, path)));
+const archives = [chromeZip, firefoxZip, sourceZip];
+const checksums = archives.map((path) =>
+  `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${relative(outDir, path)}`).join('\n');
+writeFileSync(join(outDir, 'SHA256SUMS'), `${checksums}\n`);
+
 const kb = (p) => `${(statSync(p).size / 1024).toFixed(1)} KiB`;
 console.log('\npackaged:');
 console.log(`  ${relative(root, chromeZip).split('\\').join('/')}  (${kb(chromeZip)})`);
 console.log(`  ${relative(root, firefoxZip).split('\\').join('/')}  (${kb(firefoxZip)})`);
+console.log(`  ${relative(root, sourceZip).split('\\').join('/')}  (${kb(sourceZip)})`);

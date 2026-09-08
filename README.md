@@ -42,7 +42,7 @@ More: [docs/screenshots](docs/screenshots/) — all captures come from the mocke
 There are **no store listings yet** — you install it unpacked (developer mode).
 Two ways to get the files:
 
-- **Download a release zip** and unzip it, or
+- **Download a [release zip](https://github.com/dymattic/event-bridge/releases)** and unzip it, or
 - **Build from source:** install [Node 22+](https://nodejs.org) and
   [pnpm 10+](https://pnpm.io), then in the project folder run
   `pnpm install && pnpm build`. That writes `dist/chrome` and `dist/firefox`.

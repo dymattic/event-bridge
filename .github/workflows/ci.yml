@@ -1,5 +1,4 @@
-# CI gates for event-bridge. INERT until the repo has a GitHub remote — it runs
-# nothing locally; GitHub executes it on push / PR once the repo is published.
+# Every master push publishes versioned packages after both gate jobs pass.
 # Third-party actions are pinned by commit SHA (supply-chain rule); the trailing
 # comment records the human-readable version each SHA corresponds to.
 name: CI
@@ -17,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
         with:
           version: 10.33.0
@@ -24,6 +25,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - if: github.event_name == 'push'
+        run: node tools/prepare-release.mjs --write
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:pins
       - run: pnpm typecheck
@@ -35,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
         with:
           version: 10.33.0
@@ -42,7 +47,82 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - if: github.event_name == 'push'
+        run: node tools/prepare-release.mjs --write
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm build
       - run: pnpm e2e
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [checks, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - id: version
+        run: echo "version=$(node tools/prepare-release.mjs --write)" >> "$GITHUB_OUTPUT"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm package
+      - name: Verify reviewer source reproduces both packages
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REVIEW_DIR="$(mktemp -d)"
+          unzip -q "web-ext-artifacts/event-bridge-source-$VERSION.zip" -d "$REVIEW_DIR"
+          pnpm --dir "$REVIEW_DIR" install --frozen-lockfile
+          pnpm --dir "$REVIEW_DIR" build
+          diff -r dist/firefox "$REVIEW_DIR/dist/firefox"
+          diff -r dist/chrome "$REVIEW_DIR/dist/chrome"
+      - name: Publish this commit's release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v$VERSION"
+          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            test "$(git rev-parse "$TAG^{commit}")" = "$GITHUB_SHA"
+          else
+            git tag "$TAG" "$GITHUB_SHA"
+            git push origin "$TAG"
+          fi
+          if gh release view "$TAG" --json assets --jq '.assets[].name' > existing-assets.txt 2>/dev/null; then
+            test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = false
+            for asset in "event-bridge-chrome-$VERSION.zip" "event-bridge-firefox-$VERSION.zip" "event-bridge-source-$VERSION.zip" SHA256SUMS; do
+              grep -Fx "$asset" existing-assets.txt
+            done
+            echo "Release $TAG already has all assets."
+            exit 0
+          fi
+          printf '%s\n' \
+            "Automated pre-alpha release from commit $GITHUB_SHA. All CI gates passed." \
+            '' \
+            "Firefox / Mozilla submission: event-bridge-firefox-$VERSION.zip" \
+            "Matching reviewer source: event-bridge-source-$VERSION.zip (instructions: docs/development.md)." \
+            "Chrome / Chromium: unzip event-bridge-chrome-$VERSION.zip and load the folder unpacked." \
+            '' \
+            'Firefox signing and store publication are handled separately through Mozilla.' \
+            'SHA-256 checksums are attached in SHA256SUMS.' > release-notes.md
+          gh release create "$TAG" \
+            "web-ext-artifacts/event-bridge-chrome-$VERSION.zip" \
+            "web-ext-artifacts/event-bridge-firefox-$VERSION.zip" \
+            "web-ext-artifacts/event-bridge-source-$VERSION.zip" \
+            web-ext-artifacts/SHA256SUMS \
+            --verify-tag --prerelease --title "event-bridge $VERSION (pre-alpha)" \
+            --notes-file release-notes.md --generate-notes
