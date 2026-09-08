@@ -134,6 +134,12 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
 - **GitHub namespace: `dymattic/event-bridge`** (user's personal account, NOT a
   rave.page org) - user decision 2026-09-03.
 - Commit after each logical unit once gates pass; don't batch features.
+- **Signed commits required** (user decision 2026-09-08). `master` requires
+  verified signatures; CI refuses unsigned release commits. Local commits use
+  `commit.gpgsign=true` with a GitHub-registered signer. If no signer is available,
+  use GitHub's signed `createCommitOnBranch` API after gates and explicit push
+  approval; never fall back to unsigned commits or disable signature enforcement.
+  Verify the resulting signature on GitHub. See `docs/development.md`.
 - Never force-push; never leave broken state committed.
 
 ## Architecture (planned)

@@ -185,6 +185,35 @@ retain read-only permissions. It tags the exact checked commit and attaches all
 four files. No AMO credentials are used: Mozilla listing/signing remains a
 separate maintainer action.
 
+### Signed commits
+
+User requirement, 2026-09-08: every new `master` commit must have a verified
+signature. GitHub's active **Require signed master commits** ruleset enforces
+this without bypass actors. CI also checks the exact pushed commit's signature
+before release gates. Existing unsigned history is preserved, not rewritten.
+
+For local commits, configure a GitHub-registered GPG/SSH signer and enable
+`git config --local commit.gpgsign true`; use `git commit -S`. This checkout
+fails closed until a local signer is configured. Never use `--no-gpg-sign` to
+bypass the requirement. Do not generate/register signing keys without approval.
+
+Without a local signer, the authorized fallback is GitHub's
+[`createCommitOnBranch`](https://docs.github.com/en/graphql/reference/commits#createcommitonbranch)
+API: it signs server-side as the authenticated account. Pass the inspected
+remote head as `expectedHeadOid`, upload only reviewed/gated file changes, and
+retain co-author attribution. This operation also pushes: normal explicit push
+approval is still required. Confirm the returned commit's signature is valid,
+then fetch and reconcile the checkout without discarding local changes.
+
+Check the published commit with:
+
+```sh
+gh api repos/dymattic/event-bridge/commits/<sha> --jq '.commit.verification | {verified, reason}'
+```
+
+Require `verified: true`, `reason: valid`. Release tags point to that verified
+commit; Git commit signing is separate from Mozilla add-on signing.
+
 ### Mozilla reviewer build
 
 Upload the Firefox ZIP as the extension and the matching **event-bridge-source**
