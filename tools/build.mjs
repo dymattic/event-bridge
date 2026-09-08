@@ -45,7 +45,7 @@ const options = {
   outdir: 'build',
   bundle: true,
   format: 'iife',
-  target: ['chrome121', 'firefox140'],
+  target: ['chrome121', 'firefox142'],
   jsx: 'automatic',
   define: {
     __BUILD_ID__: JSON.stringify(buildId),

@@ -3,7 +3,7 @@
 ## Build
 
 ```sh
-pnpm install          # node >=22, pnpm >=10
+pnpm install          # Node 24.20.0 LTS (.node-version), pnpm 10.33.0
 pnpm build            # esbuild + tailwind -> build/, then assemble -> dist/chrome + dist/firefox
 pnpm dev              # esbuild watch + tailwind --watch (sourcemaps on)
 ```
@@ -75,16 +75,16 @@ One `manifest/base.json` shared; per-browser overlays deep-merged at assemble:
 
 - `manifest/chrome.json` -> `background.service_worker`, `minimum_chrome_version`.
 - `manifest/firefox.json` -> `background.scripts`, `browser_specific_settings.gecko`
-  (id, `strict_min_version` `140.0`, `data_collection_permissions`). FF140 is the
-  floor because `data_collection_permissions` needs it; `web-ext lint` still warns
-  the key is unsupported on Firefox for Android (142) — Android is not a target.
+  (id, `strict_min_version` `142.0`, `data_collection_permissions`). The floor
+  covers the data-collection key's desktop/Android compatibility validation.
+  `gecko_android` stays absent: Android is not a tested distribution target.
 
 Edit the manifest under `manifest/`, never the generated `dist/*/manifest.json`.
 
 `base.json` also declares `optional_host_permissions: ["https://*/*"]` — the
 runtime grant a **custom rave.page instance** needs (see Settings below). The
 manifest probe (`pnpm build && pnpm lint:firefox`) confirmed web-ext accepts this
-for Firefox (0 errors, 5 known innerHTML warnings), so it stays in the shared
+for Firefox (0 errors; four documented upstream React warnings), so it stays in the shared
 `base.json` — no per-browser split. The default dev rave.page hosts remain in the
 required `host_permissions`, so the default instance never prompts.
 
@@ -101,15 +101,18 @@ dashboard.
 ## Gates
 
 ```sh
-pnpm check:pins   # exact pins, each >=7 days old on npm
+pnpm check:pins   # exact npm pins + matching Node LTS runtime; each >=7 days old
 pnpm typecheck    # tsconfig.json (DOM) + tsconfig.background.json (WebWorker)
 pnpm test         # vitest
 pnpm build
 pnpm e2e          # loads dist/chrome in headless Chromium
-pnpm lint:firefox # web-ext lint, 0 errors required
+pnpm lint:firefox # web-ext lint, 0 errors required; upstream warnings stay visible
 ```
 
 E2E needs the browser once: `pnpm exec playwright install chromium`.
+
+Read [Mozilla / TypeScript compliance](mozilla-compliance.md) before changing
+extension permissions, HTML handling, dependencies or release tooling.
 
 ## README screenshots
 
@@ -179,8 +182,8 @@ self-distributed signed xpi) is a pre-publish decision for the maintainer.
 The release job rebuilds the source archive in a fresh directory and requires
 both browser outputs to match byte-for-byte. It has `contents: write`; test jobs
 retain read-only permissions. It tags the exact checked commit and attaches all
-four files. No AMO credentials
-are used: Mozilla listing/signing remains a separate maintainer action.
+four files. No AMO credentials are used: Mozilla listing/signing remains a
+separate maintainer action.
 
 ### Mozilla reviewer build
 
@@ -188,9 +191,11 @@ Upload the Firefox ZIP as the extension and the matching **event-bridge-source**
 ZIP as source (the generic GitHub source download has the development version).
 See [Mozilla source submission requirements](https://extensionworkshop.com/documentation/publish/source-code-submission/).
 
-Release environment: GitHub Actions Ubuntu x86-64, Node 22, pnpm 10.33.0.
-Install [Node 22](https://nodejs.org/en/download), then install the pinned package
-manager with `npm install --global pnpm@10.33.0`. Extract the source ZIP and run
+Release environment: GitHub Actions Ubuntu x86-64, Node **24.20.0 LTS**, pnpm
+10.33.0. Node is single-pinned in `.node-version`; every upgrade must complete a
+seven-day soak. Install [Node 24.20.0](https://nodejs.org/en/blog/release/v24.20.0),
+then install the pinned package manager with `npm install --global pnpm@10.33.0`.
+Extract the source ZIP and run
 from its root:
 
 ```sh
@@ -202,8 +207,8 @@ Compare `dist/firefox` with the extracted Firefox ZIP. No Git checkout, sibling
 repository, credentials or live platform access is needed. The release build ID
 is a hash of source/build inputs, stable across rebuilds. Tailwind scans only
 the explicit kit/UI sources, so Git ignore state cannot change CSS output;
-watch builds retain a
-fresh ID so development agents reload. Dependencies are downloaded through pnpm;
+watch builds retain a fresh ID so development agents reload. Dependencies are
+downloaded through pnpm;
 the private-origin UI kit and its original source ship in `vendor/`.
 
 ## Runtime model (P2)

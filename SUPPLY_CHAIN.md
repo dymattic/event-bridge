@@ -21,7 +21,7 @@ install by `pnpm check:pins` (exact + registry `time[version]` >= 7 days).
 | happy-dom | 20.11.2 | DOM env for React render + parser tests | released 2026-08-07; dev-only |
 | @playwright/test | 1.62.1 | e2e with the loaded extension | released 2026-07-30; dev-only; browser via `playwright install chromium` |
 | @types/chrome | 0.2.7 | MV3 promise API types; shim typed `typeof chrome` | released 2026-08-21; dev-only |
-| @types/node | 22.20.1 | `tools/*.mjs`, vitest + playwright configs (engines node>=22) | released 2026-07-08; dev-only |
+| @types/node | 24.13.3 | Node 24 types for tools, vitest and Playwright; matches the LTS major | released 2026-07-08; 62-day soak verified 2026-09-08; dev-only |
 | openapi-typescript-codegen | 0.30.0 | generated rave.page client (P3; same tool as rave.page) | released 2025-12-22; dev-only (**generated code ships**) |
 
 `@rave-page/ui` transitive exact pins (installed via the tarball; each age-gated
@@ -61,3 +61,18 @@ transitives at resolve time — pnpm refuses any version published < 7 days ago.
 `saveExact: true` keeps future adds exact.
 
 Shipped extension bundle: our code + react/react-dom + the generated Tailwind CSS.
+
+## Build runtime
+
+Node **24.20.0 LTS**, pinned in `.node-version` and `engines.node`; all CI jobs
+use that file. [Official release](https://nodejs.org/en/blog/release/v24.20.0):
+2026-08-26; latest eligible LTS checked against `https://nodejs.org/dist/index.json`
+on 2026-09-08, **13 days old**. Upgrade only after seven days and full gates.
+Local verification uses the official Windows archive with SHA-256 checked
+against Node's `SHASUMS256.txt`; no system-wide runtime switch is required.
+
+React DOM remains the official, unmodified **19.2.8** release. Its two raw-HTML
+setters produce four validator warnings across the two UI bundles. Application
+and kit source must not call this API. Hash, test coverage and reviewer notes:
+[Mozilla compliance](docs/mozilla-compliance.md). Do not patch a third-party
+library to silence the validator; Mozilla prohibits library modifications.

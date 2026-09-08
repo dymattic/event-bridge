@@ -57,6 +57,14 @@ Minimize tokens. Drop filler ("simply", "just", "in order to", "make sure that")
   inside the adapter.
 - **Typed everything, zero unchecked `any`.** TS `strict`; casts only at real
   boundaries with a comment.
+- **Mozilla / TypeScript compliance.** Read `docs/mozilla-compliance.md` before
+  extension, dependency, manifest or release changes. Keep third-party libraries
+  unmodified; do not rewrite dependency code or conceal validator warnings.
+  Render platform/user data through React children or `textContent`, never raw
+  HTML. `test/security/extension-policy.test.ts` enforces source-level rules.
+  Original TS/TSX, lockfile, vendored source and reproducible reviewer builds
+  must accompany every release. Reassess permissions/data declarations when
+  behavior changes; no remote code, eval or security-header relaxation.
 - **Platform-neutral product.** event-bridge is an independent tool, not a
   product of any platform (user rule 2026-09-04, clarified 10:36). Neutrality
   is FUNCTIONAL: vrc.tl, vrcpop.com and rave.page are equal integrations - one
@@ -155,7 +163,9 @@ capability-mapping precedent: not every platform federates every concept).
 ## Environment
 
 - Windows host, bash shell: forward slashes, `/dev/null` not `NUL`.
-- node ≥22 + pnpm ≥10 on PATH.
+- Node 24.20.0 LTS (`.node-version`, exact) + pnpm 10.33.0 on PATH. Node upgrades
+  select the newest LTS that is at least seven days old, record the official
+  release date in `SUPPLY_CHAIN.md`, then pass all gates on that exact runtime.
 - Manual verification via Playwright MCP with the user's logged-in sessions;
   the user logs in themselves - never ask for platform credentials.
 

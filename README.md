@@ -43,7 +43,7 @@ There are **no store listings yet** — you install it unpacked (developer mode)
 Two ways to get the files:
 
 - **Download a [release zip](https://github.com/dymattic/event-bridge/releases)** and unzip it, or
-- **Build from source:** install [Node 22+](https://nodejs.org) and
+- **Build from source:** install [Node 24.20.0 LTS](https://nodejs.org/en/blog/release/v24.20.0) and
   [pnpm 10+](https://pnpm.io), then in the project folder run
   `pnpm install && pnpm build`. That writes `dist/chrome` and `dist/firefox`.
 
@@ -143,11 +143,16 @@ This is an open-source project and contributions are welcome.
 ### Development
 
 ```sh
-pnpm install     # Node 22+, pnpm 10+
+pnpm install     # Node 24.20.0 LTS, pnpm 10.33.0
 pnpm dev         # rebuild on change
 pnpm test        # unit tests (vitest)
 pnpm e2e         # end-to-end tests (Playwright; first run: pnpm exec playwright install chromium)
 ```
+
+Node is pinned in `.node-version`; upgrades use the newest LTS release that
+has completed our seven-day soak, then pass the full gates. Mozilla submission
+requirements and React validator warnings are documented in
+[docs/mozilla-compliance.md](docs/mozilla-compliance.md).
 
 Before a commit, the gates must be green:
 

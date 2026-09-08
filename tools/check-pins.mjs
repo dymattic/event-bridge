@@ -1,4 +1,4 @@
-// Zero-dep supply-chain gate: exact pins only, each >=7 days old on npm.
+// Exact npm pins and Node LTS runtime, each >=7 days old.
 import { readFileSync } from 'node:fs';
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -54,6 +54,32 @@ for (const [name, version] of Object.entries(deps).sort((a, b) => a[0].localeCom
   }
   rows.push({ name, version, published, ageDays, status });
 }
+
+const nodeVersion = readFileSync(new URL('../.node-version', import.meta.url), 'utf8').trim();
+let nodeStatus = 'OK';
+let nodePublished = '-';
+let nodeAge = '-';
+try {
+  if (!/^\d+\.\d+\.\d+$/.test(nodeVersion) || pkg.engines?.node !== nodeVersion) {
+    throw new Error('Node pin and engines.node must match exactly');
+  }
+  if (process.version !== `v${nodeVersion}`) throw new Error(`run gates on Node ${nodeVersion}, got ${process.version}`);
+  const res = await fetch('https://nodejs.org/dist/index.json');
+  if (!res.ok) throw new Error(`Node release index HTTP ${res.status}`);
+  const releases = await res.json();
+  const release = releases.find((entry) => entry.version === `v${nodeVersion}`);
+  if (!release?.lts) throw new Error('Node pin is not an official LTS release');
+  nodePublished = release.date;
+  // Index has dates only. Use end-of-release-day so the soak cannot end early.
+  const age = Date.now() - Date.parse(`${release.date}T23:59:59.999Z`);
+  if (!Number.isFinite(age)) throw new Error('invalid Node release date');
+  nodeAge = Math.floor(age / 86400000);
+  if (age < SEVEN_DAYS) throw new Error('Node release has not completed the seven-day soak');
+} catch (error) {
+  nodeStatus = `FAIL:${error.message}`;
+  failed = true;
+}
+rows.push({ name: 'node (official LTS)', version: nodeVersion, published: nodePublished, ageDays: nodeAge, status: nodeStatus });
 
 const pad = (s, n) => String(s).padEnd(n);
 console.log(`${pad('name', 32)} ${pad('version', 12)} ${pad('published', 12)} ${pad('age days', 9)} status`);
