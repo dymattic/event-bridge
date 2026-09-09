@@ -29,6 +29,13 @@ export async function getPlatformMeta(platform: Platform): Promise<PlatformMeta>
 // Fixed display order across UI surfaces: vrc.tl, vrcpop.com, rave.page.
 export const PLATFORMS: Platform[] = ['vrctl', 'vrcpop', 'ravepage'];
 
+// Boundary: Firefox exposes container identity; Chromium omits cookieStoreId.
+type SessionTab = chrome.tabs.Tab & { cookieStoreId?: string };
+
+function usableTab(tab: SessionTab): boolean {
+  return !tab.incognito && (tab.cookieStoreId == null || tab.cookieStoreId === 'firefox-default');
+}
+
 const TAB_READY_TIMEOUT_MS = 15_000;
 const opened = new Set<number>();
 
@@ -75,6 +82,9 @@ async function waitForComplete(tabId: number, timeoutMs = TAB_READY_TIMEOUT_MS):
 }
 
 async function injectAndPing(tabId: number): Promise<string> {
+  if (!usableTab(await ext.tabs.get(tabId))) {
+    throw new BridgeError('NOT_AUTHORIZED', 'Use a normal, non-container platform tab');
+  }
   await ext.scripting.executeScript({ target: { tabId }, files: ['agent.js'] });
   const ping: AgentPing = { type: 'agentPing' };
   let pong: unknown;
@@ -108,7 +118,7 @@ export async function ensureAgent(
     throw new BridgeError('PERMISSION_MISSING', `host permission missing for ${meta.name}`);
   }
 
-  let matches = await ext.tabs.query({ url: `${meta.origin}/*` });
+  let matches = (await ext.tabs.query({ url: `${meta.origin}/*` })).filter(usableTab);
   if (opts.url) {
     const target = new URL(opts.url);
     const pathPrefix = `${target.origin}${target.pathname}`;
@@ -148,7 +158,7 @@ export async function ensureAgent(
 export async function queryPlatformTabs(platform: Platform): Promise<{ tabId?: number; url?: string }[]> {
   const meta = await getPlatformMeta(platform);
   const tabs = await ext.tabs.query({ url: `${meta.origin}/*` });
-  return tabs.map((t) => ({ tabId: t.id, url: t.url }));
+  return tabs.filter(usableTab).map((t) => ({ tabId: t.id, url: t.url }));
 }
 
 export function openedTabIds(): number[] {

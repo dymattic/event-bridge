@@ -8,6 +8,8 @@ export interface FakeTab {
   status?: string;
   active?: boolean;
   windowId?: number;
+  incognito?: boolean;
+  cookieStoreId?: string;
 }
 
 export interface FakePort {

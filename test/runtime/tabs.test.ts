@@ -7,7 +7,7 @@ vi.mock('../../src/shared/webext', () => ({
   },
 }));
 
-import { ensureAgent } from '../../src/runtime/tabs';
+import { ensureAgent, queryPlatformTabs } from '../../src/runtime/tabs';
 import { isBridgeError } from '../../src/core/errors';
 import { createFake, type Fake } from './fake-ext';
 
@@ -86,5 +86,50 @@ describe('ensureAgent', () => {
     h.ext = f.ext;
     expect(await codeOf(ensureAgent('vrcpop', { allowOpen: false }))).toBe('AGENT_UNAVAILABLE');
     expect(f.calls.reloads).toEqual([6]);
+  });
+
+  it('ignores an active private tab in favor of a normal tab', async () => {
+    f = createFake({ tabs: [
+      { id: 1, url: 'https://vrcpop.com/dashboard', status: 'complete', active: false },
+      { id: 2, url: 'https://vrcpop.com/dashboard', status: 'complete', active: true, incognito: true },
+    ] });
+    h.ext = f.ext;
+    expect(await ensureAgent('vrcpop', { allowOpen: false })).toEqual({ tabId: 1, opened: false });
+    expect(f.calls.executeScriptTargets).toEqual([1]);
+  });
+
+  it.each([{ incognito: true }, { cookieStoreId: 'firefox-container-1' }])('does not inject into an excluded session: %j', async (session) => {
+    f = createFake({ tabs: [{ id: 3, url: 'https://vrcpop.com/dashboard', status: 'complete', ...session }] });
+    h.ext = f.ext;
+    expect(await codeOf(ensureAgent('vrcpop', { allowOpen: false }))).toBe('AGENT_UNAVAILABLE');
+    expect(f.calls.executeScriptTargets).toEqual([]);
+    expect(f.calls.sendMessages).toEqual([]);
+  });
+
+  it('accepts Firefox default-session tabs', async () => {
+    f = createFake({ tabs: [{ id: 4, url: 'https://vrcpop.com/dashboard', status: 'complete', cookieStoreId: 'firefox-default' }] });
+    h.ext = f.ext;
+    expect((await ensureAgent('vrcpop', { allowOpen: false })).tabId).toBe(4);
+    expect(f.calls.executeScriptTargets).toEqual([4]);
+  });
+
+  it('excludes private/container tabs from diagnostics', async () => {
+    f = createFake({ tabs: [
+      { id: 5, url: 'https://vrcpop.com/dashboard' },
+      { id: 6, url: 'https://vrcpop.com/dashboard', incognito: true },
+      { id: 7, url: 'https://vrcpop.com/dashboard', cookieStoreId: 'firefox-container-2' },
+    ] });
+    h.ext = f.ext;
+    expect((await queryPlatformTabs('vrcpop')).map((tab) => tab.tabId)).toEqual([5]);
+  });
+
+  it.each([false, true])('rechecks session metadata before injection (new tab: %s)', async (allowOpen) => {
+    f = createFake({ tabs: allowOpen ? [] : [{ id: 8, url: 'https://vrcpop.com/dashboard', status: 'complete' }] });
+    h.ext = f.ext;
+    const originalGet = f.ext.tabs.get;
+    vi.spyOn(f.ext.tabs, 'get').mockImplementation(async (id) => ({ ...await originalGet(id), incognito: true }));
+    expect(await codeOf(ensureAgent('vrcpop', { allowOpen }))).toBe('NOT_AUTHORIZED');
+    expect(f.calls.executeScriptTargets).toEqual([]);
+    expect(f.calls.sendMessages).toEqual([]);
   });
 });

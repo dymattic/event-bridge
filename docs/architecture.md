@@ -77,7 +77,7 @@ is sent:
 **loss report** (dropped / approximated / required) the Review tab shows — see
 the [capability matrix](platforms/capabilities.md).
 
-## Local stores (all in `storage.local`, nothing leaves the browser)
+## Local stores (`storage.local`, no separate database upload)
 
 | Key | Module | What |
 |---|---|---|
@@ -105,7 +105,10 @@ each linked copy's current scoped hash against its baseline and returns a state
 mode — writes only the non-conflicting targets, merging so a field the source
 can't represent never wipes the target's value. Sync runs **only** on the Events
 view (load / Refresh / after a local edit), **never** on a timer or in the
-background, and a public publish flip always needs the red confirm.
+background. A public-publish confirmation can be remembered per link; opted-in
+automatic writes are not individually previewed. Stored identifiers and the
+rave.page access token are used in platform requests; local storage does not mean
+zero transmission. See [privacy.md](privacy.md).
 
 ## Unload guard
 

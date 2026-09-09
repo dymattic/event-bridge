@@ -60,7 +60,13 @@ Tooling not installed (run via `pnpm dlx`, never a dep):
 transitives at resolve time — pnpm refuses any version published < 7 days ago.
 `saveExact: true` keeps future adds exact.
 
-Shipped extension bundle: our code + react/react-dom + the generated Tailwind CSS.
+Shipped extension bundle: our code + react/react-dom + the kit with its
+dependencies + the generated Tailwind CSS. `pnpm build` writes
+`THIRD_PARTY_NOTICES.txt` (license text of every bundled package, from the
+installed packages; `licenses/` holds the single reviewed supplement for an npm
+release that omits its license file) and copies `LICENSE` into both `dist/`
+targets. The build also proves the vendored kit's `dist/` is the transpile of its
+shipped TS/TSX sources (see `docs/development.md`).
 
 ## Build runtime
 

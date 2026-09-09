@@ -12,7 +12,7 @@ const uiDir = join(root, 'src', 'ui');
 const fontsDir = join(uiDir, 'fonts');
 const iconsDir = join(root, 'icons');
 
-const EXPECTED = ['background.js', 'agent.js', 'popup.js', 'dashboard.js', 'styles.css'];
+const EXPECTED = ['background.js', 'agent.js', 'popup.js', 'dashboard.js', 'styles.css', 'THIRD_PARTY_NOTICES.txt'];
 const STATIC = ['popup.html', 'dashboard.html'];
 
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
@@ -48,6 +48,8 @@ for (const target of ['chrome', 'firefox']) {
     if (/\.(js|js\.map|css|css\.map)$/.test(f)) copyFileSync(join(buildDir, f), join(outDir, f));
   }
   for (const f of STATIC) copyFileSync(join(uiDir, f), join(outDir, f));
+  copyFileSync(join(buildDir, 'THIRD_PARTY_NOTICES.txt'), join(outDir, 'THIRD_PARTY_NOTICES.txt'));
+  copyFileSync(join(root, 'LICENSE'), join(outDir, 'LICENSE'));
   if (existsSync(iconsDir)) {
     for (const f of readdirSync(iconsDir)) {
       if (f.endsWith('.png')) copyFileSync(join(iconsDir, f), join(outDir, f));

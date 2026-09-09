@@ -1,6 +1,6 @@
 # Mozilla / TypeScript extension requirements
 
-Maintainer instructions; reviewed 2026-09-08. Passing automated validation is
+Maintainer instructions; reviewed 2026-09-09. Passing automated validation is
 not Mozilla approval. Read the current
 [Add-on Policies](https://extensionworkshop.com/documentation/publish/add-on-policies/)
 before submission.
@@ -66,6 +66,56 @@ payloads against [Mozilla's data taxonomy](https://extensionworkshop.com/documen
 when transmission changes. Describe the user-directed platform requests and
 obtain any required consent. Never include real sessions, credentials, private
 account fixtures or platform screenshots in the repository/reviewer archive.
+
+## Compliance audit: 2026-09-09
+
+Update README, [privacy policy](privacy.md), [listing/reviewer copy](amo-listing.md)
+and the actual AMO fields together. Do not advertise unreleased safeguards as
+present in the installed version. `none` in 0.2.14 was incorrect: no telemetry
+does not mean no authenticated platform or image-host transmission.
+
+The compliance build declares required `personallyIdentifyingInfo` (account and
+performer identifiers/names), `authenticationInfo` (authenticated operations) and
+`websiteContent` (event text, images, links, requests). Use Firefox's built-in
+install/update consent, not implicit single-use consent for cookie-authenticated
+or automatic operations. No telemetry is implemented; do not declare it merely
+because ordinary network requests carry browser metadata.
+
+Keep `incognito: not_allowed`, packaged scripts only, HTTPS extension-page
+connections/images and UI `no-referrer`. Never relax website security headers.
+Keep private/container sessions out of agent selection; container support needs
+explicit session-scoped selection/storage. Never expose local identity/link
+stores to web content. No history, cookies API, native messaging or userScripts
+permission is needed. Optional wildcard HTTPS origins are possible rave.page
+instances, not blanket access: request only the selected app/API origins.
+
+Listing disclosures must include session checks on opening views, bounded public
+My gigs reads, automatic Apply writes without per-write previews, remembered
+publish confirmation, external poster/avatar hosts and bounded upload polling.
+Jobs omit transport authentication but can contain private event data. Uninstall
+does not delete remote events; local token removal is not server-side revocation.
+
+Submission prerequisites (not waived by green tests):
+
+- Provide matching source ZIP, exact rebuild commands and runnable mocked tests.
+- Author cannot provision password-based vrc.tl/vrcpop.com test accounts. Explain
+  their normal sign-in flows and request an acceptable review arrangement. Only a
+  development.rave.page account can be supplied. Credentials go in AMO private
+  reviewer notes, never public version notes/docs/source. Mocks are not live access.
+- Shared UI kit provenance: `@rave-page/ui` is first-party (rave.page
+  `packages/ui`; commit and sha256 in `vendor/PROVENANCE.md`), not an npm release,
+  and ships original TS/TSX, compiled JS and its MIT license. `pnpm build` proves
+  each packed `dist/*.js` is the transpile of its vendored source under the pinned
+  TypeScript (syntax compared; comments/formatting ignored) and rejects missing,
+  extra or differing files. Never modify the library or invent a release tag.
+- Verify project LICENSE and generated THIRD_PARTY_NOTICES.txt in both browser
+  ZIPs. Notices are extracted from actual bundled packages, not invented summaries;
+  `licenses/` holds the single reviewed supplement for a release without one.
+- Test Firefox install/update consent and refusal, private access, ordinary sessions
+  and Disconnect. Chromium mocks and web-ext lint do not prove Firefox behavior.
+- Keep pre-alpha/experimental status, account/payment requirements and independence
+  accurate; retain reachable support details and sanitized screenshots. Do not
+  bundle unrelated features into a reviewer-correction version.
 
 ## Build, review and release
 

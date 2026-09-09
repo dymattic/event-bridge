@@ -2,7 +2,7 @@
 // and provides platform-mock + page helpers. Tests NEVER hit real platforms —
 // all three origins are served from self-authored fixtures under e2e/mocks/.
 import { chromium, test as base, type BrowserContext, type Page } from '@playwright/test';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -37,8 +37,14 @@ export const test = base.extend<{ context: BrowserContext; extensionId: string }
       channel: 'chromium',
       args: [`--disable-extensions-except=${distChrome}`, `--load-extension=${distChrome}`],
     });
-    await use(context);
-    await context.close();
+    try {
+      await use(context);
+    } finally {
+      await context.close();
+      // Persistent contexts don't remove their profile; without this the temp dir
+      // leaks one Chromium profile per test (thousands over time -> disk-full flakes).
+      rmSync(userDataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    }
   },
   extensionId: async ({ context }, use) => {
     await use(await getExtensionId(context));

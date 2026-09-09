@@ -58,5 +58,6 @@ Legend: **Yes** / **No** / **required** / **optional**.
 - **rave.page** — `visibility.publish` + audience (`unlisted`/etc.); draft +
   unlisted by default; a public flip needs the red confirm.
 
-Across all three, event-bridge never publishes on your behalf: publish is an
-explicit per-target switch, off by default, gated by a confirm.
+Publishing is an explicit per-target choice, off by default, gated by a confirm.
+For opted-in publish-state sync, confirmation can be remembered per link;
+automatic Apply mode does not ask again for every write.

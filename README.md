@@ -13,9 +13,10 @@ so keeping the copies in step is manual too.
 
 event-bridge is a browser extension that does that from one place. It acts as
 **you**, in **your** browser, using **your** logged-in sessions — the same
-actions you'd take by hand, only entered once. It touches your own clubs and
-your own events, nothing else. There's no event-bridge server and no account to
-make: everything runs locally in your browser.
+actions you'd take by hand, only entered once. Event management targets clubs
+and events you can manage. My gigs also reads public performer/event information.
+There is no event-bridge server or account, but authenticated platform requests
+and poster/avatar requests transmit data. See [Privacy](docs/privacy.md).
 
 ## Screenshots
 
@@ -39,13 +40,15 @@ More: [docs/screenshots](docs/screenshots/) — all captures come from the mocke
 
 ## Install
 
-There are **no store listings yet** — you install it unpacked (developer mode).
+The [Firefox listing](https://addons.mozilla.org/en-US/firefox/addon/event-bridge/)
+is awaiting Mozilla review as of 2026-09-09. GitHub releases are not Mozilla-signed
+add-ons. Until approval, use the developer installation below.
 Two ways to get the files:
 
 - **Download a [release zip](https://github.com/dymattic/event-bridge/releases)** and unzip it, or
 - **Build from source:** install [Node 24.20.0 LTS](https://nodejs.org/en/blog/release/v24.20.0) and
-  [pnpm 10+](https://pnpm.io), then in the project folder run
-  `pnpm install && pnpm build`. That writes `dist/chrome` and `dist/firefox`.
+  [pnpm 10.33.0](https://pnpm.io), then in the project folder run
+  `pnpm install --frozen-lockfile && pnpm build`. That writes `dist/chrome` and `dist/firefox`.
 
 ### Chrome / Chromium / Edge / Brave
 
@@ -57,6 +60,8 @@ Two ways to get the files:
 4. Pin the event-bridge icon to the toolbar so you can find it.
 
 ### Firefox
+
+Firefox desktop 142 or newer. Android is not a tested distribution target.
 
 1. Open `about:debugging#/runtime/this-firefox`.
 2. Click **Load Temporary Add-on…** and pick `dist/firefox/manifest.json`.
@@ -79,11 +84,12 @@ What you'll find:
   as titles and dates, never raw ids.
 - **Events** — one row per event, with a cell for each platform. Where a copy
   exists you see its status; where it's missing on a platform you use, a
-  one-click **Transfer** creates it there. **Edit** opens the event; event-bridge
+  **Transfer** opens a draft for review before creating the copy. **Edit** opens the event; event-bridge
   also suggests "probably the same event" for look-alike copies so you can link
   them into one row.
-- **My gigs** — see your upcoming gigs across platforms by entering your DJ name;
-  export them as an `.ics` calendar.
+- **My gigs** — look up gigs by DJ name and export an `.ics` calendar. vrc.tl
+  includes a public timeline lookup, including clubs you do not manage: at most
+  12 pages, paced at least 300 ms apart, on page load or Refresh.
 - **Announce** — copy Discord-ready announcements with live `<t:…>` timestamps,
   your lineup and links to every platform, from presets you design.
 - **Creating an event** — enter it once: title, start time, lineup, flags,
@@ -97,16 +103,19 @@ What you'll find:
   mode (**off**, **notify**, or **apply**), a **source** (last-edited, or a fixed
   platform), and which **fields** sync. **Conflicts are never applied
   automatically** — a field changed on both sides waits for your pick. Sync runs
-  only while the dashboard is open, never on a timer or in the background.
+  on Events load, Refresh or after a local write, while the dashboard is open.
+  **Apply mode can send updates without previewing each write.** Publish-state
+  sync is off by default; a public-publish confirmation can be remembered per link.
 - **Jobs** — a step-by-step log of everything the extension sent, so you can see
   exactly what it did. Stored locally; clear it anytime.
 - **Settings** — your default event length and your sync defaults.
 - **Clubs** — link the same club across platforms (clubs that share a VRChat
   group link automatically).
 
-Before any write, event-bridge shows you the **exact request** it will send and
-what each platform can and can't represent, and it stops at the first error
-instead of pushing on.
+The event editor previews planned requests and platform differences before you
+submit. Automatic sync is a separate, opt-in write path; use Off or Notify if
+you want to review changes yourself. The Jobs view records request-body previews,
+not transport authentication headers. Those bodies can still contain personal data.
 
 ## Experimental: rave.page
 
@@ -116,23 +125,33 @@ joins as a third, equal integration.
 
 rave.page is on its way to an open-source, federated release, so the **instance is
 configurable**:
-point event-bridge at any self-hosted or federated rave.page by setting the app
+point event-bridge at a compatible HTTPS rave.page instance by setting the app
 origin and API origin in Settings (your browser prompts once for access to the
 new host). The development instance is the default for contributors — it is
 never required to use event-bridge.
 
-## What it never does
+## Privacy and controls
 
 - **No scraping, no crawling.** It only does what you could do by hand in your
   own browser, at human speed.
-- **No public listings, no other people's events.** It reads and writes your own
-  clubs and events only.
-- **No background activity.** No timers, no polling, no telemetry. It acts only
-  when you tell it to, and only while the dashboard is open.
-- **Nothing leaves your browser** except the requests to the platforms you're
-  signed in to. There's no event-bridge server.
-- **Drafts by default**, and **every write is previewed exactly** before it's
-  sent. It never publishes on your behalf.
+- **No telemetry, analytics, advertising or event-bridge server.** Accounts and
+  appropriate organizer permissions are needed only on platforms you choose.
+  event-bridge itself is free and does not charge for features.
+- **Authenticated requests transmit data.** Platforms receive relevant account,
+  performer and event data, cookies or access tokens. Displaying posters/avatars
+  also contacts their image hosts. This is not a zero-transmission extension.
+- **No scheduled background sync.** Opening the popup/dashboard can check sessions
+  and load data. Sync runs on Events load/refresh/after writes if enabled. Request
+  pacing and user-initiated uploads use timers; rave.page upload processing is
+  polled for up to 30 seconds.
+- **Drafts by default.** Publishing and automatic sync are explicit choices;
+  automatic writes are not individually previewed.
+- **Private browsing is disabled** from 0.2.15 on (0.2.14 did not enforce it).
+  Use a normal browser window; container tabs are skipped too.
+- **Local controls.** Set each link to Off to stop its sync; changing defaults
+  alone does not reset existing links. Clear finished Jobs, disconnect rave.page
+  to forget its token, or remove the extension to clear its storage. Remote events
+  and accounts are not deleted by uninstalling.
 
 See [docs/privacy.md](docs/privacy.md) for exactly what's stored and where.
 
@@ -153,6 +172,8 @@ Node is pinned in `.node-version`; upgrades use the newest LTS release that
 has completed our seven-day soak, then pass the full gates. Mozilla submission
 requirements and React validator warnings are documented in
 [docs/mozilla-compliance.md](docs/mozilla-compliance.md).
+Paste-ready listing text and reviewer access requirements:
+[docs/amo-listing.md](docs/amo-listing.md).
 
 Before a commit, the gates must be green:
 
@@ -179,8 +200,9 @@ Please include:
   redacted**;
 - any console errors.
 
-**Never paste tokens, cookies or CSRF values** — event-bridge never records them,
-and they should never end up in an issue.
+**Never paste tokens, cookies, CSRF values or private event/account data.** Jobs
+omit transport authentication, but previews and error messages can contain
+personal information. Redact before sharing.
 
 ### Adding a platform provider
 
@@ -188,7 +210,8 @@ New platforms are welcome as long as they follow the same user-agency,
 own-events-only, no-scraping rule. Start here:
 
 - the adapter contract — [`src/adapters/types.ts`](src/adapters/types.ts);
-- routes are an **allowlist** (own surfaces only, no public-listing endpoints);
+- routes are an **allowlist**; public reads are limited to the documented,
+  bounded My gigs lookup, not general crawling;
 - the capability table — [`src/core/capabilities.ts`](src/core/capabilities.ts)
   and the [capability matrix](docs/platforms/capabilities.md);
 - fixture rules — [test/fixtures/README.md](test/fixtures/README.md).

@@ -69,6 +69,18 @@ rewrites `vendor/PROVENANCE.md`, and syncs the `package.json` spec.
 exact pins (Radix, cva, clsx, tailwind-merge, dayjs) are still age-gated by
 pnpm `minimumReleaseAge`. Switch to the npm version in P8.
 
+**Reviewer provenance.** The kit is first-party (rave.page `packages/ui`, same
+author), not an npm release, so the tarball also ships its original `src/`
+TS/TSX. `tools/build.mjs` transpiles every non-test kit source with the pinned
+TypeScript (ES2020, ESNext modules, `react-jsx`, `verbatimModuleSyntax`) and
+compares it syntactically (comments/formatting ignored) with the packed
+`dist/*.js`; a missing, extra or differing file fails the build. The kit's own
+`tsconfig.build.json` is not in the tarball; this check stands in for it and
+never modifies the library. The same build writes `THIRD_PARTY_NOTICES.txt` from
+every bundled package's license file (`licenses/` holds the single reviewed
+supplement for an npm release that omits its license file) and copies `LICENSE`
+into both `dist/` targets.
+
 ## Two-manifest layout
 
 One `manifest/base.json` shared; per-browser overlays deep-merged at assemble:
@@ -174,7 +186,8 @@ pnpm package   # zip the existing build into web-ext-artifacts/
   stamped `package.json`, lockfile and vendored kit, including its sources.
 - `web-ext-artifacts/SHA256SUMS` — SHA-256 of all three archives.
 
-**No store listings exist yet.** Distribution today is the zips + "Load unpacked"
+**Firefox listing submitted 2026-09-09, awaiting Mozilla review; no signed build
+yet.** Distribution today is the zips + "Load unpacked"
 (Chrome) / "Load Temporary Add-on" (Firefox). A Firefox temporary add-on is
 **gone on browser restart** until a signed build exists; signing (AMO or a
 self-distributed signed xpi) is a pre-publish decision for the maintainer.
@@ -450,7 +463,7 @@ node-tested; the runtime only supplies stored links.
 **Storage keys:** `settings` (now incl. `sync` defaults), `links` (EventLinks,
 now with optional per-link `sync` + `lastSynced` baselines), `clubLinks`
 (ClubLinks), `dismissedSuggestions`, `jobs` (P7 job log), `ravepage.auth`. All
-extension-local; nothing leaves the browser.
+extension-local; ids and tokens in them are used in platform requests ([privacy](privacy.md)).
 
 e2e: `unified-events.spec.ts` (club linking via SmartSelect, suggestion Link,
 Transfer -> editor, missing filter, Unlink, rave.page third column, mobile

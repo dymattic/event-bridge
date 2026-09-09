@@ -24,5 +24,9 @@
     "https://development.rave.page/*",
     "https://development.api.rave.page/*"
   ],
-  "optional_host_permissions": ["https://*/*"]
+  "optional_host_permissions": ["https://*/*"],
+  "incognito": "not_allowed",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; connect-src https:; img-src 'self' https: data: blob:;"
+  }
 }

@@ -109,3 +109,28 @@ test('Firefox version floor covers data-collection compatibility without enablin
   expect(Number.parseInt(manifest.browser_specific_settings.gecko.strict_min_version, 10)).toBeGreaterThanOrEqual(142);
   expect(manifest.browser_specific_settings.gecko_android).toBeUndefined();
 });
+
+test('Firefox declares authenticated event transmission, not no-data or telemetry', () => {
+  const manifest = JSON.parse(readFileSync('manifest/firefox.json', 'utf8')) as {
+    browser_specific_settings: { gecko: { data_collection_permissions: { required: string[]; optional?: string[] } } };
+  };
+  expect(manifest.browser_specific_settings.gecko.data_collection_permissions).toEqual({
+    required: ['personallyIdentifyingInfo', 'authenticationInfo', 'websiteContent'],
+  });
+});
+
+test('private browsing stays disabled without additional API permissions', () => {
+  const manifest = JSON.parse(readFileSync('manifest/base.json', 'utf8')) as { incognito: string; permissions: string[] };
+  expect(manifest.incognito).toBe('not_allowed');
+  expect(manifest.permissions).toEqual(['storage', 'scripting']);
+});
+
+test('extension CSP permits only local scripts and encrypted remote connections/images', () => {
+  const manifest = JSON.parse(readFileSync('manifest/base.json', 'utf8')) as { content_security_policy: { extension_pages: string } };
+  const directives = manifest.content_security_policy.extension_pages.split(';').map((d) => d.trim()).filter(Boolean);
+  expect(directives).toEqual(["script-src 'self'", "object-src 'none'", "base-uri 'none'", 'connect-src https:', "img-src 'self' https: data: blob:"]);
+});
+
+test.each(['popup', 'dashboard'])('%s sends no referrer from its UI', (page) => {
+  expect(readFileSync(`src/ui/${page}.html`, 'utf8')).toContain('<meta name="referrer" content="no-referrer">');
+});
