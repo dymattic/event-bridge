@@ -140,7 +140,7 @@ execSync(
 const firefoxZip = join(outDir, firefoxName);
 
 // Only tracked source; the CI-stamped package.json matches the browser zips.
-// Includes the vendored kit sources, lockfile and reviewer build instructions.
+// Includes the in-repo kit source (packages/ui), lockfile and build instructions.
 const tracked = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean);
 if (tracked.some((path) => /(^|\/)(?:\.env(?:\.|$)|\.devnotes\/|\.profile\/|CLAUDE\.local\.md$)|\.(?:har|log)$/.test(path))) {
   throw new Error('package: private files must not be tracked');

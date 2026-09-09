@@ -6,10 +6,10 @@ test('dashboard renders heading + kit theme applied', async ({ context, extensio
   await expect(page.getByRole('heading', { name: 'event-bridge' })).toBeVisible();
 
   // Prove the CSS pipeline applied the kit theme: a kit Button (default variant)
-  // paints the kit brand-base #F70864.
+  // paints the AA fill --color-brand-base-fill #DB0759 (white-on-brand contrast).
   const primary = page.getByRole('button', { name: 'Open vrc.tl' });
   await expect(primary).toBeVisible();
-  expect(await primary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(247, 8, 100)');
+  expect(await primary.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(219, 7, 89)');
 
   const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bodyBg).not.toBe('rgba(0, 0, 0, 0)');

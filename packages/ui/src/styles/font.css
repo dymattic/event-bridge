@@ -1,0 +1,25 @@
+/*
+ * @rave-page/ui - Orbitron brand face.
+ *
+ * Orbitron is DISPLAY-ONLY (--font-display: h1/h2, wordmark, eyebrows,
+ * numerals, section labels) since the 2026-09-07 type split. The body/UI face
+ * is Inter (--font-body); consumers load it themselves via
+ * `@import "@fontsource-variable/inter";` (OFL, no CDN) - it is NOT bundled
+ * here.
+ *
+ * Kept separate from tokens.css so an app that already loads Orbitron (the
+ * rave.page web app does) doesn't load the face twice. Import this ONLY if
+ * you don't already serve Orbitron:
+ *   @import "@rave-page/ui/font.css";
+ *
+ * The url() below is relative to THIS file (src/styles/). When you consume the
+ * published package, copy `@rave-page/ui/fonts/` next to your bundled CSS, or
+ * rewrite the url to wherever your bundler emits the font.
+ */
+@font-face {
+    font-family: 'Orbitron';
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: swap;
+    src: url("../../fonts/Orbitron-VariableFont_wght.ttf") format("truetype");
+}

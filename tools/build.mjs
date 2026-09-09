@@ -18,7 +18,10 @@ function sourceFiles(dir) {
 // Reproducible from the AMO source archive, including without a Git checkout.
 // Normalize source line endings so Windows and Linux produce the same ID.
 const fingerprint = createHash('sha256');
-const inputs = [...sourceFiles('src'), ...sourceFiles('manifest'), ...sourceFiles('vendor'), ...sourceFiles('licenses'),
+const inputs = [...sourceFiles('src'), ...sourceFiles('manifest'),
+  ...sourceFiles('packages/ui/src'), 'packages/ui/package.json',
+  'packages/ui/tsconfig.json', 'packages/ui/tsconfig.build.json',
+  ...sourceFiles('licenses'),
   'LICENSE', 'package.json', 'pnpm-lock.yaml', 'tools/build.mjs'];
 for (const path of inputs.sort()) {
   const bytes = readFileSync(path);
@@ -35,41 +38,17 @@ const twPkg = JSON.parse(readFileSync(twPkgPath, 'utf8'));
 const twBin = resolve(dirname(twPkgPath), typeof twPkg.bin === 'string' ? twPkg.bin : twPkg.bin.tailwindcss);
 const twArgs = [twBin, '-i', 'src/ui/styles.css', '-o', 'build/styles.css'];
 
-// Reviewer provenance for the vendored kit (first-party, not an npm release): its
-// tarball ships original TS/TSX beside compiled dist/. Prove every dist/*.js is that
-// source's transpile under the pinned TypeScript before bundling it. Syntax is
-// compared; comments/formatting are not. The library itself is never modified.
-function verifyKitSource() {
-  const ts = require('typescript');
-  const kitRoot = dirname(require.resolve('@rave-page/ui/package.json'));
-  const srcDir = join(kitRoot, 'src');
-  const distDir = join(kitRoot, 'dist');
-  const rel = (base, path) => relative(base, path).split(sep).join('/');
-  const compilerOptions = {
-    target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX,
-    verbatimModuleSyntax: true, moduleDetection: ts.ModuleDetectionKind.Force,
-  };
-  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed });
-  const shape = (code, name) => printer.printFile(ts.createSourceFile(name, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS));
-  const expected = new Set();
-  for (const src of sourceFiles(srcDir)) {
-    if (!/\.tsx?$/.test(src) || /\.test\.tsx?$/.test(src)) continue; // kit tests are not built
-    const out = rel(srcDir, src).replace(/\.tsx?$/, '.js');
-    expected.add(out);
-    const dist = join(distDir, out);
-    if (!existsSync(dist)) throw new Error(`kit: dist/${out} missing for its vendored source`);
-    const result = ts.transpileModule(readFileSync(src, 'utf8'), { fileName: src, compilerOptions, reportDiagnostics: true });
-    if (result.diagnostics?.length || shape(result.outputText, out) !== shape(readFileSync(dist, 'utf8'), out)) {
-      throw new Error(`kit: dist/${out} does not match its vendored source`);
-    }
-  }
-  for (const file of sourceFiles(distDir)) {
-    const out = rel(distDir, file);
-    if (out.endsWith('.js') && !expected.has(out)) throw new Error(`kit: dist/${out} has no vendored source`);
-  }
-  return expected.size;
+// Build the first-party design-system kit from its in-repo source (packages/ui)
+// to its own dist/ under its own tsconfig, then bundle that compiled output. The
+// kit source is the reviewable truth; dist is a reproducible build artifact
+// (git-ignored). Consuming compiled .js/.d.ts keeps the kit's looser tsconfig
+// separate from this repo's stricter one (see docs/development.md).
+function buildKit() {
+  const tsc = require.resolve('typescript/bin/tsc');
+  execFileSync(process.execPath, [tsc, '-p', 'packages/ui/tsconfig.build.json'], { stdio: 'inherit' });
+  console.log('kit: built @rave-page/ui from packages/ui/src');
 }
-console.log(`kit: ${verifyKitSource()} compiled files match their vendored sources`);
+buildKit();
 
 function generateNotices(metafile) {
   const packages = new Map();
@@ -82,6 +61,10 @@ function generateNotices(metafile) {
       if (!existsSync(file)) continue;
       const pkg = JSON.parse(readFileSync(file, 'utf8'));
       if (!pkg.name || !pkg.version) continue;
+      // @rave-page/ui is first-party in-repo source (packages/ui, MIT LICENSE
+      // shipped there), not a third-party dependency — its own deps below still
+      // get notices.
+      if (pkg.name === '@rave-page/ui') { found = true; break; }
       packages.set(realpathSync(dir), { name: pkg.name, version: pkg.version });
       found = true;
       break;

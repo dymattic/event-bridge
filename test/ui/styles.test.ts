@@ -19,8 +19,8 @@ describe('styles.css consumes the @rave-page/ui kit', () => {
     expect(css).toContain("url('fonts/Orbitron-VariableFont_wght.ttf')");
   });
 
-  it('opts the kit source back into Tailwind scanning (node_modules is auto-ignored)', () => {
-    expect(css).toContain('@source "../../node_modules/@rave-page/ui/src"');
+  it('opts the in-repo kit source into Tailwind scanning', () => {
+    expect(css).toContain('@source "../../packages/ui/src"');
   });
 });
 
@@ -30,8 +30,11 @@ describe('styles.css consumes the @rave-page/ui kit', () => {
 // that -> guard the vendored source (build-independent; fresh on install). This
 // guards the kit contract, not the extension's theme (which is the kit as-is).
 describe('vendored @rave-page/ui brand glows are themeable (no hardcoded pink)', () => {
-  const kitBase = 'node_modules/@rave-page/ui/src/base';
+  const kitBase = 'packages/ui/src/base';
   const read = (f: string) => readFileSync(resolve(kitBase, f), 'utf8');
+  // Strip comments: an AA-contrast annotation may cite the hex for documentation;
+  // the guard is about hardcoded pink in actual styles, not in prose.
+  const code = (src: string) => src.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
 
   it('Button/Badge/Card use the shadow-brand-* tokens', () => {
     expect(read('Button.tsx')).toContain('shadow-brand-glow');
@@ -41,14 +44,14 @@ describe('vendored @rave-page/ui brand glows are themeable (no hardcoded pink)',
 
   it('no hardcoded brand pink in the glow components', () => {
     for (const f of ['Button.tsx', 'Badge.tsx', 'Card.tsx']) {
-      const src = read(f);
+      const src = code(read(f));
       expect(src).not.toMatch(/247, ?8, ?100/);
       expect(src.toLowerCase()).not.toContain('f70864');
     }
   });
 
   it('tokens.css defines --shadow-brand-* via color-mix off --color-brand-base', () => {
-    const tokens = readFileSync(resolve('node_modules/@rave-page/ui/src/styles/tokens.css'), 'utf8');
+    const tokens = readFileSync(resolve('packages/ui/src/styles/tokens.css'), 'utf8');
     expect(tokens).toMatch(/--shadow-brand-glow:\s*[^;]*color-mix\(in srgb, var\(--color-brand-base\)/);
     expect(tokens).toContain('--shadow-brand-glow-sm:');
     expect(tokens).toContain('--shadow-brand-ring:');

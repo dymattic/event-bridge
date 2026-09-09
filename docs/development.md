@@ -30,7 +30,7 @@ upstream in the kit, never forked here. Extension-specific views stay in
 ```css
 @import "tailwindcss" source(none);
 @import "@rave-page/ui/tokens.css";
-@source "../../node_modules/@rave-page/ui/src";   /* node_modules is auto-ignored; opt the kit back in */
+@source "../../packages/ui/src";                 /* the in-repo design-system kit */
 @source "./";                                    /* the extension's own UI */
 ```
 
@@ -44,42 +44,42 @@ in `dist/*/fonts/`.
 `tooltip`) wrapping `NotificationProvider` with `<Toast/>` inside (backs
 `useNotification()`).
 
-### Vendored kit (not `link:`)
+### Kit as an in-repo workspace package (`packages/ui`)
 
-The kit isn't on npm yet, so it's consumed as a committed tarball under
-`vendor/` — a self-contained `pnpm install` for outside contributors (no
-sibling rave.page checkout needed). `package.json` carries
-`"@rave-page/ui": "file:vendor/rave-page-ui-<version>.tgz"`; peers are
-react/react-dom 19 + lucide-react 1.34 (the kit accepts lucide `>=0.560 <2`).
-Provenance (kit commit/branch, sha256, UTC date, refresh command) lives in
-`vendor/PROVENANCE.md`. Refresh:
+The kit isn't on npm yet, so its **source lives in this repo** as a pnpm
+workspace package under `packages/ui` (`"@rave-page/ui": "workspace:*"`). This
+keeps `pnpm install` self-contained for outside contributors and gives AMO
+reviewers the complete, unmodified source that produces the bundle — no tarball,
+no submodule. Peers are react/react-dom 19 + lucide-react 1.34 (the kit accepts
+lucide `>=0.560 <2`).
+
+The kit's `prepare` script compiles `src/**` → `dist/` with its own
+`tsconfig.build.json`; event-bridge bundles that compiled `dist/` and imports its
+`.d.ts`. `packages/ui/dist` is **git-ignored** — the reviewable truth is `src/`,
+and `pnpm install` (prepare) / `pnpm build` reproduce `dist/` from it. Consuming
+the compiled output keeps the kit's looser tsconfig separate from this repo's
+stricter one (`noUncheckedIndexedAccess` etc.), so the kit source is never edited
+to satisfy the app's compiler. `check:pins` skips the `workspace:` spec with a
+printed note; the kit's own exact-pinned deps (Radix, dnd-kit, cva, clsx,
+tailwind-merge, dayjs) are age-gated by pnpm `minimumReleaseAge`.
+
+`tools/build.mjs` runs the kit build (`tsc -p packages/ui/tsconfig.build.json`)
+before esbuild, then writes `THIRD_PARTY_NOTICES.txt` from every bundled package's
+license file (`licenses/` holds the single reviewed supplement for an npm release
+that omits its license file — the first-party kit is excluded, its MIT `LICENSE`
+lives in `packages/ui/`) and copies the project `LICENSE` into both `dist/`
+targets.
+
+**Refresh from upstream** (`packages/ui/PROVENANCE.md` records the source commit):
 
 ```sh
-pnpm vendor:ui                                     # default kit ../rave.page/packages/ui
-pnpm vendor:ui ../rave.page-wt-uikit/packages/ui   # today the kit is on a worktree
-pnpm install                                       # if the spec/tarball changed
+git -C ../rave.page-wt-uikit-events archive HEAD packages/ui | tar -x --strip-components=2 -C packages/ui
+rm -rf packages/ui/dev
+pnpm install                                       # prepare rebuilds packages/ui/dist
 ```
 
-`tools/vendor-ui.mjs` asserts the kit identity, runs `pnpm --dir <kit> build`
-then `pnpm --dir <kit> pack` into `vendor/`, drops stale tarballs, verifies the
-packed `.` export resolves to the compiled `dist/` (event-bridge consumes the
-`.js`/`.d.ts`, never the kit's looser TS sources — our tsconfig is stricter),
-rewrites `vendor/PROVENANCE.md`, and syncs the `package.json` spec.
-`check:pins` skips the `file:` spec with a printed note; the kit's transitive
-exact pins (Radix, cva, clsx, tailwind-merge, dayjs) are still age-gated by
-pnpm `minimumReleaseAge`. Switch to the npm version in P8.
-
-**Reviewer provenance.** The kit is first-party (rave.page `packages/ui`, same
-author), not an npm release, so the tarball also ships its original `src/`
-TS/TSX. `tools/build.mjs` transpiles every non-test kit source with the pinned
-TypeScript (ES2020, ESNext modules, `react-jsx`, `verbatimModuleSyntax`) and
-compares it syntactically (comments/formatting ignored) with the packed
-`dist/*.js`; a missing, extra or differing file fails the build. The kit's own
-`tsconfig.build.json` is not in the tarball; this check stands in for it and
-never modifies the library. The same build writes `THIRD_PARTY_NOTICES.txt` from
-every bundled package's license file (`licenses/` holds the single reviewed
-supplement for an npm release that omits its license file) and copies `LICENSE`
-into both `dist/` targets.
+Do not hand-edit kit source to fix app type errors — fix upstream in rave.page
+and re-vendor. Publish to npm and switch to a version range in P8.
 
 ## Two-manifest layout
 
@@ -250,8 +250,8 @@ repository, credentials or live platform access is needed. The release build ID
 is a hash of source/build inputs, stable across rebuilds. Tailwind scans only
 the explicit kit/UI sources, so Git ignore state cannot change CSS output;
 watch builds retain a fresh ID so development agents reload. Dependencies are
-downloaded through pnpm;
-the private-origin UI kit and its original source ship in `vendor/`.
+downloaded through pnpm; the UI kit's source is in-repo under `packages/ui` and
+built from source during the reviewer build.
 
 ## Runtime model (P2)
 

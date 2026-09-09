@@ -103,11 +103,11 @@ Submission prerequisites (not waived by green tests):
   development.rave.page account can be supplied. Credentials go in AMO private
   reviewer notes, never public version notes/docs/source. Mocks are not live access.
 - Shared UI kit provenance: `@rave-page/ui` is first-party (rave.page
-  `packages/ui`; commit and sha256 in `vendor/PROVENANCE.md`), not an npm release,
-  and ships original TS/TSX, compiled JS and its MIT license. `pnpm build` proves
-  each packed `dist/*.js` is the transpile of its vendored source under the pinned
-  TypeScript (syntax compared; comments/formatting ignored) and rejects missing,
-  extra or differing files. Never modify the library or invent a release tag.
+  `packages/ui`; source commit in `packages/ui/PROVENANCE.md`), not an npm release.
+  Its complete original TS/TSX source is vendored in-repo under `packages/ui` (a
+  `workspace:*` package with its MIT `LICENSE`); `pnpm install`/`pnpm build`
+  compile it to JS from that source. No compiled kit output is committed. Never
+  hand-edit the kit source to satisfy the app compiler; fix upstream and re-vendor.
 - Verify project LICENSE and generated THIRD_PARTY_NOTICES.txt in both browser
   ZIPs. Notices are extracted from actual bundled packages, not invented summaries;
   `licenses/` holds the single reviewed supplement for a release without one.

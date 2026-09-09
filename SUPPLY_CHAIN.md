@@ -9,7 +9,7 @@ install by `pnpm check:pins` (exact + registry `time[version]` >= 7 days).
 |---|---|---|---|
 | react | 19.2.8 | dashboard + popup UI; rave.page UI reuse (its primitives are React 19 + Tailwind 4; user decision 2026-09-03); kit peer (`^19`) | released 2026-07-21; **ships** |
 | react-dom | 19.2.8 | React DOM renderer (`createRoot`); kit peer (`^19`) | released 2026-07-21; **ships** |
-| @rave-page/ui | file:vendor/rave-page-ui-0.2.0.tgz | shared rave.page design-system kit (Button/Badge/Card/Dialog/form controls/SmartSelect/DataTable/Toast/…; 0.2.0 adds LineupBoard/lineup-math/VisibilityBadge/Avatar for P6.3); UI-reuse rule (P0b) | **vendored tarball** (kit not on npm yet), MIT; provenance + sha256 in `vendor/PROVENANCE.md`; `check:pins` skips `file:` specs; transitive exact pins listed below; **ships** (compiled `dist/` + Tailwind CSS) |
+| @rave-page/ui | workspace:* (packages/ui) | shared rave.page design-system kit (Button/Badge/Card/Chip/Dialog/form controls/SmartSelect/DataTable/Toast/LineupBoard/…); UI-reuse rule (P0b) | **first-party in-repo source** (`packages/ui/**`), MIT; not an npm release. Vendored from rave.page `packages/ui` @ `c7121629` (`packages/ui/PROVENANCE.md`); its `prepare` builds `dist/` from `src/` (git-ignored, reproducible). `check:pins` skips `workspace:` specs; its exact-pinned deps listed below; **ships** (kit built to JS + Tailwind CSS) |
 | lucide-react | 1.34.0 | icons (design rule: Lucide only); kit peer (accepts `>=0.560 <2`) | released 2026-08-24; **ships** |
 | tailwindcss | 4.3.3 | design-token CSS engine; tokens vendored from rave.page | released 2026-07-16; dev-only (generated CSS ships) |
 | @tailwindcss/cli | 4.3.3 | `styles.css` -> `build/styles.css` build step (`tools/build.mjs`) | released 2026-07-16; dev-only |
@@ -24,9 +24,9 @@ install by `pnpm check:pins` (exact + registry `time[version]` >= 7 days).
 | @types/node | 24.13.3 | Node 24 types for tools, vitest and Playwright; matches the LTS major | released 2026-07-08; 62-day soak verified 2026-09-08; dev-only |
 | openapi-typescript-codegen | 0.30.0 | generated rave.page client (P3; same tool as rave.page) | released 2025-12-22; dev-only (**generated code ships**) |
 
-`@rave-page/ui` transitive exact pins (installed via the tarball; each age-gated
-by pnpm `minimumReleaseAge: 10080` at resolve; all released on/before
-2026-07-24 per the plan's pin table):
+`@rave-page/ui` exact-pinned deps (declared in `packages/ui/package.json`,
+installed into the workspace; each age-gated by pnpm `minimumReleaseAge: 10080`
+at resolve; all released on/before 2026-07-24 per the plan's pin table):
 
 - `@radix-ui/react-checkbox` 1.3.11, `@radix-ui/react-dialog` 1.1.23,
   `@radix-ui/react-dropdown-menu` 2.1.24, `@radix-ui/react-label` 2.1.15,
@@ -65,8 +65,9 @@ dependencies + the generated Tailwind CSS. `pnpm build` writes
 `THIRD_PARTY_NOTICES.txt` (license text of every bundled package, from the
 installed packages; `licenses/` holds the single reviewed supplement for an npm
 release that omits its license file) and copies `LICENSE` into both `dist/`
-targets. The build also proves the vendored kit's `dist/` is the transpile of its
-shipped TS/TSX sources (see `docs/development.md`).
+targets. The build also compiles the in-repo kit source (`packages/ui/src`) to
+its own `dist/` before bundling, so nothing machine-generated from the kit is
+committed (see `docs/development.md`).
 
 ## Build runtime
 

@@ -5,11 +5,11 @@ const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 const EXACT = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
-// Local specs (vendored tarball / linked checkout) have no registry entry to
-// age-check. `@rave-page/ui` is a `file:` tarball whose provenance +
-// transitive exact pins live in vendor/PROVENANCE.md + SUPPLY_CHAIN.md; its
-// deps are still age-gated transitively by pnpm minimumReleaseAge at resolve.
-const LOCAL = /^(file:|link:)/;
+// Local specs have no registry entry to age-check. `@rave-page/ui` is a
+// `workspace:*` package whose source lives in-repo under packages/ui; its own
+// exact-pinned deps (SUPPLY_CHAIN.md) are age-gated by pnpm minimumReleaseAge
+// at resolve.
+const LOCAL = /^(file:|link:|workspace:)/;
 const encode = (n) => (n.startsWith('@') ? `@${encodeURIComponent(n.slice(1))}` : n);
 
 const rows = [];
@@ -92,7 +92,7 @@ console.log('\nSUPPLY_CHAIN.md rows (paste-ready):');
 for (const r of rows) console.log(`| ${r.name} | ${r.version} | | released ${r.published} |`);
 
 if (skipped.length) {
-  console.log('\nSkipped (local specs, not registry-aged; provenance in vendor/PROVENANCE.md + SUPPLY_CHAIN.md):');
+  console.log('\nSkipped (local specs, not registry-aged; provenance in packages/ui/PROVENANCE.md + SUPPLY_CHAIN.md):');
   for (const s of skipped) console.log(`  - ${s.name} (${s.version})`);
 }
 

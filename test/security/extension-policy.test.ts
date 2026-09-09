@@ -89,7 +89,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 test('application and vendored kit do not invoke raw HTML rendering APIs', () => {
-  const files = [...sourceFiles('src'), ...sourceFiles('node_modules/@rave-page/ui/src')];
+  const files = [...sourceFiles('src'), ...sourceFiles('packages/ui/src')];
   expect(files.length).toBeGreaterThan(100);
   expect(files.flatMap((file) => unsafeHtml(readFileSync(file, 'utf8'), file))).toEqual([]);
 });

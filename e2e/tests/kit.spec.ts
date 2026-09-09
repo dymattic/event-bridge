@@ -6,14 +6,15 @@ import { expect, test } from '../fixtures/extension';
 const KIT_URL = (id: string) => `chrome-extension://${id}/dashboard.html#/kit`;
 
 test.describe('@rave-page/ui showcase (#/kit)', () => {
-  test('Button default renders the brand-base background from the kit', async ({ context, extensionId }) => {
+  test('Button default renders the brand fill background from the kit', async ({ context, extensionId }) => {
     const page = await context.newPage();
     await page.goto(KIT_URL(extensionId));
     const btn = page.getByTestId('kit-button-default');
     await expect(btn).toBeVisible();
-    // kit brand-base #F70864 — proves the kit's Button variant classes reached
-    // the built CSS with the kit's own tokens (used as-is, not re-themed)
-    expect(await btn.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(247, 8, 100)');
+    // AA fill --color-brand-base-fill #DB0759 (white-on-brand contrast; the base
+    // #F70864 drives the glow below) — proves the kit's Button variant classes
+    // reached the built CSS with the kit's own tokens (used as-is, not re-themed)
+    expect(await btn.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(219, 7, 89)');
   });
 
   test('Button default glow follows the kit brand base (pink box-shadow)', async ({ context, extensionId }) => {

@@ -4,15 +4,15 @@
  * z-ladder, font-orbitron, --breakpoint-xxl, text-2xs/3xs) and every component
  * class come from @rave-page/ui, the shared rave.page design-system kit. This
  * file adds ONLY the extension's own Orbitron @font-face (dist-relative url) and
- * body defaults. Re-sync tokens by re-vendoring the kit (`pnpm vendor:ui`) -
- * never by copying token blocks back here. */
+ * body defaults. The kit source lives in packages/ui (see PROVENANCE.md); re-sync
+ * tokens by re-vendoring that source - never by copying token blocks back here. */
 @import "tailwindcss" source(none);
 @import "@rave-page/ui/tokens.css";
 
 /* Explicit inputs keep reviewer archives and Git checkouts identical.
    Kit variants and extension UI are the only class sources. Paths are relative
    to this file (src/ui/styles.css). */
-@source "../../node_modules/@rave-page/ui/src";
+@source "../../packages/ui/src";
 @source "./";
 
 /* Orbitron ships in dist/{chrome,firefox}/fonts/ (assemble copies
