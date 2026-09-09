@@ -47,9 +47,18 @@ here; the kit owns their justification, and pnpm still refuses any that resolve
 
 Vendored assets (not npm deps):
 
-- **Orbitron (OFL 1.1)** — brand font copied from the rave.page design system
-  (`rave-page-design-system/fonts/`); the license file (`Orbitron-OFL.txt`)
-  ships next to the font in `dist/*/fonts/`. Re-sync from rave.page, don't fork.
+- **Orbitron (OFL 1.1)** — display face (h1/h2, wordmark) copied from the
+  rave.page design system (`rave-page-design-system/fonts/`); the license file
+  (`Orbitron-OFL.txt`) ships next to the font in `dist/*/fonts/`. Re-sync from
+  rave.page, don't fork.
+- **Inter Variable (OFL 1.1)** — body/UI face (kit `--font-body`; the kit's
+  2026-09-07 type split, same face rave.page loads). The two weight-axis woff2
+  files (`inter-latin-wght-normal.woff2`, `inter-latin-ext-wght-normal.woff2`)
+  and `Inter-OFL.txt` are copied from `@fontsource-variable/inter@5.3.0` (the
+  version rave.page pins) into `src/ui/fonts/`; a local `@font-face` in
+  `styles.css` serves them with dist-relative urls (we do NOT add the npm
+  package as a dep). Non-latin text falls back through the `--font-body` stack
+  to system-ui.
 
 Tooling not installed (run via `pnpm dlx`, never a dep):
 

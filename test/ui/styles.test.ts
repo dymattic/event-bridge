@@ -19,6 +19,13 @@ describe('styles.css consumes the @rave-page/ui kit', () => {
     expect(css).toContain("url('fonts/Orbitron-VariableFont_wght.ttf')");
   });
 
+  it('ships the Inter Variable body face and uses it on body (kit type split)', () => {
+    expect(css).toContain("font-family: 'Inter Variable'");
+    expect(css).toContain("url('fonts/inter-latin-wght-normal.woff2')");
+    // body copy is the Inter/UI face, not the Orbitron display face
+    expect(css).toMatch(/body\s*\{[^}]*font-family:\s*var\(--font-body\)/);
+  });
+
   it('opts the in-repo kit source into Tailwind scanning', () => {
     expect(css).toContain('@source "../../packages/ui/src"');
   });

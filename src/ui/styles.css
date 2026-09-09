@@ -15,20 +15,42 @@
 @source "../../packages/ui/src";
 @source "./";
 
-/* Orbitron ships in dist/{chrome,firefox}/fonts/ (assemble copies
-   src/ui/fonts). We do NOT import the kit's font.css: its url() is relative to
-   the kit's src/styles/ and would not resolve from our built dist/styles.css. */
+/* Fonts ship in dist/{chrome,firefox}/fonts/ (assemble copies src/ui/fonts).
+   We do NOT import the kit's font.css or @fontsource CSS: their url()s resolve
+   from node_modules / the kit's src/styles, not our built dist/styles.css - so
+   we declare local @font-face with dist-relative urls instead. Two type roles
+   (kit decision 2026-09-07): Orbitron is DISPLAY only (--font-display, applied
+   via font-orbitron/font-display on headings); Inter is the body/UI face
+   (--font-body). */
 @font-face {
     font-family: 'Orbitron';
     src: url('fonts/Orbitron-VariableFont_wght.ttf') format('truetype');
     font-weight: 400 900;
     font-display: swap;
 }
+/* Inter Variable (OFL) - @fontsource-variable/inter 5.3.0, latin + latin-ext
+   subsets (weight axis). Non-latin text falls back through the --font-body
+   stack to system-ui. unicode-range values are fontsource's for these subsets. */
+@font-face {
+    font-family: 'Inter Variable';
+    src: url('fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+    font-family: 'Inter Variable';
+    src: url('fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
 
-/* Extension page defaults (rave.page body: dark, brand font). */
+/* Extension page defaults (rave.page body: dark, Inter body face). Headings opt
+   into Orbitron via the kit's font-orbitron/font-display utilities. */
 body {
     color-scheme: dark;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: var(--font-orbitron);
+    font-family: var(--font-body);
 }

@@ -14,6 +14,15 @@ test('dashboard renders heading + kit theme applied', async ({ context, extensio
   const bodyBg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bodyBg).not.toBe('rgba(0, 0, 0, 0)');
   expect(bodyBg).not.toBe('rgb(255, 255, 255)');
+
+  // Body copy uses the Inter body face (kit type split), and the bundled font loads.
+  const bodyFont = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
+  expect(bodyFont).toContain('Inter Variable');
+  const interLoaded = await page.evaluate(async () => {
+    await document.fonts.ready;
+    return document.fonts.check('16px "Inter Variable"');
+  });
+  expect(interLoaded).toBe(true);
 });
 
 test('popup renders the open-dashboard button', async ({ context, extensionId }) => {

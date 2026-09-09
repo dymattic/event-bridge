@@ -34,10 +34,15 @@ upstream in the kit, never forked here. Extension-specific views stay in
 @source "./";                                    /* the extension's own UI */
 ```
 
-It adds only the extension's own Orbitron `@font-face` (dist-relative
-`fonts/…` url — we do NOT import the kit's `font.css`, whose url wouldn't
-resolve from `dist/`) and the `body` defaults. Orbitron + its OFL license ship
-in `dist/*/fonts/`.
+It adds the extension's own local `@font-face` rules (dist-relative `fonts/…`
+urls — we do NOT import the kit's `font.css` or `@fontsource` CSS, whose urls
+wouldn't resolve from `dist/`) and the `body` defaults. Per the kit's two type
+roles (2026-09-07): **Orbitron** is the display face (`--font-display`, applied
+via `font-orbitron`/`font-display` on headings) and **Inter Variable** is the
+body/UI face (`--font-body`, the `body` default). Both fonts + their OFL licenses
+ship in `dist/*/fonts/` (Inter = the latin + latin-ext weight-axis woff2 from
+`@fontsource-variable/inter@5.3.0`, vendored as an asset, not an npm dep — see
+`SUPPLY_CHAIN.md`).
 
 **Providers.** Mount once at each React root (`popup/main.tsx`,
 `dashboard/main.tsx`): `TooltipProvider` (backs any `Button`/`IconButtonWithTooltip`
